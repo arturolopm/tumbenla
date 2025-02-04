@@ -1,8 +1,6 @@
-import nextra from "nextra";
+import { NextConfig } from "next";
 
-const withNextra = nextra({ contentDirBasePath: "/docs" });
-
-export default withNextra({
+const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   pageExtensions: ["tsx", "mdx"],
@@ -31,4 +29,6 @@ export default withNextra({
       },
     ];
   },
-});
+} satisfies NextConfig;
+
+export default nextConfig;

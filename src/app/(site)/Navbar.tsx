@@ -59,12 +59,6 @@ export default function Navbar() {
           >
             Wall of love
           </Link>
-          <Link
-            href="/docs"
-            className="text-base text-white/90 transition hover:text-white"
-          >
-            Docs
-          </Link>
         </div>
 
         <div className="hidden items-center gap-2 md:flex">
