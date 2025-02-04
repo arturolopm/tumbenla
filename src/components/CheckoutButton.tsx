@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { getStripe } from "@/utils/stripe"
+import { useState } from "react";
+import { getStripe } from "@/utils/stripe";
 
 interface CheckoutButtonProps {
-  priceId: string
+  priceId: string;
 }
 
 export default function CheckoutButton({ priceId }: CheckoutButtonProps) {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCheckout = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const response = await fetch("/api/checkout", {
@@ -20,17 +20,17 @@ export default function CheckoutButton({ priceId }: CheckoutButtonProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ priceId }),
-      })
+      });
 
-      const { sessionId } = await response.json()
-      const stripe = await getStripe()
-      stripe?.redirectToCheckout({ sessionId })
+      const { sessionId } = await response.json();
+      const stripe = await getStripe();
+      stripe?.redirectToCheckout({ sessionId });
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Error:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <button
@@ -40,6 +40,5 @@ export default function CheckoutButton({ priceId }: CheckoutButtonProps) {
     >
       {isLoading ? "Loading..." : "Subscribe"}
     </button>
-  )
+  );
 }
-

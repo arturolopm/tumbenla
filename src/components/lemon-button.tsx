@@ -1,15 +1,15 @@
 // app/checkout/page.tsx
-'use client';
+"use client";
 
-import { createCheckout } from '@/utils/lemon';
-import { useEffect, useState } from 'react';
+import { createCheckout } from "@/utils/lemon";
+import { useEffect, useState } from "react";
 
 export default function CheckoutPage() {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const initiateCheckout = async () => {
-      const variantId = 'your_variant_id_here'; // Replace with actual variant ID
+      const variantId = "your_variant_id_here"; // Replace with actual variant ID
       const redirectUrl = `${window.location.origin}/success`; // Redirect URL after successful payment
       const checkout = await createCheckout(variantId, redirectUrl);
       setCheckoutUrl(checkout.data.attributes.url);

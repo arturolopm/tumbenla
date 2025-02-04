@@ -1,24 +1,27 @@
 // lib/lemon-squeezy.ts
-import axios from 'axios';
+import axios from "axios";
 
 const LEMON_SQUEEZY_API_KEY = process.env.LEMON_SQUEEZY_API_KEY;
 const LEMON_SQUEEZY_STORE_ID = process.env.LEMON_SQUEEZY_STORE_ID;
 
 const lemonSqueezyClient = axios.create({
-  baseURL: 'https://api.lemonsqueezy.com/v1',
+  baseURL: "https://api.lemonsqueezy.com/v1",
   headers: {
     Authorization: `Bearer ${LEMON_SQUEEZY_API_KEY}`,
   },
 });
 
-export const createCheckout = async (variantId: string, redirectUrl: string) => {
-  const response = await lemonSqueezyClient.post('/checkouts', {
+export const createCheckout = async (
+  variantId: string,
+  redirectUrl: string
+) => {
+  const response = await lemonSqueezyClient.post("/checkouts", {
     data: {
-      type: 'checkouts',
+      type: "checkouts",
       attributes: {
         checkout_data: {
           custom: {
-            user_id: '123', // Replace with actual user ID
+            user_id: "123", // Replace with actual user ID
           },
         },
         product_options: {
@@ -28,13 +31,13 @@ export const createCheckout = async (variantId: string, redirectUrl: string) => 
       relationships: {
         store: {
           data: {
-            type: 'stores',
+            type: "stores",
             id: LEMON_SQUEEZY_STORE_ID,
           },
         },
         variant: {
           data: {
-            type: 'variants',
+            type: "variants",
             id: variantId,
           },
         },
@@ -47,5 +50,5 @@ export const createCheckout = async (variantId: string, redirectUrl: string) => 
 
 export const handleWebhook = async (payload: any) => {
   // Handle webhook payload here
-  console.log('Webhook received:', payload);
+  console.log("Webhook received:", payload);
 };

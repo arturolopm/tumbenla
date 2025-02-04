@@ -75,17 +75,29 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <a href="/tos"  target="_blank" className="text-zinc-400 hover:text-white">
+                <a
+                  href="/tos"
+                  target="_blank"
+                  className="text-zinc-400 hover:text-white"
+                >
                   Terms of Servise
                 </a>
               </li>
               <li>
-                <a href="/privacy"  target="_blank" className="text-zinc-400 hover:text-white">
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  className="text-zinc-400 hover:text-white"
+                >
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <a href="/licenses" target="_blank" className="text-zinc-400 hover:text-white">
+                <a
+                  href="/licenses"
+                  target="_blank"
+                  className="text-zinc-400 hover:text-white"
+                >
                   Licenses
                 </a>
               </li>
@@ -99,34 +111,33 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3 text-sm">
               {/* {["idee8.agency", "React AI", "Code Mentor"].map((item) => ( */}
-                <li >
-                  <a
-                    href="https://idee8.agency"
-                    target="_blank"
-                    className="text-zinc-400 hover:text-white"
-                  >
-                   Idee8
-                  </a>
-                </li>
-                <li >
-                  <a
-                    href="https://codementor.idee8.agency"
-                    className="text-zinc-400 hover:text-white"
-                    target="_blank"
-                  >
-                   Code Mentor
-                  </a>
-                </li>
-                <li >
-                  <a
-                    href="https://reactai.idee8.agency"
-                    className="text-zinc-400 hover:text-white"
-                    target="_blank"
-                  >
-                   React AI
-                  </a>
-                </li>
-              
+              <li>
+                <a
+                  href="https://idee8.agency"
+                  target="_blank"
+                  className="text-zinc-400 hover:text-white"
+                >
+                  Idee8
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://codementor.idee8.agency"
+                  className="text-zinc-400 hover:text-white"
+                  target="_blank"
+                >
+                  Code Mentor
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://reactai.idee8.agency"
+                  className="text-zinc-400 hover:text-white"
+                  target="_blank"
+                >
+                  React AI
+                </a>
+              </li>
             </ul>
 
             {/* Newsletter Section */}

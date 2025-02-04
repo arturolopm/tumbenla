@@ -1,7 +1,7 @@
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import type { Metadata } from "next"
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -10,24 +10,24 @@ export const metadata: Metadata = {
     title: "Dashboard | My App",
     description: "Access your personal dashboard on My App",
   },
-}
+};
 
 export default async function Dashboard() {
-  const supabase = createClient()
+  const supabase = createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login")
+    redirect("/auth/login");
   }
 
   const handleSignOut = async () => {
-    "use server"
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    redirect("/auth/login")
-  }
+    "use server";
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    redirect("/auth/login");
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -41,6 +41,5 @@ export default async function Dashboard() {
         </form>
       </div>
     </div>
-  )
+  );
 }
-

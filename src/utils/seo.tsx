@@ -1,5 +1,5 @@
 // components/SEO.tsx
-import Head from 'next/head';
+import Head from "next/head";
 
 interface SEOProps {
   title: string;
@@ -15,7 +15,7 @@ export default function SEO({
   description,
   canonicalUrl,
   ogImageUrl,
-  ogType = 'website',
+  ogType = "website",
   twitterHandle,
 }: SEOProps) {
   return (

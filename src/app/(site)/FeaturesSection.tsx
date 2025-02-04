@@ -1,5 +1,14 @@
-import { Mail, CreditCard, User, Database, FileJson, Paintbrush, MoreHorizontal, Check } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import {
+  Mail,
+  CreditCard,
+  User,
+  Database,
+  FileJson,
+  Paintbrush,
+  MoreHorizontal,
+  Check,
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function FeaturesSection() {
   const features = [
@@ -122,7 +131,7 @@ export default function FeaturesSection() {
         timeSaved: "4 hours",
       },
     },
-  ]
+  ];
 
   return (
     <div className="bg-zinc-900 min-h-screen text-gray-300 py-16 px-4">
@@ -132,15 +141,16 @@ export default function FeaturesSection() {
             Supercharge your app instantly, launch faster, make $
           </h2>
           <p className="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto">
-            Login users, process payments and send emails at lightspeed. Spend your time building your startup, not
-            integrating APIs. ShipFast provides you with the boilerplate code you need to launch, FAST.
+            Login users, process payments and send emails at lightspeed. Spend
+            your time building your startup, not integrating APIs. ShipFast
+            provides you with the boilerplate code you need to launch, FAST.
           </p>
         </div>
 
         <Tabs defaultValue="seo" className="w-full">
           <TabsList className="h-auto flex flex-wrap justify-center gap-4 bg-transparent mb-8">
             {features.map((feature) => {
-              const Icon = feature.icon
+              const Icon = feature.icon;
               return (
                 <TabsTrigger
                   key={feature.id}
@@ -150,12 +160,16 @@ export default function FeaturesSection() {
                   <Icon className="w-6 h-6" />
                   <span className="text-sm">{feature.label}</span>
                 </TabsTrigger>
-              )
+              );
             })}
           </TabsList>
 
           {features.map((feature) => (
-            <TabsContent key={feature.id} value={feature.id} className="space-y-8">
+            <TabsContent
+              key={feature.id}
+              value={feature.id}
+              className="space-y-8"
+            >
               <div className="space-y-6">
                 {feature.content.features.map((item, index) => (
                   <div key={index} className="flex items-start gap-3">
@@ -167,7 +181,9 @@ export default function FeaturesSection() {
                   <Check className="w-5 h-5 text-green-500" />
                   <span className="text-lg">
                     <span className="text-green-500">Time saved: </span>
-                    <span className="text-green-500">{feature.content.timeSaved}</span>
+                    <span className="text-green-500">
+                      {feature.content.timeSaved}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -176,6 +192,5 @@ export default function FeaturesSection() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }
-

@@ -1,11 +1,14 @@
-"use client"
+"use client";
 
-import { Check } from "lucide-react"
-import type React from "react"
+import { Check } from "lucide-react";
+import type React from "react";
 
 export default function PricingSection() {
   return (
-    <div id="pricing" className="min-h-screen bg-[#0F0F0F] text-white px-4 py-16">
+    <div
+      id="pricing"
+      className="min-h-screen bg-[#0F0F0F] text-white px-4 py-16"
+    >
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="text-center mb-16">
@@ -21,7 +24,6 @@ export default function PricingSection() {
           </p>
         </div>
 
-       
         <div className="max-w-md mx-auto">
           <div className="rounded-xl bg-zinc-900 p-6 border border-green-500/50 relative">
             <div className="absolute -top-3 right-6 bg-green-500 text-black text-sm font-semibold px-3 py-1 rounded-full">
@@ -33,7 +35,9 @@ export default function PricingSection() {
                 <span className="text-4xl font-bold">$0</span>
                 <span className="text-zinc-500">USD</span>
               </div>
-              <p className="text-green-500 text-sm mt-2">Free Forever, No Credit Card Required</p>
+              <p className="text-green-500 text-sm mt-2">
+                Free Forever, No Credit Card Required
+              </p>
             </div>
 
             <div className="space-y-4 mb-8">
@@ -50,7 +54,9 @@ export default function PricingSection() {
             </div>
 
             <button
-              onClick={() => window.open("https://github.com/idee8/shipfree", "_blank")}
+              onClick={() =>
+                window.open("https://github.com/idee8/shipfree", "_blank")
+              }
               className="w-full bg-green-500 hover:bg-green-400 transition-colors text-black font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2"
             >
               <span>⚡</span> Get Started Now
@@ -62,7 +68,7 @@ export default function PricingSection() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 function Feature({ children }: { children: React.ReactNode }) {
@@ -71,6 +77,5 @@ function Feature({ children }: { children: React.ReactNode }) {
       <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
       <span className="text-zinc-300">{children}</span>
     </div>
-  )
+  );
 }
-

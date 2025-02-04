@@ -6,7 +6,7 @@ ShipFree is a free alternative to ShipFast, designed to simplify and optimize yo
 
 ## Features
 
-- SEO Optimisation 
+- SEO Optimisation
 - User authentication with Supabase
 - Stripe and LemonSqueezy integration
 - Email notifications via Mailgun
@@ -24,6 +24,6 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
 For people who want to contribute, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
 
-----
+---
 
 Cooked for you with ❤️ by [Idee8](https://idee8.agency)

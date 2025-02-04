@@ -1,16 +1,17 @@
-import type { Metadata } from "next"
-import { Bricolage_Grotesque } from "next/font/google"
-import "./globals.css"
-import type React from "react" // Import React
+import type { Metadata } from "next";
+import { Bricolage_Grotesque } from "next/font/google";
+import "./globals.css";
+import type React from "react"; // Import React
 
 const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ["latin"],
   display: "swap",
-})
+});
 
 export const metadata: Metadata = {
   title: "ShipFree",
-  description: "Open Source Alternative to ShipFast - Launch your startup in days Not in weeks",
+  description:
+    "Open Source Alternative to ShipFast - Launch your startup in days Not in weeks",
   keywords: [
     "saas",
     "boilerplate",
@@ -21,19 +22,18 @@ export const metadata: Metadata = {
     "idee8",
     "made by idee8",
     "free boilerplate",
-    "github"
+    "github",
   ],
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" className={bricolageGrotesque.className}>
       <body className="antialiased">{children}</body>
     </html>
-  )
+  );
 }
-

@@ -1,6 +1,6 @@
-import Link from "next/link"
-import { Zap } from "lucide-react"
-import Image from "next/image"
+import Link from "next/link";
+import { Zap } from "lucide-react";
+import Image from "next/image";
 
 const HeroSection = () => {
   return (
@@ -8,7 +8,7 @@ const HeroSection = () => {
       <div className="max-w-7xl w-full mx-auto py-16 flex flex-col lg:flex-row justify-between items-center">
         <div className="w-full lg:w-1/2 mb-12 lg:mb-0 text-center lg:text-left">
           <div className="flex justify-center lg:justify-start items-center gap-2 mb-5">
-          <svg
+            <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 122 37"
               className="w-32 text-zinc-400 md:w-36 fill-[#cfcfcf]"
@@ -20,12 +20,14 @@ const HeroSection = () => {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 text-[#CFCFCF] leading-tight">
             Ship your startup
             <br />
-            in days, <span className="bg-[#CFCFCF] text-[#2E1A05] px-2">not weeks</span>
+            in days,{" "}
+            <span className="bg-[#CFCFCF] text-[#2E1A05] px-2">not weeks</span>
           </h1>
 
           <p className="text-base text-[#CFCFCF] mb-8 max-w-2xl mx-auto lg:mx-0">
-            Tired of wasting time on setup instead of building? ShipFree is the fastest way to launch your SaaS, AI
-            tool, or web app—for free. No setup headaches, no paywalls—just build and ship!
+            Tired of wasting time on setup instead of building? ShipFree is the
+            fastest way to launch your SaaS, AI tool, or web app—for free. No
+            setup headaches, no paywalls—just build and ship!
           </p>
 
           <Link
@@ -59,7 +61,11 @@ const HeroSection = () => {
               <div className="flex flex-col items-center lg:items-start">
                 <div className="flex">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <svg key={star} className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-400 fill-current" viewBox="0 0 24 24">
+                    <svg
+                      key={star}
+                      className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-400 fill-current"
+                      viewBox="0 0 24 24"
+                    >
                       <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                     </svg>
                   ))}
@@ -83,8 +89,7 @@ const HeroSection = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default HeroSection
-
+export default HeroSection;
