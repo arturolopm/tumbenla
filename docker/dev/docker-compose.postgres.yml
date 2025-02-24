@@ -1,20 +1,4 @@
 services:
-  app:
-    build:
-      context: ../..
-      dockerfile: docker/dev/Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://devuser:devpass@postgres:5432/shipfreedev
-      - HUSKY=0
-    volumes:
-      - ../../:/app
-      - /app/node_modules
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   postgres:
     image: postgres:15-alpine
@@ -31,17 +15,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  # OPTIONAL
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@example.com
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    ports:
-      - "5050:80"
-    depends_on:
-      - postgres
 
   portainer:
     image: portainer/portainer-ce:latest
