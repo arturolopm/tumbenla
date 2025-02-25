@@ -2,7 +2,7 @@
 
 Hi there! 👋
 
-ShipFree is a free alternative to ShipFast, designed to simplify and optimize your shipping process. It’s built using modern web technologies like Next.js, Supabase, Stripe, LemonSqueezy, and Mailgun.
+ShipFree is a free alternative to ShipFast, designed to simplify and optimize your shipping process. It’s built using modern web technologies like Next.js, Supabase, Stripe, LemonSqueezy, Drizzle ORM and Mailgun.
 
 ## Features
 
