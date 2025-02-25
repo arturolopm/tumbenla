@@ -15,7 +15,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
   postgres:
     image: postgres:15-alpine
     environment:
@@ -32,7 +31,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # OPTIONAL
+    # OPTIONAL
   pgadmin:
     image: dpage/pgadmin4
     environment:
