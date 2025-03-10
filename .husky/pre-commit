@@ -1,2 +1,2 @@
-pnpm format
+npm run format
 
