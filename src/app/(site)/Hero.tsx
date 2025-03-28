@@ -25,7 +25,7 @@ const HeroSection = () => {
           </h1>
 
           <p className="text-base text-[#CFCFCF] mb-8 max-w-2xl mx-auto lg:mx-0">
-            Tired of wasting time on setup instead of building? ShipFree is the
+            Tired of wasting time on setup instead of build? ShipFree is the
             fastest way to launch your SaaS, AI tool, or web app—for free. No
             setup headaches, no paywalls—just build and ship!
           </p>
