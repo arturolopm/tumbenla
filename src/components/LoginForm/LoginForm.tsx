@@ -1,4 +1,5 @@
 "use client";
+
 import SEO from "@/utils/seo";
 
 import { useState } from "react";
@@ -25,28 +26,6 @@ export function LoginForm() {
       console.error("Error logging in:", error.message);
     } else {
       router.push("/dashboard");
-    }
-  };
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (error) {
-      console.error("Error sending magic link:", error.message);
-    } else {
-      alert("Check your email for the magic link!");
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      console.error("Error signing in with Google:", error.message);
     }
   };
 
@@ -91,25 +70,9 @@ export function LoginForm() {
               Login
             </Button>
           </form>
-          <div className="flex flex-col space-y-4">
-            <Button
-              onClick={handleMagicLink}
-              variant="outline"
-              className="w-full"
-            >
-              Send Magic Link
-            </Button>
-            <Button
-              onClick={handleGoogleSignIn}
-              variant="outline"
-              className="w-full"
-            >
-              Sign in with Google
-            </Button>
-          </div>
           <p className="text-center text-sm pt-4">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-blue-500 hover:underline">
+            <Link href="/auth/register" className="text-blue-500 hover:underline">
               Register
             </Link>
           </p>
