@@ -1,19 +1,14 @@
-'use client'
+"use client";
 
-import { type User } from '@supabase/supabase-js'
-
+import { type User } from "@supabase/supabase-js";
 
 export default function AccountForm({ user }: { user: User | null }) {
-
-
-    return (
-        <div className="form-widget">
-
-            <div>
-                <label htmlFor="email">Email</label>
-                <input id="email" type="text" value={user?.email} disabled />
-            </div>
-
-        </div>
-    )
+  return (
+    <div className="form-widget">
+      <div>
+        <label htmlFor="email">Email</label>
+        <input id="email" type="text" value={user?.email} disabled />
+      </div>
+    </div>
+  );
 }
