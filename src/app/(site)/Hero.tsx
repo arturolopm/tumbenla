@@ -47,7 +47,7 @@ const HeroSection = () => {
                 "https://pbs.twimg.com/profile_images/1855635236509388800/PFMQ949e_400x400.jpg",
                 "https://pbs.twimg.com/profile_images/933422170499371008/drhhIn0z_400x400.jpg",
                 "https://pbs.twimg.com/profile_images/1870096957370445827/PQrjfHGt_400x400.jpg",
-                "https://pbs.twimg.com/profile_images/1850639995444371456/9rbx-lYe_400x400.jpg",
+                "https://pbs.twimg.com/profile_images/1933139628044832768/8dSUDBN7_400x400.jpg",
               ].map((avatar, index) => (
                 <img
                   key={index}
