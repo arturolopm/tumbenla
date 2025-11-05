@@ -15,6 +15,7 @@ import { type NextRequest } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get("next") ?? "/dashboard";
 
   if (token_hash && type) {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
 
     const { error } = await supabase.auth.verifyOtp({
       type,

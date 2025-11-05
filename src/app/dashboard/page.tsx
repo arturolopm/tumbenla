@@ -1,8 +1,10 @@
 import AccountForm from "./account-form";
 import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 export default async function Dashboard() {
-  const supabase = await createClient();
+  const cookieStore = await cookies();
+  const supabase = await createClient(cookieStore);
 
   const {
     data: { user },
