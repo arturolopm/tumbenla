@@ -125,4 +125,4 @@ For people who want to contribute, please refer to [CONTRIBUTING.md](CONTRIBUTIN
 
 ---
 
-Cooked for you with ❤️ by [Idee8](https://idee8.agency)
+Cooked for you with ❤️ by [Revoks](https://revoks.dev)
