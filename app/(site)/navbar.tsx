@@ -42,7 +42,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          <div className='flex-1'></div>
+          <div className='flex-1' />
 
           <div className='flex items-center gap-6'>
             <div className='hidden items-center gap-6 md:flex'>
@@ -78,7 +78,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            <div className='hidden h-6 w-[1px] bg-black/30 md:block'></div>
+            <div className='hidden h-6 w-px bg-black/30 md:block' />
 
             <a
               href={`https://github.com/${repo}`}
