@@ -4,6 +4,7 @@ const EnvSchema = z.object({
   // generic stuff
   NODE_ENV: z.string().default('development'),
   DATABASE_URL: z.url().default('postgres://postgres@postgres:localhost:5432/shipfree'),
+  NEXT_PUBLIC_APP_URL: z.url().default('http://localhost:3000'),
 
   // observability (optional)
   SENTRY_DSN: z.string().optional(),
