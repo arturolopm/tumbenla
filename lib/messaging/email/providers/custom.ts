@@ -29,30 +29,30 @@
  * 2. Update the registry to not include custom provider
  */
 
-import type { EmailProvider } from "../types";
+import type { EmailProvider } from '../types'
 
-let customProvider: EmailProvider | null = null;
+let customProvider: EmailProvider | null = null
 
 /**
  * Set a custom email provider at runtime.
  * This allows you to inject any provider implementation.
  */
 export function setCustomEmailProvider(provider: EmailProvider): void {
-	customProvider = provider;
+  customProvider = provider
 }
 
 /**
  * Get the currently registered custom provider.
  */
 export function getCustomProvider(): EmailProvider | null {
-	return customProvider;
+  return customProvider
 }
 
 /**
  * Clear the custom email provider.
  */
 export function clearCustomProvider(): void {
-	customProvider = null;
+  customProvider = null
 }
 
 /**
@@ -60,5 +60,5 @@ export function clearCustomProvider(): void {
  * Returns null if no custom provider has been set.
  */
 export function createCustomProvider(): EmailProvider | null {
-	return customProvider;
+  return customProvider
 }

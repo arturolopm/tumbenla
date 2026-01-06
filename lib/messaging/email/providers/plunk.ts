@@ -16,57 +16,53 @@
  * 3. Remove PLUNK_* from your .env
  */
 
-import type { Plunk as PlunkClient } from "@plunk/node";
+import type { Plunk as PlunkClient } from '@plunk/node'
 
-import { env } from "@/config/env-runtime";
-import type {
-	EmailProvider,
-	ProcessedEmailData,
-	SendEmailResult,
-} from "../types";
-import { hasNonEmpty } from "../utils";
+import { env } from '@/config/env-runtime'
+import type { EmailProvider, ProcessedEmailData, SendEmailResult } from '../types'
+import { hasNonEmpty } from '../utils'
 
-let client: PlunkClient | null = null;
+let client: PlunkClient | null = null
 
 function getClient(): PlunkClient | null {
-	if (client) return client;
+  if (client) return client
 
-	const apiKey = env.PLUNK_API_KEY;
-	if (!hasNonEmpty(apiKey)) return null;
+  const apiKey = env.PLUNK_API_KEY
+  if (!hasNonEmpty(apiKey)) return null
 
-	try {
-		// Dynamic import so plunk is optional
-		// eslint-disable-next-line @typescript-eslint/no-var-requires
-		const { Plunk } = require("@plunk/node") as {
-			Plunk: new (key: string) => PlunkClient;
-		};
-		client = new Plunk(apiKey);
-		return client;
-	} catch (error) {
-		console.warn("Plunk client creation failed:", error);
-		return null;
-	}
+  try {
+    // Dynamic import so plunk is optional
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { Plunk } = require('@plunk/node') as {
+      Plunk: new (key: string) => PlunkClient
+    }
+    client = new Plunk(apiKey)
+    return client
+  } catch (error) {
+    console.warn('Plunk client creation failed:', error)
+    return null
+  }
 }
 
 async function send(data: ProcessedEmailData): Promise<SendEmailResult> {
-	const plunk = getClient();
-	if (!plunk) {
-		throw new Error("Plunk not configured");
-	}
+  const plunk = getClient()
+  if (!plunk) {
+    throw new Error('Plunk not configured')
+  }
 
-	// Plunk focuses on HTML; we pass HTML or text fallback
-	const response = await plunk.emails.send({
-		to: Array.isArray(data.to) ? data.to : [data.to],
-		subject: data.subject,
-		body: data.html || data.text || "",
-		from: data.senderEmail,
-	} as any);
+  // Plunk focuses on HTML; we pass HTML or text fallback
+  const response = await plunk.emails.send({
+    to: Array.isArray(data.to) ? data.to : [data.to],
+    subject: data.subject,
+    body: data.html || data.text || '',
+    from: data.senderEmail,
+  } as any)
 
-	return {
-		success: true,
-		message: "Email sent successfully via Plunk",
-		data: response,
-	};
+  return {
+    success: true,
+    message: 'Email sent successfully via Plunk',
+    data: response,
+  }
 }
 
 /**
@@ -77,11 +73,11 @@ async function send(data: ProcessedEmailData): Promise<SendEmailResult> {
  * Batch sends will fall back to individual sends.
  */
 export function createPlunkProvider(): EmailProvider | null {
-	if (!getClient()) return null;
+  if (!getClient()) return null
 
-	return {
-		name: "plunk",
-		send,
-		// No native batch support - will use fallback sequential sending
-	};
+  return {
+    name: 'plunk',
+    send,
+    // No native batch support - will use fallback sequential sending
+  }
 }

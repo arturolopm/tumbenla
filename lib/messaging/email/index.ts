@@ -39,42 +39,42 @@
 
 // Core mailer functions
 export {
-	sendEmail,
-	sendBatchEmails,
-	hasEmailService,
-	getActiveProviderName,
-} from "./mailer";
+  sendEmail,
+  sendBatchEmails,
+  hasEmailService,
+  getActiveProviderName,
+} from './mailer'
 
 // Types
 export type {
-	EmailType,
-	EmailProviderName,
-	EmailAttachment,
-	UnsubscribeInfo,
-	EmailOptions,
-	BatchEmailOptions,
-	SendEmailResult,
-	BatchSendEmailResult,
-	EmailProvider,
-	ProcessedEmailData,
-	ProviderFactory,
-} from "./types";
+  EmailType,
+  EmailProviderName,
+  EmailAttachment,
+  UnsubscribeInfo,
+  EmailOptions,
+  BatchEmailOptions,
+  SendEmailResult,
+  BatchSendEmailResult,
+  EmailProvider,
+  ProcessedEmailData,
+  ProviderFactory,
+} from './types'
 
 // Provider management (for custom provider injection)
-export { setCustomEmailProvider, clearCustomProvider } from "./providers";
+export { setCustomEmailProvider, clearCustomProvider } from './providers'
 
 // Provider utilities (for advanced use cases)
 export {
-	getProvider,
-	getFirstAvailableProvider,
-	getConfiguredProviders,
-	hasRealProvider,
-	providerPreferenceOrder,
-} from "./providers";
+  getProvider,
+  getFirstAvailableProvider,
+  getConfiguredProviders,
+  hasRealProvider,
+  providerPreferenceOrder,
+} from './providers'
 
 // Validation utilities
-export { validateEmail, quickValidateEmail } from "./validation";
-export type { EmailValidationResult } from "./validation";
+export { validateEmail, quickValidateEmail } from './validation'
+export type { EmailValidationResult } from './validation'
 
 // Utility functions
-export { getFromEmailAddress, hasNonEmpty } from "./utils";
+export { getFromEmailAddress, hasNonEmpty } from './utils'

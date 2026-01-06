@@ -1,3 +1,3 @@
-import { env } from "@/config/env-runtime";
+import { env } from '@/config/env-runtime'
 
-export const isProd =  env.NODE_ENV === 'production'
+export const isProd = env.NODE_ENV === 'production'

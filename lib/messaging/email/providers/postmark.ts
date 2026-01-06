@@ -16,116 +16,111 @@
  * 3. Remove POSTMARK_* from your .env
  */
 
-import type { ServerClient as PostmarkClient } from "postmark";
+import type { ServerClient as PostmarkClient } from 'postmark'
 
-import { env } from "@/config/env-runtime";
+import { env } from '@/config/env-runtime'
 import type {
-	EmailOptions,
-	EmailProvider,
-	ProcessedEmailData,
-	SendEmailResult,
-	BatchSendEmailResult,
-} from "../types";
-import { getFromEmailAddress, hasNonEmpty } from "../utils";
+  EmailOptions,
+  EmailProvider,
+  ProcessedEmailData,
+  SendEmailResult,
+  BatchSendEmailResult,
+} from '../types'
+import { getFromEmailAddress, hasNonEmpty } from '../utils'
 
-let client: PostmarkClient | null = null;
+let client: PostmarkClient | null = null
 
 function getClient(): PostmarkClient | null {
-	if (client) return client;
+  if (client) return client
 
-	const apiToken = env.POSTMARK_API_TOKEN;
-	if (!hasNonEmpty(apiToken)) return null;
+  const apiToken = env.POSTMARK_API_TOKEN
+  if (!hasNonEmpty(apiToken)) return null
 
-	try {
-		// Dynamic import so postmark is optional
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const { ServerClient } = require("postmark") as {
-			ServerClient: new (token: string) => PostmarkClient;
-		};
-		client = new ServerClient(apiToken);
-		return client;
-	} catch (error) {
-		console.warn("Postmark client creation failed:", error);
-		return null;
-	}
+  try {
+    // Dynamic import so postmark is optional
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ServerClient } = require('postmark') as {
+      ServerClient: new (token: string) => PostmarkClient
+    }
+    client = new ServerClient(apiToken)
+    return client
+  } catch (error) {
+    console.warn('Postmark client creation failed:', error)
+    return null
+  }
 }
 
 async function send(data: ProcessedEmailData): Promise<SendEmailResult> {
-	const postmark = getClient();
-	if (!postmark) {
-		throw new Error("Postmark not configured");
-	}
+  const postmark = getClient()
+  if (!postmark) {
+    throw new Error('Postmark not configured')
+  }
 
-	const response = await postmark.sendEmail({
-		From: data.senderEmail,
-		To: Array.isArray(data.to) ? data.to.join(",") : data.to,
-		Subject: data.subject,
-		HtmlBody: data.html,
-		TextBody: data.text,
-		Headers:
-			Object.keys(data.headers).length > 0
-				? Object.entries(data.headers).map(([Name, Value]) => ({
-						Name,
-						Value,
-					}))
-				: undefined,
-		ReplyTo: data.replyTo,
-		Attachments: data.attachments?.map((att) => ({
-			Name: att.filename,
-			Content:
-				typeof att.content === "string"
-					? att.content
-					: att.content.toString("base64"),
-			ContentType: att.contentType,
-			ContentID: att.disposition === "inline" ? att.filename : undefined,
-		})),
-	});
+  const response = await postmark.sendEmail({
+    From: data.senderEmail,
+    To: Array.isArray(data.to) ? data.to.join(',') : data.to,
+    Subject: data.subject,
+    HtmlBody: data.html,
+    TextBody: data.text,
+    Headers:
+      Object.keys(data.headers).length > 0
+        ? Object.entries(data.headers).map(([Name, Value]) => ({
+            Name,
+            Value,
+          }))
+        : undefined,
+    ReplyTo: data.replyTo,
+    Attachments: data.attachments?.map((att) => ({
+      Name: att.filename,
+      Content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
+      ContentType: att.contentType,
+      ContentID: att.disposition === 'inline' ? att.filename : undefined,
+    })),
+  })
 
-	return {
-		success: true,
-		message: "Email sent successfully via Postmark",
-		data: response,
-	};
+  return {
+    success: true,
+    message: 'Email sent successfully via Postmark',
+    data: response,
+  }
 }
 
-async function sendBatch(
-	emails: EmailOptions[],
-): Promise<BatchSendEmailResult> {
-	const postmark = getClient();
-	if (!postmark) {
-		throw new Error("Postmark not configured");
-	}
+async function sendBatch(emails: EmailOptions[]): Promise<BatchSendEmailResult> {
+  const postmark = getClient()
+  if (!postmark) {
+    throw new Error('Postmark not configured')
+  }
 
-	if (emails.length === 0) {
-		return {
-			success: true,
-			message: "No emails to send",
-			results: [],
-			data: { count: 0 },
-		};
-	}
+  if (emails.length === 0) {
+    return {
+      success: true,
+      message: 'No emails to send',
+      results: [],
+      data: { count: 0 },
+    }
+  }
 
-	const batch = emails.map((email) => ({
-		From: email.from || getFromEmailAddress(),
-		To: Array.isArray(email.to) ? email.to.join(",") : email.to,
-		Subject: email.subject,
-		HtmlBody: email.html,
-		TextBody: email.text,
-	}));
+  const batch = emails.map((email) => ({
+    From: email.from || getFromEmailAddress(),
+    To: Array.isArray(email.to) ? email.to.join(',') : email.to,
+    Subject: email.subject,
+    HtmlBody: email.html,
+    TextBody: email.text,
+  }))
 
-	const response = await postmark.sendEmailBatch(batch);
+  const response = await postmark.sendEmailBatch(batch)
 
-	const results: SendEmailResult[] = response.map(() => ({
-		success: true,
-		message: "Email sent successfully via Postmark batch",
-	}));
+  const results: SendEmailResult[] = response.map(() => ({
+    success: true,
+    message: 'Email sent successfully via Postmark batch',
+  }))
 
-	return {
-		success: true,
-		message: "All batch emails sent successfully via Postmark",
-		results,
-		data: { count: emails.length },
-	};
+  return {
+    success: true,
+    message: 'All batch emails sent successfully via Postmark',
+    results,
+    data: { count: emails.length },
+  }
 }
 
 /**
@@ -133,11 +128,11 @@ async function sendBatch(
  * Returns null if not configured.
  */
 export function createPostmarkProvider(): EmailProvider | null {
-	if (!getClient()) return null;
+  if (!getClient()) return null
 
-	return {
-		name: "postmark",
-		send,
-		sendBatch,
-	};
+  return {
+    name: 'postmark',
+    send,
+    sendBatch,
+  }
 }

@@ -16,54 +16,49 @@
  * 3. Remove the provider name from EmailProviderName type in types.ts
  */
 
-import type { EmailProvider, EmailProviderName } from "../types";
+import type { EmailProvider, EmailProviderName } from '../types'
 
-import { createResendProvider } from "./resend";
-import { createPostmarkProvider } from "./postmark";
-import { createNodemailerProvider } from "./nodemailer";
-import { createPlunkProvider } from "./plunk";
-import {
-	createCustomProvider,
-	setCustomEmailProvider,
-	clearCustomProvider,
-} from "./custom";
-import { createLogProvider } from "./log";
+import { createResendProvider } from './resend'
+import { createPostmarkProvider } from './postmark'
+import { createNodemailerProvider } from './nodemailer'
+import { createPlunkProvider } from './plunk'
+import { createCustomProvider, setCustomEmailProvider, clearCustomProvider } from './custom'
+import { createLogProvider } from './log'
 
 /**
  * Registry of all available provider factories.
  * Each factory returns EmailProvider | null.
  */
-const providerFactories: Record<EmailProviderName, () => EmailProvider | null> =
-	{
-		resend: createResendProvider,
-		postmark: createPostmarkProvider,
-		nodemailer: createNodemailerProvider,
-		plunk: createPlunkProvider,
-		custom: createCustomProvider,
-		log: createLogProvider,
-	};
+const providerFactories: Record<EmailProviderName, () => EmailProvider | null> = {
+  resend: createResendProvider,
+  postmark: createPostmarkProvider,
+  nodemailer: createNodemailerProvider,
+  plunk: createPlunkProvider,
+  custom: createCustomProvider,
+  log: createLogProvider,
+}
 
 /**
  * Default order of provider preference when auto-discovering.
  * The first configured provider will be used.
  */
 export const providerPreferenceOrder: EmailProviderName[] = [
-	"resend",
-	"postmark",
-	"nodemailer",
-	"plunk",
-	"custom",
-	"log",
-];
+  'resend',
+  'postmark',
+  'nodemailer',
+  'plunk',
+  'custom',
+  'log',
+]
 
 /**
  * Get a specific provider by name.
  * Returns null if the provider is not configured.
  */
 export function getProvider(name: EmailProviderName): EmailProvider | null {
-	const factory = providerFactories[name];
-	if (!factory) return null;
-	return factory();
+  const factory = providerFactories[name]
+  if (!factory) return null
+  return factory()
 }
 
 /**
@@ -71,12 +66,12 @@ export function getProvider(name: EmailProviderName): EmailProvider | null {
  * Falls back to log provider if none are configured.
  */
 export function getFirstAvailableProvider(): EmailProvider {
-	for (const name of providerPreferenceOrder) {
-		const provider = getProvider(name);
-		if (provider) return provider;
-	}
-	// This should never happen since log provider always returns a valid provider
-	return createLogProvider();
+  for (const name of providerPreferenceOrder) {
+    const provider = getProvider(name)
+    if (provider) return provider
+  }
+  // This should never happen since log provider always returns a valid provider
+  return createLogProvider()
 }
 
 /**
@@ -84,15 +79,15 @@ export function getFirstAvailableProvider(): EmailProvider {
  * Useful for debugging or provider selection UI.
  */
 export function getConfiguredProviders(): EmailProvider[] {
-	const providers: EmailProvider[] = [];
-	for (const name of providerPreferenceOrder) {
-		if (name === "log") continue; // Skip log provider in this list
-		const provider = getProvider(name);
-		if (provider) {
-			providers.push(provider);
-		}
-	}
-	return providers;
+  const providers: EmailProvider[] = []
+  for (const name of providerPreferenceOrder) {
+    if (name === 'log') continue // Skip log provider in this list
+    const provider = getProvider(name)
+    if (provider) {
+      providers.push(provider)
+    }
+  }
+  return providers
 }
 
 /**
@@ -100,22 +95,22 @@ export function getConfiguredProviders(): EmailProvider[] {
  * Returns false if only the log provider is available.
  */
 export function hasRealProvider(): boolean {
-	for (const name of providerPreferenceOrder) {
-		if (name === "log") continue;
-		const provider = getProvider(name);
-		if (provider) return true;
-	}
-	return false;
+  for (const name of providerPreferenceOrder) {
+    if (name === 'log') continue
+    const provider = getProvider(name)
+    if (provider) return true
+  }
+  return false
 }
 
 // Re-export provider factories for direct access
 export {
-	createResendProvider,
-	createPostmarkProvider,
-	createNodemailerProvider,
-	createPlunkProvider,
-	createCustomProvider,
-	createLogProvider,
-	setCustomEmailProvider,
-	clearCustomProvider,
-};
+  createResendProvider,
+  createPostmarkProvider,
+  createNodemailerProvider,
+  createPlunkProvider,
+  createCustomProvider,
+  createLogProvider,
+  setCustomEmailProvider,
+  clearCustomProvider,
+}
