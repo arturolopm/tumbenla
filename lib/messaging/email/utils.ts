@@ -2,7 +2,7 @@
  * Email utility functions.
  */
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 
 /**
  * Check if a string value is non-empty and not a placeholder.

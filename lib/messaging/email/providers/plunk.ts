@@ -16,26 +16,21 @@
  * 3. Remove PLUNK_* from your .env
  */
 
-import type { Plunk as PlunkClient } from '@plunk/node'
+import Plunk from '@plunk/node'
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import type { EmailProvider, ProcessedEmailData, SendEmailResult } from '../types'
 import { hasNonEmpty } from '../utils'
 
-let client: PlunkClient | null = null
+let client: Plunk | null = null
 
-function getClient(): PlunkClient | null {
+function getClient(): Plunk | null {
   if (client) return client
 
   const apiKey = env.PLUNK_API_KEY
   if (!hasNonEmpty(apiKey)) return null
 
   try {
-    // Dynamic import so plunk is optional
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Plunk } = require('@plunk/node') as {
-      Plunk: new (key: string) => PlunkClient
-    }
     client = new Plunk(apiKey)
     return client
   } catch (error) {
@@ -56,7 +51,7 @@ async function send(data: ProcessedEmailData): Promise<SendEmailResult> {
     subject: data.subject,
     body: data.html || data.text || '',
     from: data.senderEmail,
-  } as any)
+  })
 
   return {
     success: true,

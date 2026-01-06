@@ -5,7 +5,7 @@ import { emailOTP } from 'better-auth/plugins'
 
 import { db } from '@/database'
 import { isProd } from '@/lib/constants'
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import { getBaseUrl } from '@/lib/utils'
 import { getEmailSubject, renderOTPEmail, renderWelcomeEmail } from '@/components/emails'
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
@@ -37,14 +37,38 @@ export const auth = betterAuth({
   },
 
   socialProviders: {
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      scopes: [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-      ],
-    },
+    ...(env.GOOGLE_CLIENT_ID &&
+      env.GOOGLE_CLIENT_SECRET && {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          scope: ['email', 'profile'],
+        },
+      }),
+    ...(env.GITHUB_CLIENT_ID &&
+      env.GITHUB_CLIENT_SECRET && {
+        github: {
+          clientId: env.GITHUB_CLIENT_ID,
+          clientSecret: env.GITHUB_CLIENT_SECRET,
+          scope: ['user:email'],
+        },
+      }),
+    ...(env.MICROSOFT_CLIENT_ID &&
+      env.MICROSOFT_CLIENT_SECRET && {
+        microsoft: {
+          clientId: env.MICROSOFT_CLIENT_ID,
+          clientSecret: env.MICROSOFT_CLIENT_SECRET,
+          tenantId: env.MICROSOFT_TENANT_ID || 'common',
+        },
+      }),
+    ...(env.FACEBOOK_CLIENT_ID &&
+      env.FACEBOOK_CLIENT_SECRET && {
+        facebook: {
+          clientId: env.FACEBOOK_CLIENT_ID,
+          clientSecret: env.FACEBOOK_CLIENT_SECRET,
+          scope: ['email', 'public_profile'],
+        },
+      }),
   },
 
   emailVerification: {
