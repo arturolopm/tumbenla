@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { client } from '@/lib/auth/auth-client'
-import { Field, FieldControl, FieldLabel } from '@/components/ui/field'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -79,20 +79,18 @@ export default function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
             <Field>
               <FieldLabel htmlFor='email'>Email</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='email'
-                    type='email'
-                    placeholder='name@example.com'
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Mail className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='email'
+                  type='email'
+                  placeholder='name@example.com'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Mail className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
             </Field>
 
             <Button type='submit' disabled={isPending} className='w-full'>

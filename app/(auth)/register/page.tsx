@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signUp } from '@/lib/auth/auth-client'
-import { Field, FieldControl, FieldLabel } from '@/components/ui/field'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -100,75 +100,67 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
             <Field>
               <FieldLabel htmlFor='name'>Name</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='name'
-                    type='text'
-                    placeholder='John Doe'
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <User className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='name'
+                  type='text'
+                  placeholder='John Doe'
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <User className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
             </Field>
 
             <Field>
               <FieldLabel htmlFor='email'>Email</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='email'
-                    type='email'
-                    placeholder='name@example.com'
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Mail className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='email'
+                  type='email'
+                  placeholder='name@example.com'
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Mail className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
             </Field>
 
             <Field>
               <FieldLabel htmlFor='password'>Password</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='password'
-                    type='password'
-                    placeholder='Create a password'
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='password'
+                  type='password'
+                  placeholder='Create a password'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
               <p className='text-xs text-muted-foreground mt-1'>Must be at least 8 characters</p>
             </Field>
 
             <Field>
               <FieldLabel htmlFor='confirmPassword'>Confirm Password</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='confirmPassword'
-                    type='password'
-                    placeholder='Confirm your password'
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='confirmPassword'
+                  type='password'
+                  placeholder='Confirm your password'
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
             </Field>
 
             <Button type='submit' disabled={isPending} className='w-full'>

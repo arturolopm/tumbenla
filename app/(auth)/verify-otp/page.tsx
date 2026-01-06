@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { client } from '@/lib/auth/auth-client'
-import { Field, FieldControl, FieldLabel } from '@/components/ui/field'
+import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
@@ -100,56 +100,50 @@ export default function VerifyOtpPage() {
           <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
             <Field>
               <FieldLabel htmlFor='otp'>Verification code</FieldLabel>
-              <FieldControl>
-                <Input
-                  id='otp'
-                  type='text'
-                  placeholder='Enter 6-digit code'
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  maxLength={6}
-                  required
-                  disabled={isPending}
-                  className='text-center text-lg tracking-widest'
-                />
-              </FieldControl>
+              <Input
+                id='otp'
+                type='text'
+                placeholder='Enter 6-digit code'
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                required
+                disabled={isPending}
+                className='text-center text-lg tracking-widest'
+              />
             </Field>
 
             <Field>
               <FieldLabel htmlFor='newPassword'>New password</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='newPassword'
-                    type='password'
-                    placeholder='Create new password'
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='newPassword'
+                  type='password'
+                  placeholder='Create new password'
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
               <p className='text-xs text-muted-foreground mt-1'>Must be at least 8 characters</p>
             </Field>
 
             <Field>
               <FieldLabel htmlFor='confirmPassword'>Confirm new password</FieldLabel>
-              <FieldControl>
-                <div className='relative'>
-                  <Input
-                    id='confirmPassword'
-                    type='password'
-                    placeholder='Confirm new password'
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                  <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                </div>
-              </FieldControl>
+              <div className='relative'>
+                <Input
+                  id='confirmPassword'
+                  type='password'
+                  placeholder='Confirm new password'
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  disabled={isPending}
+                />
+                <Lock className='absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+              </div>
             </Field>
 
             <Button type='submit' disabled={isPending} className='w-full'>
@@ -163,7 +157,7 @@ export default function VerifyOtpPage() {
             className='text-sm text-muted-foreground hover:text-foreground flex items-center gap-1'
           >
             <ArrowLeft className='h-4 w-4' />
-            Didn't receive the code?
+            Did not receive the code?
           </a>
         </CardContent>
       </Card>
