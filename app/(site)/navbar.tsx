@@ -103,7 +103,7 @@ export default function Navbar() {
               )}
             </a>
 
-           <Button>Get Pro</Button>
+           <Button>Upgrade to Pro</Button>
 
             <button
               type="button"
