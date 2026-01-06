@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Zap, X, Menu } from "lucide-react";
+import { X, Menu } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getGitHubStars } from "@/utils/github";
 import { Button } from "@/components/ui/button"
@@ -32,11 +32,10 @@ export default function Navbar() {
         <div className="flex h-14 items-center justify-between gap-8 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2">
-              <Zap
-                className="h-6 w-6"
-                fill="#FFBE18"
-                stroke="black"
-                strokeWidth={1.4}
+              <img
+                src="/image.png"
+                alt="ShipFree Logo"
+                className="h-6 w-6 object-contain"
               />
               <span className="text-base font-semibold text-foreground">
                 ShipFree
