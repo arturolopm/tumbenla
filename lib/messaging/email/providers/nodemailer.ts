@@ -47,8 +47,6 @@ function getTransporter(): nodemailer.Transporter | null {
   }
 
   try {
-    // Dynamic import so nodemailer is optional
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const nodemailerModule = require('nodemailer') as typeof nodemailer
     transporter = nodemailerModule.createTransport({
       host: env.SMTP_HOST,

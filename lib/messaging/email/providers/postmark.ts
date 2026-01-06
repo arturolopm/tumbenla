@@ -37,8 +37,6 @@ function getClient(): PostmarkClient | null {
   if (!hasNonEmpty(apiToken)) return null
 
   try {
-    // Dynamic import so postmark is optional
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { ServerClient } = require('postmark') as {
       ServerClient: new (token: string) => PostmarkClient
     }
@@ -74,7 +72,7 @@ async function send(data: ProcessedEmailData): Promise<SendEmailResult> {
       Name: att.filename,
       Content: typeof att.content === 'string' ? att.content : att.content.toString('base64'),
       ContentType: att.contentType,
-      ContentID: att.disposition === 'inline' ? att.filename : undefined,
+      ContentID: att.disposition === 'inline' ? att.filename : null,
     })),
   })
 
