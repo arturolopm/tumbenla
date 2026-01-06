@@ -37,7 +37,7 @@ export default function Navbar() {
                 alt="ShipFree Logo"
                 className="h-6 w-6 object-contain"
               />
-              <span className="text-base font-semibold text-foreground">
+              <span className="text-base font-semibold text-foreground" style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}>
                 ShipFree
               </span>
             </Link>
