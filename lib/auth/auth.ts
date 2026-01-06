@@ -36,16 +36,40 @@ export const auth = betterAuth({
     freshAge: 60 * 60, // 1 hour (or set to 0 to disable completely)
   },
 
-  socialProviders:
-    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
-      ? {
-          google: {
-            clientId: env.GOOGLE_CLIENT_ID,
-            clientSecret: env.GOOGLE_CLIENT_SECRET,
-            scope: ['email', 'profile'],
-          },
-        }
-      : {},
+  socialProviders: {
+    ...(env.GOOGLE_CLIENT_ID &&
+      env.GOOGLE_CLIENT_SECRET && {
+        google: {
+          clientId: env.GOOGLE_CLIENT_ID,
+          clientSecret: env.GOOGLE_CLIENT_SECRET,
+          scope: ['email', 'profile'],
+        },
+      }),
+    ...(env.GITHUB_CLIENT_ID &&
+      env.GITHUB_CLIENT_SECRET && {
+        github: {
+          clientId: env.GITHUB_CLIENT_ID,
+          clientSecret: env.GITHUB_CLIENT_SECRET,
+          scope: ['user:email'],
+        },
+      }),
+    ...(env.MICROSOFT_CLIENT_ID &&
+      env.MICROSOFT_CLIENT_SECRET && {
+        microsoft: {
+          clientId: env.MICROSOFT_CLIENT_ID,
+          clientSecret: env.MICROSOFT_CLIENT_SECRET,
+          tenantId: env.MICROSOFT_TENANT_ID || 'common',
+        },
+      }),
+    ...(env.FACEBOOK_CLIENT_ID &&
+      env.FACEBOOK_CLIENT_SECRET && {
+        facebook: {
+          clientId: env.FACEBOOK_CLIENT_ID,
+          clientSecret: env.FACEBOOK_CLIENT_SECRET,
+          scope: ['email', 'public_profile'],
+        },
+      }),
+  },
 
   emailVerification: {
     autoSignInAfterVerification: true,
