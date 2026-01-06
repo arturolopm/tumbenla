@@ -28,7 +28,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className='fixed inset-x-0 top-0 z-10 border-b border-black/5 bg-[#F4F4F5]'>
+      <nav className='fixed inset-x-0 top-0 z-10 border-b border-[#E4E4E7] bg-[#F4F4F5]'>
         <div className="flex h-14 items-center justify-between gap-8 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center gap-2">
