@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { X, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { getGitHubStars } from '@/utils/github'
+import { getGitHubStars } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 export default function Navbar() {
