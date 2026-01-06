@@ -6,6 +6,14 @@ import { getBaseUrl } from '../utils'
 export const client = createAuthClient({
   baseURL: getBaseUrl(),
   plugins: [emailOTPClient()],
+  fetchOptions: {
+    onError(error) {
+      console.error('Auth error:', error)
+    },
+    onSuccess(data) {
+      console.log('Auth action successful:', data)
+    },
+  },
 })
 
-export const { signIn, signUp, signOut } = client
+export const { signIn, signUp, signOut, useSession } = client
