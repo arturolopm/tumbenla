@@ -19,7 +19,7 @@
 
 import { Resend } from 'resend'
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import type {
   EmailOptions,
   EmailProvider,

@@ -1,4 +1,4 @@
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import { isProd } from '@/lib/constants'
 
 /**

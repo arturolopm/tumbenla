@@ -22,7 +22,7 @@
 
 import type nodemailer from 'nodemailer'
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import type {
   EmailOptions,
   EmailProvider,

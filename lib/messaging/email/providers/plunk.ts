@@ -18,7 +18,7 @@
 
 import type { Plunk as PlunkClient } from '@plunk/node'
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import type { EmailProvider, ProcessedEmailData, SendEmailResult } from '../types'
 import { hasNonEmpty } from '../utils'
 

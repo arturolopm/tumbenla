@@ -18,7 +18,7 @@
 
 import type { ServerClient as PostmarkClient } from 'postmark'
 
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import type {
   EmailOptions,
   EmailProvider,

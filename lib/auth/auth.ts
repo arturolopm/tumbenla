@@ -5,7 +5,7 @@ import { emailOTP } from 'better-auth/plugins'
 
 import { db } from '@/database'
 import { isProd } from '@/lib/constants'
-import { env } from '@/config/env-runtime'
+import { env } from '@/config/env'
 import { getBaseUrl } from '@/lib/utils'
 import { getEmailSubject, renderOTPEmail, renderWelcomeEmail } from '@/components/emails'
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
@@ -36,16 +36,16 @@ export const auth = betterAuth({
     freshAge: 60 * 60, // 1 hour (or set to 0 to disable completely)
   },
 
-  socialProviders: {
-    google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
-      scopes: [
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-      ],
-    },
-  },
+  socialProviders:
+    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: env.GOOGLE_CLIENT_ID,
+            clientSecret: env.GOOGLE_CLIENT_SECRET,
+            scope: ['email', 'profile'],
+          },
+        }
+      : {},
 
   emailVerification: {
     autoSignInAfterVerification: true,
