@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, Bricolage_Grotesque } from 'next/font/google'
+
 import './globals.css'
+import { HydrationErrorHandler } from '@/app/_shell/hydration-error-handler'
+import { QueryProvider } from '@/app/_shell/providers/query-provider'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -32,7 +35,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bricolageGrotesque.variable} font-sans antialiased`}
       >
-        {children}
+        <HydrationErrorHandler />
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   )
