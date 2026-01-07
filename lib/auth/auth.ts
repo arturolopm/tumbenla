@@ -4,7 +4,7 @@ import { nextCookies } from 'better-auth/next-js'
 import { emailOTP } from 'better-auth/plugins'
 
 import { db } from '@/database'
-import { isProd } from '@/lib/constants'
+import { APP_COOKIE_NAME, isProd } from '@/lib/constants'
 import { env } from '@/config/env'
 import { getBaseUrl } from '@/lib/utils'
 import { getEmailSubject, renderOTPEmail, renderWelcomeEmail } from '@/components/emails'
@@ -18,7 +18,7 @@ export const auth = betterAuth({
   }),
 
   advanced: {
-    cookiePrefix: 'shipfree', // Change this to your cookie prefix
+    cookiePrefix: APP_COOKIE_NAME, // Change this to your cookie prefix
     crossSubDomainCookies: {
       enabled: !isProd,
       domain: '.shipfree.app', // Change this to your domain, if you are using a custom domain
