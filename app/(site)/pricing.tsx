@@ -50,9 +50,15 @@ export default function Pricing() {
           <div className="flex flex-col p-8 border-r border-[#E4E4E7]">
             <div className="mb-6">
               <h3 className="text-2xl font-semibold mb-4">Community</h3>
-              <div className="mb-6">
+              <div className="mb-4">
                 <span className="text-4xl font-semibold font-mono">$0</span>
               </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                For learners, early builders & indie devs who love to experiment.
+              </p>
+              <p className="text-xs font-medium text-foreground uppercase" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+                INCLUDING
+              </p>
             </div>
             <ul className="space-y-3 mb-8 flex-1">
               {communityFeatures.map((feature, index) => (
@@ -90,12 +96,18 @@ export default function Pricing() {
                   Most popular
                 </Badge>
               </div>
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm text-muted-foreground line-through font-mono">$150</span>
                   <span className="text-4xl font-semibold font-mono">$90</span>
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                For founders & builders ready to ship real products and make money.
+              </p>
+              <p className="text-xs font-medium text-foreground uppercase" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+                INCLUDING
+              </p>
             </div>
             <ul className="space-y-3 mb-8 flex-1">
               {premiumFeatures.map((feature, index) => (
