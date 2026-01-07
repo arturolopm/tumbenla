@@ -1,7 +1,7 @@
 'use client'
 
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion'
-import { ChevronDownIcon } from 'lucide-react'
+import { Plus, Minus } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -24,14 +24,17 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
     <AccordionPrimitive.Header className='flex'>
       <AccordionPrimitive.Trigger
         className={cn(
-          'flex flex-1 cursor-pointer items-start justify-between gap-4 rounded-md py-4 text-left font-medium text-sm outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64 [&[data-panel-open]>svg]:rotate-180',
+          'group accordion-trigger flex flex-1 cursor-pointer items-start justify-between gap-4 rounded-md py-4 text-left font-medium text-sm outline-none transition-all focus-visible:ring-[3px] focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-64',
           className
         )}
         data-slot='accordion-trigger'
         {...props}
       >
         {children}
-        <ChevronDownIcon className='pointer-events-none size-4 shrink-0 translate-y-0.5 opacity-80 transition-transform duration-200 ease-in-out' />
+        <div className="relative size-4 shrink-0 translate-y-0.5">
+          <Plus className='pointer-events-none size-4 opacity-80 transition-opacity duration-200 ease-in-out group-data-[panel-open]:opacity-0' />
+          <Minus className='pointer-events-none size-4 opacity-0 absolute inset-0 transition-opacity duration-200 ease-in-out group-data-[panel-open]:opacity-80' />
+        </div>
       </AccordionPrimitive.Trigger>
     </AccordionPrimitive.Header>
   )

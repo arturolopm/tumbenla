@@ -1,6 +1,7 @@
 import Navbar from "./(site)/navbar";
 import Hero from "./(site)/hero";
 import Pricing from "./(site)/pricing";
+import FAQ from "./(site)/faq";
 
 export default function Page() {
   return (
@@ -8,6 +9,7 @@ export default function Page() {
       <Navbar />
       <Hero />
       <Pricing />
+      <FAQ />
     </div>
   );
 }
