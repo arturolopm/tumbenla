@@ -17,6 +17,8 @@ export const env = createEnv({
     R2_SECRET_ACCESS_KEY: z.string().optional(),
     R2_BUCKET_URL: z.string().optional(),
     R2_STORAGE_BASE_URL: z.string().optional(),
+    R2_PUBLIC_BUCKET: z.string().optional(),
+    R2_PRIVATE_BUCKET: z.string().optional(),
 
     // Optional: Email providers
     EMAIL_PROVIDER: z
@@ -60,6 +62,8 @@ export const env = createEnv({
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_BUCKET_URL: process.env.R2_BUCKET_URL,
     R2_STORAGE_BASE_URL: process.env.R2_STORAGE_BASE_URL,
+    R2_PUBLIC_BUCKET: process.env.R2_PUBLIC_BUCKET,
+    R2_PRIVATE_BUCKET: process.env.R2_PRIVATE_BUCKET,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     RESEND_DOMAIN: process.env.RESEND_DOMAIN,
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,
