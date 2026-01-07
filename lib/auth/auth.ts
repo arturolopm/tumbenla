@@ -1,14 +1,20 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { nextCookies } from 'better-auth/next-js'
-import { emailOTP } from 'better-auth/plugins'
+import { emailOTP, organization } from 'better-auth/plugins'
 
 import { db } from '@/database'
 import { APP_COOKIE_NAME, isProd } from '@/lib/constants'
 import { env } from '@/config/env'
 import { getBaseUrl } from '@/lib/utils'
-import { getEmailSubject, renderOTPEmail, renderWelcomeEmail } from '@/components/emails'
+import {
+  getEmailSubject,
+  renderOTPEmail,
+  renderPasswordResetEmail,
+  renderWelcomeEmail,
+} from '@/components/emails'
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
+import { isEmailVerificationEnabled } from '@/config/feature-flags'
 
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
@@ -98,6 +104,30 @@ export const auth = betterAuth({
       }
     },
   },
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: isEmailVerificationEnabled,
+    sendVerificationOnSignUp: false,
+    throwOnMissingCredentials: true,
+    throwOnInvalidCredentials: true,
+    sendResetPassword: async ({ user, url, token }, request) => {
+      const username = user.name || ''
+
+      const html = await renderPasswordResetEmail(username, url)
+
+      const result = await sendEmail({
+        to: user.email,
+        subject: getEmailSubject('reset-password'),
+        html,
+        from: getFromEmailAddress(),
+        emailType: 'transactional',
+      })
+
+      if (!result.success) {
+        throw new Error(`Failed to send reset password email: ${result.message}`)
+      }
+    },
+  },
   plugins: [
     nextCookies(),
     emailOTP({
@@ -159,5 +189,35 @@ export const auth = betterAuth({
       otpLength: 6, // Explicitly set the OTP length
       expiresIn: 15 * 60, // 15 minutes in seconds
     }),
+
+    organization({
+      // allowUserToCreateOrganization: async (user) => {
+      //   const dbSubscriptions = await db
+      //     .select()
+      //     .from(schema.subscription)
+      //     .where(eq(schema.subscription.referenceId, user.id))
+
+      //   const hasTeamPlan = dbSubscriptions.some(
+      //     (sub) => sub.status === 'active' && (sub.plan === 'team' || sub.plan === 'enterprise')
+      //   )
+
+      //   return hasTeamPlan
+      // },
+      organizationCreation: {
+        afterCreate: async ({ organization, user }) => {
+          console.info('[organizationCreation.afterCreate] Organization created', {
+            organizationId: organization.id,
+            creatorId: user.id,
+          })
+        },
+      },
+    }),
   ],
+
+  pages: {
+    signIn: '/login',
+    signUp: '/register',
+    error: '/error',
+    verify: '/verify',
+  },
 })

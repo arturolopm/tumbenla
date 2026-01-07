@@ -2,10 +2,11 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
 import { Button } from '@/components/ui/button'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
 import { cn } from '@/lib/utils'
-import { useVerification } from '@/app/(auth)/verify/use-verification'
+import { useVerification } from './use-verification'
 
 interface VerifyContentProps {
   isProduction: boolean

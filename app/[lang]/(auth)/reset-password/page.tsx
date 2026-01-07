@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-import { SetNewPasswordForm } from '@/app/(auth)/reset-password/reset-password-form'
+import { SetNewPasswordForm } from '../reset-password/reset-password-form'
 
 function ResetPasswordContent() {
   const router = useRouter()

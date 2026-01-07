@@ -3,10 +3,12 @@ import { z } from 'zod'
 
 export const env = createEnv({
   server: {
-    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    // Core Database and Authentication
     DATABASE_URL: z.string().optional(),
     BETTER_AUTH_SECRET: z.string().default('dev-secret-change-in-production'),
     BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
+    BILLING_ENABLED: z.boolean().default(false),
+    EMAIL_VERIFICATION_ENABLED: z.boolean().default(false),
 
     // Optional: Sentry
     SENTRY_DSN: z.string().optional(),
@@ -47,15 +49,23 @@ export const env = createEnv({
     FACEBOOK_CLIENT_ID: z.string().optional(),
     FACEBOOK_CLIENT_SECRET: z.string().optional(),
   },
+
   client: {
     NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
-    NEXT_PUBLIC_ENV: z.enum(['development', 'production', 'test']).default('development'),
   },
+
+  // Variables available on both server and client
+  shared: {
+    NODE_ENV: z.enum(['development', 'test', 'production']).optional(), // Runtime environment
+  },
+
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+    BILLING_ENABLED: process.env.BILLING_ENABLED,
+    EMAIL_VERIFICATION_ENABLED: process.env.EMAIL_VERIFICATION_ENABLED,
     SENTRY_DSN: process.env.SENTRY_DSN,
     CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
@@ -86,7 +96,14 @@ export const env = createEnv({
     FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
     FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_ENV: process.env.NEXT_PUBLIC_ENV,
   },
   emptyStringAsUndefined: true,
 })
+
+// Need this utility because t3-env is returning string for boolean values.
+export const isTruthy = (value: string | boolean | number | undefined) =>
+  typeof value === 'string' ? value.toLowerCase() === 'true' || value === '1' : Boolean(value)
+
+// Utility to check if a value is explicitly false (defaults to false only if explicitly set)
+export const isFalsy = (value: string | boolean | number | undefined) =>
+  typeof value === 'string' ? value.toLowerCase() === 'false' || value === '0' : value === false
