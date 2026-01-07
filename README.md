@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ⚡ ShipFree
 
-## Getting Started
+Hi there! 👋
 
-First, run the development server:
+ShipFree is a free alternative to ShipFast, designed to simplify and optimize your shipping process. It’s built using modern web technologies like Next.js, Bun, Stripe, Drizzle ORM, Postgres and Tailwindcss.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- SEO Optimisation
+- User authentication with Better-Auth
+- Stripe, Polar, Autumn Billing, Dodo Payments, Commet and Creem integration
+- Email messaging via Resend, Postmark, Plunk, and Nodemailer
+- Modern UI built with Next.js, TailwindCSS, and BaseUI
+- Bun as runtime and package manager
+- Drizzle ORM and Postgres for database operations
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Docs
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+For full documentation, visit: [ShipFree Docs](https://shipfree.revoks.dev/docs)
 
-## Learn More
+## Code of Conduct
 
-To learn more about Next.js, take a look at the following resources:
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+For people who want to contribute, please refer to [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Cooked for you with ❤️ by [Revoks](https://revoks.dev)
