@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { cn, getBaseUrl } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
-import { SocialLoginButtons } from '@/app/(auth)/components/social-login-buttons'
+import { SocialLoginButtons } from '../components/social-login-buttons'
 
 const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []

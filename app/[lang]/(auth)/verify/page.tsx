@@ -1,5 +1,5 @@
 import { isProd } from '@/lib/constants'
-import { VerifyContent } from '@/app/(auth)/verify/verify-content'
+import { VerifyContent } from './verify-content'
 import { generateMetadata } from '@/lib/seo'
 
 export const dynamic = 'force-dynamic'
