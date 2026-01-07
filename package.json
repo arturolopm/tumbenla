@@ -23,9 +23,7 @@
     "@hugeicons/core-free-icons": "^3.1.1",
     "@hugeicons/react": "^1.1.4",
     "@lingui/core": "^5.7.0",
-    "@lingui/loader": "^5.7.0",
     "@lingui/react": "^5.7.0",
-    "@lingui/swc-plugin": "^5.10.1",
     "@plunk/node": "^3.0.3",
     "@react-email/components": "1.0.3",
     "@t3-oss/env-nextjs": "^0.13.10",
@@ -51,6 +49,8 @@
   "devDependencies": {
     "@biomejs/biome": "^2.3.11",
     "@lingui/cli": "^5.7.0",
+    "@lingui/loader": "^5.7.0",
+    "@lingui/swc-plugin": "^5.10.1",
     "@react-email/preview-server": "5.1.1",
     "@tailwindcss/postcss": "^4",
     "@types/negotiator": "^0.6.4",

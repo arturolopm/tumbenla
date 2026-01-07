@@ -3,12 +3,11 @@ import { Geist, Geist_Mono, Bricolage_Grotesque } from 'next/font/google'
 import { setI18n } from '@lingui/react/server'
 
 import '@/app/_styles/globals.css'
-import { HydrationErrorHandler } from '@/app/_shell/hydration-error-handler'
-import { QueryProvider } from '@/app/_shell/providers/query-provider'
+import { QueryProvider } from '@/app/_providers/query-provider'
 import { ToastProvider } from '@/components/ui/toast'
 import { generateMetadata } from '@/lib/seo'
 import { getI18nInstance } from '@/locale/server'
-import I18nProvider from '@/locale/i18nProvider'
+import { I18nProvider } from '@/locale/i18nProvider'
 
 type Props = {
   params: Promise<{ lang: string }>
@@ -42,7 +41,6 @@ export default async function RootLayout({ children, params }: Props) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bricolageGrotesque.variable} font-sans antialiased`}
       >
-        <HydrationErrorHandler />
         <I18nProvider initialLocale={lang} initialMessages={i18n.messages}>
           <QueryProvider>
             <ToastProvider>{children}</ToastProvider>
