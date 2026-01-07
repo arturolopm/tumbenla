@@ -132,6 +132,7 @@ export function SocialLoginButtons({
   const githubButton = (
     <Button
       variant='outline'
+      size='lg'
       className='w-full hover:bg-gray-50'
       disabled={!githubAvailable || isGithubLoading}
       onClick={signInWithGithub}
@@ -144,6 +145,7 @@ export function SocialLoginButtons({
   const googleButton = (
     <Button
       variant='outline'
+      size='lg'
       className='w-full hover:bg-gray-50'
       disabled={!googleAvailable || isGoogleLoading}
       onClick={signInWithGoogle}
@@ -156,6 +158,7 @@ export function SocialLoginButtons({
   const microsoftButton = (
     <Button
       variant='outline'
+      size='lg'
       className='w-full rounded-[10px] shadow-sm hover:bg-gray-50'
       disabled={!microsoftAvailable || isMicrosoftLoading}
       onClick={signInWithMicrosoft}
@@ -168,6 +171,7 @@ export function SocialLoginButtons({
   const facebookButton = (
     <Button
       variant='outline'
+      size='lg'
       className='w-full  hover:bg-gray-50'
       disabled={!facebookAvailable || isFacebookLoading}
       onClick={signInWithFacebook}
