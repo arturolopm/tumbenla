@@ -168,28 +168,6 @@ export function useVerification({ isProduction }: UseVerificationParams): UseVer
     }
   }, [otp, email, isLoading, isVerified])
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setIsVerified(true)
-
-      const handleRedirect = async () => {
-        try {
-          await refetchSession()
-        } catch (error) {
-          console.warn('Failed to refetch session during verification skip:', error)
-        }
-
-        if (redirectUrl) {
-          window.location.href = redirectUrl
-        } else {
-          router.push('/dashboard')
-        }
-      }
-
-      handleRedirect()
-    }
-  }, [router, redirectUrl])
-
   return {
     otp,
     email,

@@ -10,6 +10,7 @@
     "format": "biome format --write",
     "lint": "biome lint",
     "biome:check": "biome check",
+    "generate-migration": "drizzle-kit generate",
     "migrate:local": "bun run ./scripts/migrate.ts",
     "migrate:prod": "cross-env NODE_ENV=production bun run ./scripts/migrate.ts"
   },
