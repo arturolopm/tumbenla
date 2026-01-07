@@ -4,7 +4,7 @@ import { I18nProvider as DefaultI18nProvider } from '@lingui/react'
 import { useState, type ReactNode } from 'react'
 import { type Messages, setupI18n } from '@lingui/core'
 
-export default function I18nProvider({
+export function I18nProvider({
   children,
   initialLocale,
   initialMessages,
