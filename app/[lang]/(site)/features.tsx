@@ -22,6 +22,11 @@ export default function Features() {
       description: "Beautiful, accessible components built with Base UI. Dark mode, animations, and responsive design.",
       logos: ["/stack-icons/tailwindcss.svg", "/stack-icons/base-ui.svg"],
     },
+    {
+      title: "Vercel AI SDK",
+      description: "Build AI-powered applications with Vercel AI SDK. Streaming, tool calling, and more.",
+      logo: "/stack-icons/vercel.svg",
+    },
   ];
 
   const stack = [
@@ -45,6 +50,21 @@ export default function Features() {
       description: "Rate limiting with Upstash. Protect your API endpoints and prevent abuse automatically.",
       logo: "/stack-icons/upstash.svg",
     },
+    {
+      title: "AI Tools",
+      description: "Integrating in your AI tools like Cursor, Windsurf, Claude Code. Works seamlessly with AI assistants.",
+      logos: ["/stack-icons/windsurf.svg", "/stack-icons/cursor.svg", "/stack-icons/claude.svg", "/stack-icons/copilot.svg"],
+    },
+    {
+      title: "Internationalization",
+      description: "Multi-language support with Lingui. Translate your app and reach global audiences.",
+      logo: null,
+    },
+    {
+      title: "And More",
+      description: "Plus many more TypeScript-first features. Everything you need to build production-ready applications.",
+      logo: null,
+    },
   ];
 
   return (
@@ -62,70 +82,45 @@ export default function Features() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent">
-          {/* Left Column - Bento Grid Features */}
-          <div className="flex flex-col border-r border-[#E4E4E7]">
-            <div className="grid grid-cols-2 grid-rows-2 h-full">
-              {features.map((feature, index) => (
-                <div
-                  key={index}
-                  className={`p-6 bg-transparent flex flex-col ${
-                    index % 2 === 0 ? 'border-r border-[#E4E4E7]' : ''
-                  } ${
-                    index < 2 ? 'border-b border-[#E4E4E7]' : ''
-                  }`}
-                >
+        <div className="border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent">
+          {/* Features Grid */}
+          <div className="grid grid-cols-4 grid-rows-3 h-full">
+            {[...features, ...stack].map((item, index) => (
+              <div
+                key={index}
+                className={`p-6 bg-transparent flex flex-col ${
+                  index % 4 !== 3 ? 'border-r border-[#E4E4E7]' : ''
+                } ${
+                  index < 8 ? 'border-b border-[#E4E4E7]' : ''
+                }`}
+              >
+                {item.logo && !item.logos && (
                   <div className="mb-3 flex items-center gap-2">
-                    {feature.logos ? (
-                      feature.logos.map((logo, logoIndex) => (
-                        <img
-                          key={logoIndex}
-                          src={logo}
-                          alt={feature.title}
-                          className={`h-10 w-10 object-contain ${
-                            logo.includes('prisma') ? 'brightness-0' : ''
-                          }`}
-                        />
-                      ))
-                    ) : (
-                      <img
-                        src={feature.logo}
-                        alt={feature.title}
-                        className="h-10 w-10 object-contain"
-                      />
-                    )}
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right Column - Stack Grid */}
-          <div className="flex flex-col">
-            <div className="grid grid-cols-2 grid-rows-2 h-full">
-              {stack.map((item, index) => (
-                <div
-                  key={index}
-                  className={`p-6 bg-transparent flex flex-col ${
-                    index % 2 === 0 ? 'border-r border-[#E4E4E7]' : ''
-                  } ${
-                    index < 2 ? 'border-b border-[#E4E4E7]' : ''
-                  }`}
-                >
-                  <div className="mb-3">
                     <img
                       src={item.logo}
                       alt={item.title}
                       className="h-10 w-10 object-contain"
                     />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-              ))}
-            </div>
+                )}
+                {item.logos && (
+                  <div className="mb-3 flex items-center gap-2 flex-wrap">
+                    {item.logos.map((logo, logoIndex) => (
+                      <img
+                        key={logoIndex}
+                        src={logo}
+                        alt={item.title}
+                        className={`h-10 w-10 object-contain ${
+                          logo.includes('prisma') ? 'brightness-0' : ''
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+                <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
