@@ -1,6 +1,20 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { BiSolidZap } from "react-icons/bi";
 import { ArrowUpRight } from "lucide-react";
+import { Tooltip, TooltipCreateHandle, TooltipProvider, TooltipTrigger, TooltipPopup } from "@/components/ui/tooltip";
+
+const tooltipHandle = TooltipCreateHandle<React.ComponentType>();
+
+// Tooltip content components
+const BetterAuthContent = () => <span>Better Auth</span>;
+const TailwindCSSContent = () => <span>Tailwind CSS</span>;
+const TypeScriptContent = () => <span>TypeScript</span>;
+const TanStackContent = () => <span>TanStack</span>;
+const VercelContent = () => <span>Vercel AI SDK</span>;
+const BunContent = () => <span>Bun</span>;
+const BaseUIContent = () => <span>Base UI</span>;
 
 export default function Hero() {
   return (
@@ -34,6 +48,114 @@ export default function Hero() {
           </Button>
         </div>
       </div>
+
+      {/* Built With Section */}
+      <TooltipProvider>
+        <div className="mx-auto mt-24 w-full max-w-5xl">
+          <h2 className="text-center text-sm font-medium text-muted-foreground mb-8" style={{ fontFamily: 'var(--font-geist-mono)' }}>
+            BUILT WITH THE BEST TOOLS
+          </h2>
+          <div className="flex items-center justify-center gap-1 sm:gap-5 md:gap-6 flex-wrap">
+            {/* Vercel AI SDK */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={VercelContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/vercel.svg" 
+                alt="Vercel AI SDK" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100 brightness-0"
+              />
+            </TooltipTrigger>
+            
+            {/* Tailwind CSS */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={TailwindCSSContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/tailwindcss.svg" 
+                alt="Tailwind CSS" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+            {/* TypeScript */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={TypeScriptContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/typescript.svg" 
+                alt="TypeScript" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+            {/* Better Auth */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={BetterAuthContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/better-auth.svg" 
+                alt="Better Auth" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+            {/* TanStack */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={TanStackContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/tanstack.svg" 
+                alt="TanStack" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+            {/* Base UI */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={BaseUIContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/base-ui.svg" 
+                alt="Base UI" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+            {/* Bun */}
+            <TooltipTrigger 
+              handle={tooltipHandle}
+              payload={BunContent}
+              className="flex items-center justify-center h-12 w-12 cursor-pointer"
+            >
+              <img 
+                src="/stack-icons/bun.svg" 
+                alt="Bun" 
+                className="h-12 w-12 opacity-70 transition-opacity duration-200 hover:opacity-100"
+              />
+            </TooltipTrigger>
+            
+          </div>
+        </div>
+        
+        <Tooltip handle={tooltipHandle}>
+          {({ payload: Payload }) => (
+            <TooltipPopup>{Payload !== undefined && <Payload />}</TooltipPopup>
+          )}
+        </Tooltip>
+      </TooltipProvider>
     </main>
   );
 }
