@@ -38,6 +38,26 @@ export const env = createEnv({
     DEFAULT_FROM_EMAIL: z.string().optional(),
     DEFAULT_FROM_NAME: z.string().optional(),
 
+    // Optional: Payment provider selection
+    PAYMENT_PROVIDER: z.enum(['stripe', 'polar', 'lemonsqueezy']).default('stripe'),
+
+    // Stripe
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_PRICE_ID: z.string().optional(),
+
+    // Polar
+    POLAR_ACCESS_TOKEN: z.string().optional(),
+    POLAR_WEBHOOK_SECRET: z.string().optional(),
+    POLAR_ORGANIZATION_ID: z.string().optional(),
+    POLAR_PRODUCT_ID: z.string().optional(),
+    POLAR_ENVIRONMENT: z.enum(['production', 'sandbox']).default('production'),
+
+    // Lemon Squeezy
+    LEMONSQUEEZY_API_KEY: z.string().optional(),
+    LEMONSQUEEZY_STORE_ID: z.string().optional(),
+    LEMONSQUEEZY_WEBHOOK_SECRET: z.string().optional(),
+
     // Optional: OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -52,6 +72,23 @@ export const env = createEnv({
 
   client: {
     NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
+    // Lemon Squeezy product IDs (public)
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY: z.string().optional(),
+
+    // Stripe price IDs (public)
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY: z.string().optional(),
+
+    // Polar product IDs (public)
+    NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY: z.string().optional(),
   },
 
   // Variables available on both server and client
@@ -95,7 +132,38 @@ export const env = createEnv({
     MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID,
     FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
     FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
+    PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID,
+    POLAR_ACCESS_TOKEN: process.env.POLAR_ACCESS_TOKEN,
+    POLAR_WEBHOOK_SECRET: process.env.POLAR_WEBHOOK_SECRET,
+    POLAR_ORGANIZATION_ID: process.env.POLAR_ORGANIZATION_ID,
+    POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID,
+    POLAR_ENVIRONMENT: process.env.POLAR_ENVIRONMENT,
+    LEMONSQUEEZY_API_KEY: process.env.LEMONSQUEEZY_API_KEY,
+    LEMONSQUEEZY_STORE_ID: process.env.LEMONSQUEEZY_STORE_ID,
+    LEMONSQUEEZY_WEBHOOK_SECRET: process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY,
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY,
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY:
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY:
+      process.env.NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY: process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY,
   },
   emptyStringAsUndefined: true,
 })

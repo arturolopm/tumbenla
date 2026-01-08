@@ -193,7 +193,7 @@ class StorageClient {
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const blobProps: any = {}
-    if (opts?.contentType) blobProps['type'] = opts.contentType
+    if (opts?.contentType) blobProps.type = opts.contentType
     return new Blob([byteArray], blobProps)
   }
 

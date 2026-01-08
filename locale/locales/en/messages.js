@@ -1,1 +1,1 @@
-/*eslint-disable*/module.exports={messages:JSON.parse("{\"nxDITk\":[\"PRICING\"]}")};
+/*eslint-disable*/ module.exports = { messages: JSON.parse('{"nxDITk":["PRICING"]}') }
