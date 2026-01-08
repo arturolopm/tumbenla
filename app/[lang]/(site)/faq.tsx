@@ -53,21 +53,11 @@ export default function FAQ() {
       answer:
         "Private Discord, priority replies, and lifetime updates. You'll never be stuck figuring things out alone.",
     },
-    {
-      question: 'Do you offer refunds?',
-      answer: "Yep — 7-day refund window if it's not what you expected.",
-    },
   ]
 
   return (
-    <section id="faq" className='py-24 bg-[#F4F4F5]'>
+    <section id='faq' className='py-24 bg-[#F4F4F5]'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
-        <h2
-          className='text-center text-sm font-medium text-muted-foreground mb-8'
-          style={{ fontFamily: 'var(--font-geist-mono)' }}
-        >
-          FAQ
-        </h2>
         <div className='grid md:grid-cols-2 gap-12 md:gap-16'>
           {/* Left Section */}
           <div>

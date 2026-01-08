@@ -28,11 +28,11 @@ export default function CTA() {
 
         {/* Buttons */}
         <div className='mx-auto mt-10 flex items-center justify-center gap-4'>
-          <Button variant='default' className='text-white font-semibold !h-12 px-8 text-base'>
+          <Button variant='default' className='text-white font-semibold h-12! px-8 text-base'>
             <BiSolidZap className='h-8 w-8' />
             Get ShipFree
           </Button>
-          <Button variant='outline' className='font-semibold !h-12 px-8 text-base'>
+          <Button variant='outline' className='font-semibold h-12! px-8 text-base'>
             Try demo
             <ArrowUpRight className='h-8 w-8' />
           </Button>
@@ -41,4 +41,3 @@ export default function CTA() {
     </section>
   )
 }
-

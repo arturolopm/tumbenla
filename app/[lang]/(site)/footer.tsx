@@ -210,7 +210,8 @@ export default function Footer() {
             </div>
             <p className='text-sm text-muted-foreground'>Turn ideas into products, fast</p>
             <p className='text-sm text-muted-foreground'>
-              Copyright © {new Date().getFullYear()} - All rights reserved
+              Copyright © {new Date().getFullYear()} -{' '}
+              <Link href='https://revoks.dev'>The Revoks Company</Link>
             </p>
           </div>
         </div>
