@@ -6,6 +6,7 @@ import Features from './(site)/features'
 import Pricing from './(site)/pricing'
 import Testimonials from './(site)/testimonials'
 import FAQ from './(site)/faq'
+import CTA from './(site)/cta'
 import Footer from './(site)/footer'
 
 export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
@@ -21,6 +22,7 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
       <Pricing />
       <Testimonials />
       <FAQ />
+      <CTA />
       <Footer />
     </div>
   )
