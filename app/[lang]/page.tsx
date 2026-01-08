@@ -25,7 +25,6 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
       <Pricing />
       <SectionDivider />
       <Testimonials />
-      <SectionDivider />
       <FAQ />
       <CTA />
       <Footer />

@@ -7,22 +7,22 @@ interface GridLayoutProps {
 
 export const GridLayout = ({ children, className = '' }: GridLayoutProps) => {
   return (
-    <div className={`relative ${className}`}>
-      {/* Background Grid Lines Container */}
-      <div className='pointer-events-none fixed inset-0 z-10' aria-hidden='true'>
-        <div className='mx-auto h-full max-w-6xl px-4 sm:px-6'>
+    <>
+      {/* Background Grid Lines Container - High z-index to appear above section backgrounds */}
+      <div className='pointer-events-none fixed inset-0 z-20' aria-hidden='true'>
+        <div className='mx-auto h-full'>
           <div className='relative h-full'>
             {/* Left vertical line */}
-            <div className='absolute left-0 top-0 h-full w-px bg-[#E4E4E7]' />
+            <div className='absolute left-0 top-0 h-full w-10 border-x border-x-(--grid-line-color) bg-fixed bg-size-[10px_10px] bg-[repeating-linear-gradient(315deg,var(--grid-line-color)_0,var(--grid-line-color)_1px,transparent_0,transparent_50%)]' />
             {/* Right vertical line */}
-            <div className='absolute right-0 top-0 h-full w-px bg-[#E4E4E7]' />
+            <div className='absolute right-0 top-0 h-full w-10 border-x border-x-(--grid-line-color) bg-fixed bg-size-[10px_10px] bg-[repeating-linear-gradient(315deg,var(--grid-line-color)_0,var(--grid-line-color)_1px,transparent_0,transparent_50%)]' />
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className='relative z-20'>{children}</div>
-    </div>
+      {/* Content Wrapper */}
+      <div className={`relative ${className}`}>{children}</div>
+    </>
   )
 }
 
@@ -32,7 +32,7 @@ interface SectionDividerProps {
 
 export const SectionDivider = ({ className = '' }: SectionDividerProps) => {
   return (
-    <div className={`mx-auto max-w-6xl px-4 sm:px-6 ${className}`}>
+    <div className={`${className}`}>
       <div className='h-px w-full bg-[#E4E4E7]' />
     </div>
   )
