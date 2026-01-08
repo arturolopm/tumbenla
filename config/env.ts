@@ -38,37 +38,25 @@ export const env = createEnv({
     DEFAULT_FROM_EMAIL: z.string().optional(),
     DEFAULT_FROM_NAME: z.string().optional(),
 
-    // Optional: Billing provider selection (only one can be active at a time)
-    // Uses better-auth payment plugins: stripe, polar, dodo, creem, autumn
-    BILLING_PROVIDER: z.enum(['stripe', 'polar', 'dodo', 'creem', 'autumn']).optional(),
+    // Optional: Payment provider selection
+    PAYMENT_PROVIDER: z.enum(['stripe', 'polar', 'lemonsqueezy']).default('stripe'),
 
-    // Stripe (@better-auth/stripe)
+    // Stripe
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_PRICE_ID: z.string().optional(),
 
-    // Polar (@polar-sh/better-auth)
+    // Polar
     POLAR_ACCESS_TOKEN: z.string().optional(),
     POLAR_WEBHOOK_SECRET: z.string().optional(),
     POLAR_ORGANIZATION_ID: z.string().optional(),
     POLAR_PRODUCT_ID: z.string().optional(),
     POLAR_ENVIRONMENT: z.enum(['production', 'sandbox']).default('production'),
 
-    // Dodo Payments (@dodopayments/better-auth)
-    DODO_API_KEY: z.string().optional(),
-    DODO_WEBHOOK_SECRET: z.string().optional(),
-    DODO_PRODUCT_ID: z.string().optional(),
-    DODO_ENVIRONMENT: z.enum(['live_mode', 'test_mode']).default('test_mode'),
-
-    // Creem (@creem_io/better-auth)
-    CREEM_API_KEY: z.string().optional(),
-    CREEM_WEBHOOK_SECRET: z.string().optional(),
-
-    // Autumn (autumn-js/better-auth)
-    AUTUMN_API_KEY: z.string().optional(),
-    AUTUMN_CUSTOMER_SCOPE: z
-      .enum(['user', 'organization', 'user_and_organization'])
-      .default('user'),
+    // Lemon Squeezy
+    LEMONSQUEEZY_API_KEY: z.string().optional(),
+    LEMONSQUEEZY_STORE_ID: z.string().optional(),
+    LEMONSQUEEZY_WEBHOOK_SECRET: z.string().optional(),
 
     // Optional: OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
@@ -84,10 +72,23 @@ export const env = createEnv({
 
   client: {
     NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
-    // Billing provider for client-side (must match server BILLING_PROVIDER)
-    NEXT_PUBLIC_BILLING_PROVIDER: z
-      .enum(['stripe', 'polar', 'dodo', 'creem', 'autumn', ''])
-      .optional(),
+    // Lemon Squeezy product IDs (public)
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY: z.string().optional(),
+
+    // Stripe price IDs (public)
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY: z.string().optional(),
+
+    // Polar product IDs (public)
+    NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY: z.string().optional(),
+    NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY: z.string().optional(),
   },
 
   // Variables available on both server and client
@@ -131,7 +132,7 @@ export const env = createEnv({
     MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID,
     FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
     FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
-    BILLING_PROVIDER: process.env.BILLING_PROVIDER,
+    PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID,
@@ -140,16 +141,29 @@ export const env = createEnv({
     POLAR_ORGANIZATION_ID: process.env.POLAR_ORGANIZATION_ID,
     POLAR_PRODUCT_ID: process.env.POLAR_PRODUCT_ID,
     POLAR_ENVIRONMENT: process.env.POLAR_ENVIRONMENT,
-    DODO_API_KEY: process.env.DODO_API_KEY,
-    DODO_WEBHOOK_SECRET: process.env.DODO_WEBHOOK_SECRET,
-    DODO_PRODUCT_ID: process.env.DODO_PRODUCT_ID,
-    DODO_ENVIRONMENT: process.env.DODO_ENVIRONMENT,
-    CREEM_API_KEY: process.env.CREEM_API_KEY,
-    CREEM_WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET,
-    AUTUMN_API_KEY: process.env.AUTUMN_API_KEY,
-    AUTUMN_CUSTOMER_SCOPE: process.env.AUTUMN_CUSTOMER_SCOPE,
+    LEMONSQUEEZY_API_KEY: process.env.LEMONSQUEEZY_API_KEY,
+    LEMONSQUEEZY_STORE_ID: process.env.LEMONSQUEEZY_STORE_ID,
+    LEMONSQUEEZY_WEBHOOK_SECRET: process.env.LEMONSQUEEZY_WEBHOOK_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXT_PUBLIC_BILLING_PROVIDER: process.env.NEXT_PUBLIC_BILLING_PROVIDER,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY,
+    NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY,
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY,
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY,
+    NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY:
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY:
+      process.env.NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY: process.env.NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY,
+    NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY:
+      process.env.NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY,
   },
   emptyStringAsUndefined: true,
 })
