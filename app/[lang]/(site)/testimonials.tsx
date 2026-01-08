@@ -64,6 +64,9 @@ export default function Testimonials() {
           <h2 className="text-4xl font-semibold tracking-tight mb-4">
             Trusted by developers
           </h2>
+          <p className="text-lg text-muted-foreground">
+            See what builders are saying about ShipFree
+          </p>
         </div>
 
         <div className="border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent">
