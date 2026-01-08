@@ -15,6 +15,10 @@ import {
 } from '@/components/emails'
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
 import { isEmailVerificationEnabled } from '@/config/feature-flags'
+import { getBillingPlugin } from '@/lib/billing'
+
+// Get the billing plugin if configured (returns null if no provider is set up)
+const billingPlugin = getBillingPlugin()
 
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
@@ -107,10 +111,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: isEmailVerificationEnabled,
-    sendVerificationOnSignUp: false,
-    throwOnMissingCredentials: true,
-    throwOnInvalidCredentials: true,
-    sendResetPassword: async ({ user, url, token }, request) => {
+    sendResetPassword: async ({ user, url }) => {
       const username = user.name || ''
 
       const html = await renderPasswordResetEmail(username, url)
@@ -212,6 +213,12 @@ export const auth = betterAuth({
         },
       },
     }),
+
+    // Billing plugin (conditionally loaded based on BILLING_PROVIDER env var)
+    // Supports: stripe, polar, dodo, creem, autumn
+    // See lib/billing/plugins/ for configuration
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(billingPlugin ? [billingPlugin as any] : []),
   ],
 
   pages: {

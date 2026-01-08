@@ -31,7 +31,7 @@ function AccordionTrigger({ className, children, ...props }: AccordionPrimitive.
         {...props}
       >
         {children}
-        <div className="relative size-4 shrink-0 translate-y-0.5">
+        <div className='relative size-4 shrink-0 translate-y-0.5'>
           <Plus className='pointer-events-none size-4 opacity-80 transition-opacity duration-200 ease-in-out group-data-[panel-open]:opacity-0' />
           <Minus className='pointer-events-none size-4 opacity-0 absolute inset-0 transition-opacity duration-200 ease-in-out group-data-[panel-open]:opacity-80' />
         </div>

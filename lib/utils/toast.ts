@@ -7,5 +7,5 @@ interface ShowToastOptions {
 }
 
 export function showToast({ title, description, type = 'info' }: ShowToastOptions) {
-  console.log(`[${type.toUpperCase()}] ${title}${description ? ': ' + description : ''}`)
+  console.log(`[${type.toUpperCase()}] ${title}${description ? `: ${description}` : ''}`)
 }
