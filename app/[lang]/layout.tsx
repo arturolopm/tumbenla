@@ -55,6 +55,7 @@ export default async function RootLayout({ children, params }: Props) {
         <I18nProvider initialLocale={lang} initialMessages={i18n.messages}>
           <QueryProvider>
             <ToastProvider>{children}</ToastProvider>
+            <div className="h-screen w-full fixed top-0 left-0 -z-10  bg-[url('/grain.jpg')] opacity-5" />
           </QueryProvider>
         </I18nProvider>
       </body>
