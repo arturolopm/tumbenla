@@ -78,7 +78,7 @@ export default function Features() {
   ]
 
   return (
-    <section className='py-24 px-4 sm:px-6 bg-[#F4F4F5]'>
+    <section id="features" className='py-24 px-4 sm:px-6 bg-[#F4F4F5]'>
       <div className='mx-auto max-w-6xl'>
         <h2
           className='text-center text-sm font-medium text-muted-foreground mb-8'

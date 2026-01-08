@@ -24,7 +24,7 @@ const BaseUIContent = () => <span>Base UI</span>
 
 export default function Hero() {
   return (
-    <main className='flex min-h-screen flex-col bg-[#F4F4F5] items-center justify-start px-4 pt-40 pb-24 sm:px-6'>
+    <main id="hero" className='flex min-h-screen flex-col bg-[#F4F4F5] items-center justify-start px-4 pt-40 pb-24 sm:px-6'>
       <div className='mx-auto w-full max-w-4xl text-center'>
         <h1 className='mx-auto max-w-3xl text-balance text-center font-semibold text-4xl leading-tight tracking-tighter sm:text-5xl md:max-w-4xl md:text-6xl lg:leading-[1.1]'>
           A production-ready{' '}

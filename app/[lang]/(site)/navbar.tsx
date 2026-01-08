@@ -61,16 +61,10 @@ export default function Navbar() {
           <div className='flex items-center gap-6'>
             <div className='hidden items-center gap-6 md:flex'>
               <Link
-                href='/docs'
+                href='#features'
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
-                Docs
-              </Link>
-              <Link
-                href='/changelog'
-                className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
-              >
-                Changelog
+                Features
               </Link>
               <Link
                 href='#pricing'
@@ -89,6 +83,12 @@ export default function Navbar() {
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
                 FAQ
+              </Link>
+              <Link
+                href='/docs'
+                className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
+              >
+                Docs
               </Link>
             </div>
 
@@ -150,18 +150,11 @@ export default function Navbar() {
           <div className='border-t border-border md:hidden'>
             <div className='space-y-1 px-2 pb-3 pt-2'>
               <Link
-                href='/docs'
+                href='#features'
                 className='block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground'
                 onClick={toggleMenu}
               >
-                Docs
-              </Link>
-              <Link
-                href='/changelog'
-                className='block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground'
-                onClick={toggleMenu}
-              >
-                Changelog
+                Features
               </Link>
               <Link
                 href='#pricing'
@@ -183,6 +176,13 @@ export default function Navbar() {
                 onClick={toggleMenu}
               >
                 FAQ
+              </Link>
+              <Link
+                href='/docs'
+                className='block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground'
+                onClick={toggleMenu}
+              >
+                Docs
               </Link>
               <a
                 href={`https://github.com/${repo}`}
