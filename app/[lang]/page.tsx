@@ -8,6 +8,7 @@ import Testimonials from './(site)/testimonials'
 import FAQ from './(site)/faq'
 import CTA from './(site)/cta'
 import Footer from './(site)/footer'
+import { GridLayout, SectionDivider } from './(site)/grid-layout'
 
 export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
@@ -15,15 +16,19 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
   setI18n(i18n)
 
   return (
-    <div className='bg-[#F4F4F5]'>
+    <GridLayout>
       <Navbar />
       <Hero />
+      <SectionDivider />
       <Features />
+      <SectionDivider />
       <Pricing />
+      <SectionDivider />
       <Testimonials />
+      <SectionDivider />
       <FAQ />
       <CTA />
       <Footer />
-    </div>
+    </GridLayout>
   )
 }

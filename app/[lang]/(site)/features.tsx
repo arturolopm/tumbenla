@@ -78,8 +78,8 @@ export default function Features() {
   ]
 
   return (
-    <section id="features" className='py-24 px-4 sm:px-6 bg-[#F4F4F5]'>
-      <div className='mx-auto max-w-6xl'>
+    <section id="features" className='py-24 bg-[#F4F4F5]'>
+      <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <h2
           className='text-center text-sm font-medium text-muted-foreground mb-8'
           style={{ fontFamily: 'var(--font-geist-mono)' }}

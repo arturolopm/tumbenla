@@ -4,8 +4,8 @@ import { SiProducthunt, SiYcombinator, SiPeerlist } from 'react-icons/si'
 
 export default function Footer() {
   return (
-    <footer className='border-t border-[#E4E4E7] bg-[#F4F4F5] py-12 px-4 sm:px-6'>
-      <div className='mx-auto max-w-6xl'>
+    <footer className='border-t border-[#E4E4E7] bg-[#F4F4F5] py-12'>
+      <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <div className='grid grid-cols-2 gap-8 md:grid-cols-4'>
           {/* Column 1: Links */}
           <div>
