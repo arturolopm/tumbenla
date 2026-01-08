@@ -29,7 +29,18 @@ const bricolageGrotesque = Bricolage_Grotesque({
   subsets: ['latin'],
 })
 
-export const metadata: Metadata = generateMetadata({ title: 'ShipFree' })
+export const metadata: Metadata = {
+  ...generateMetadata({ 
+    title: 'ShipFree - Turn Ideas Into Products, Fast',
+    description: 'Ship your startup in days, not weeks. A production-ready Next.js boilerplate with auth, payments, and everything you need to launch fast. Free forever, open source.',
+    isRootLayout: true
+  }),
+  icons: {
+    icon: '/image.png',
+    shortcut: '/image.png',
+    apple: '/image.png',
+  },
+}
 
 export default async function RootLayout({ children, params }: Props) {
   const { lang } = await params
