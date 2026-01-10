@@ -1,33 +1,18 @@
-import { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
-const nextConfig = {
-  typescript: { ignoreBuildErrors: true },
-  pageExtensions: ["ts", "tsx", "mdx"],
-  async headers() {
-    return [
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains; preload",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-        ],
-      },
-    ];
+const nextConfig: NextConfig = {
+  // to use Lingui macros
+  experimental: {
+    swcPlugins: [['@lingui/swc-plugin', {}]],
   },
-} satisfies NextConfig;
+  turbopack: {
+    rules: {
+      '*.po': {
+        loaders: ['@lingui/loader'],
+        as: '*.js',
+      },
+    },
+  },
+}
 
-export default nextConfig;
+export default nextConfig

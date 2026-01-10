@@ -1,19 +1,51 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
+import Negotiator from 'negotiator'
+
+import linguiConfig from '@/lingui.config'
+
+const { locales } = linguiConfig
 
 export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+  const { pathname } = request.nextUrl
+
+  const pathnameHasLocale = locales.some(
+    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+  )
+
+  if (pathnameHasLocale) return
+
+  // Redirect if there is no locale
+  const locale = getRequestLocale(request.headers)
+  request.nextUrl.pathname = `/${locale}${pathname}`
+  // e.g. incoming request is /products
+  // The new URL is now /en/products
+  return NextResponse.redirect(request.nextUrl)
+}
+
+function getRequestLocale(requestHeaders: Headers): string {
+  const langHeader = requestHeaders.get('accept-language') || undefined
+  const languages = new Negotiator({
+    headers: { 'accept-language': langHeader },
+  }).languages(locales.slice())
+
+  const activeLocale = languages[0] || locales[0] || 'en'
+
+  return activeLocale
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
+     * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - api (API routes)
+     * - SEO files: manifest, robots.txt, sitemap.xml, etc.
+     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
      * Feel free to modify this pattern to include more paths.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    '/((?!_next/static|_next/image|favicon.ico|api|manifest|robots\\.txt|sitemap|opensearch\\.xml|humans\\.txt|ads\\.txt|security\\.txt|apple-touch-icon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-};
+}
