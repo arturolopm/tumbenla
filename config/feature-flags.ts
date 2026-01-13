@@ -40,22 +40,5 @@ export const isStripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WE
 /** Check if Polar is configured (@polar-sh/better-auth) */
 export const isPolarConfigured = Boolean(env.POLAR_ACCESS_TOKEN)
 
-/** Check if Dodo Payments is configured (@dodopayments/better-auth) */
-export const isDodoConfigured = Boolean(env.DODO_API_KEY)
-
-/** Check if Creem is configured (@creem_io/better-auth) */
-export const isCreemConfigured = Boolean(env.CREEM_API_KEY)
-
-/** Check if Autumn is configured (autumn-js/better-auth) */
-export const isAutumnConfigured = Boolean(env.AUTUMN_API_KEY)
-
-/** Get the explicitly selected billing provider */
-export const selectedBillingProvider = env.BILLING_PROVIDER
-
 /** Check if any billing provider is configured */
-export const hasBillingProvider =
-  isStripeConfigured ||
-  isPolarConfigured ||
-  isDodoConfigured ||
-  isCreemConfigured ||
-  isAutumnConfigured
+export const hasBillingProvider = isStripeConfigured || isPolarConfigured
