@@ -1,0 +1,8 @@
+services:
+  shipfree-staging:
+    build:
+      context: ../../
+      dockerfile: docker/staging/Dockerfile
+    image: shipfree-staging
+    ports:
+      - "3002:3000"
