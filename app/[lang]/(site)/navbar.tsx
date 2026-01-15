@@ -5,12 +5,9 @@ import { X, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { getGitHubStars } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useSession } from '@/lib/auth/auth-client'
 
 export default function Navbar() {
-  const { data: session, isPending } = useSession()
   const [stars, setStars] = useState<number | null>(null)
   const [isLoadingStars, setIsLoadingStars] = useState(true)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -84,12 +81,6 @@ export default function Navbar() {
               >
                 FAQ
               </Link>
-              <Link
-                href='/docs'
-                className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
-              >
-                Docs
-              </Link>
             </div>
 
             <div className='hidden h-6 w-px bg-black/30 md:block' />
@@ -120,19 +111,15 @@ export default function Navbar() {
               )}
             </a>
 
-            {!isPending && (
-              <>
-                {session ? (
-                  <Link href='/dashboard'>
-                    <Button>Go to App</Button>
-                  </Link>
-                ) : (
-                  <Link href='/upgrade'>
-                    <Button variant='ghost'>Upgrade to Pro</Button>
-                  </Link>
-                )}
-              </>
-            )}
+            <a
+              href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
+              target='_blank'
+              className='block text-sm font-semibold text-emerald-600 transition-colors duration-200 ease-in-out hover:text-emerald-700 hover:underline underline-offset-4'
+              rel='noopener noreferrer'
+              aria-label='Open token on Bags.fm'
+            >
+              $SHIPFREE COIN
+            </a>
 
             <button
               type='button'
@@ -177,13 +164,18 @@ export default function Navbar() {
               >
                 FAQ
               </Link>
-              <Link
-                href='/docs'
-                className='block rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 ease-in-out hover:bg-accent hover:text-accent-foreground'
+
+              <a
+                href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
+                target='_blank'
+                rel='noopener noreferrer'
+                className='block rounded-md px-3 py-2 text-sm font-semibold text-emerald-600 transition-colors duration-200 ease-in-out hover:text-emerald-700 hover:bg-accent/40'
+                aria-label='Open token on Bags.fm'
                 onClick={toggleMenu}
               >
-                Docs
-              </Link>
+                $SHIPFREE
+              </a>
+
               <a
                 href={`https://github.com/${repo}`}
                 target='_blank'
