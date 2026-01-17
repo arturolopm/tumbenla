@@ -4,9 +4,13 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { setPurchasedPremium } from '@/lib/premium-purchase'
 import { useVerifyPremiumPurchase } from '@/lib/premium-purchase/hooks'
-import { CheckCircle2, Sparkles, Github, Twitter } from 'lucide-react'
+import { CheckCircle2, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { quickValidateEmail } from '@/lib/messaging/email/validation'
+import { Spinner } from '@/components/ui/spinner'
 
 export default function PremiumPurchaseSuccess() {
   const searchParams = useSearchParams()
@@ -28,28 +32,88 @@ export default function PremiumPurchaseSuccess() {
   const [showDiscordLink, setShowDiscordLink] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Validation states
+  const [githubEmailErrors, setGithubEmailErrors] = useState<string[]>([])
+  const [twitterHandleErrors, setTwitterHandleErrors] = useState<string[]>([])
+  const [showGithubEmailValidationError, setShowGithubEmailValidationError] = useState(false)
+  const [showTwitterHandleValidationError, setShowTwitterHandleValidationError] = useState(false)
+
   useEffect(() => {
     if (isVerified && verificationData) {
       setPurchasedPremium()
     }
   }, [isVerified, verificationData])
 
-  const handleTwitterHandleChange = (value: string) => {
+  const validateEmailField = (emailValue: string): string[] => {
+    const errors: string[] = []
+
+    if (!emailValue || !emailValue.trim()) {
+      errors.push('Email is required.')
+      return errors
+    }
+
+    const validation = quickValidateEmail(emailValue.trim().toLowerCase())
+    if (!validation.isValid) {
+      errors.push(validation.reason || 'Please enter a valid email address.')
+    }
+
+    return errors
+  }
+
+  const validateTwitterHandle = (handle: string): string[] => {
+    const errors: string[] = []
+
+    if (!handle || !handle.trim()) {
+      errors.push('Twitter handle is required.')
+      return errors
+    }
+
+    const cleaned = handle.replace(/^@+/, '').trim()
+    if (cleaned.length === 0) {
+      errors.push('Twitter handle cannot be empty.')
+    } else if (cleaned.length < 1) {
+      errors.push('Twitter handle must be at least 1 character.')
+    } else if (cleaned.length > 15) {
+      errors.push('Twitter handle cannot exceed 15 characters.')
+    } else if (!/^[a-zA-Z0-9_]+$/.test(cleaned)) {
+      errors.push('Twitter handle can only contain letters, numbers, and underscores.')
+    }
+
+    return errors
+  }
+
+  const handleGithubEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value
+    setGithubEmail(newEmail)
+
+    const errors = validateEmailField(newEmail)
+    setGithubEmailErrors(errors)
+    setShowGithubEmailValidationError(false)
+  }
+
+  const handleTwitterHandleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
     const cleaned = value.replace(/^@+/, '')
     setTwitterHandle(cleaned)
+
+    const errors = validateTwitterHandle(cleaned)
+    setTwitterHandleErrors(errors)
+    setShowTwitterHandleValidationError(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!githubEmail || !twitterHandle) {
-      setFormError('Please fill in all fields')
-      return
-    }
+    const emailValidationErrors = validateEmailField(githubEmail)
+    setGithubEmailErrors(emailValidationErrors)
+    setShowGithubEmailValidationError(emailValidationErrors.length > 0)
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(githubEmail)) {
-      setFormError('Please enter a valid email address')
+    const twitterValidationErrors = validateTwitterHandle(twitterHandle)
+    setTwitterHandleErrors(twitterValidationErrors)
+    setShowTwitterHandleValidationError(twitterValidationErrors.length > 0)
+
+    if (emailValidationErrors.length > 0 || twitterValidationErrors.length > 0) {
+      setFormError(null)
       return
     }
 
@@ -119,18 +183,7 @@ export default function PremiumPurchaseSuccess() {
     return (
       <div className='min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4'>
         <div className='max-w-lg w-full'>
-          <div className='bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl p-10 text-center shadow-2xl shadow-black/5 dark:shadow-black/20 opacity-0 animate-[fadeIn_0.7s_ease-out_0.1s_forwards,slideUp_0.7s_ease-out_0.1s_forwards]'>
-            <div className='relative mb-8'>
-              <div className='absolute inset-0 flex items-center justify-center'>
-                <div className='w-32 h-32 bg-linear-to-br from-primary/20 via-primary/10 to-transparent rounded-full blur-2xl animate-pulse' />
-              </div>
-              <div className='relative w-24 h-24 bg-linear-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-green-500/30 opacity-0 scale-95 animate-[zoomIn_0.5s_ease-out_0.3s_forwards]'>
-                <CheckCircle2 className='w-12 h-12 text-white' strokeWidth={2.5} />
-              </div>
-              <div className='absolute -top-2 -right-2'>
-                <Sparkles className='w-6 h-6 text-primary animate-pulse' />
-              </div>
-            </div>
+          <div className='bg-background/80 backdrop-blur-xl rounded-xl p-10 text-center opacity-0 animate-[fadeIn_0.7s_ease-out_0.1s_forwards,slideUp_0.7s_ease-out_0.1s_forwards]'>
             <h1 className='text-4xl font-bold mb-4 bg-linear-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent'>
               Welcome to ShipFree Premium!
             </h1>
@@ -140,7 +193,7 @@ export default function PremiumPurchaseSuccess() {
             </p>
             <div className='space-y-4'>
               <Button
-                className='w-full h-12 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300'
+                className='w-full h-12 text-base font-semibold transition-all duration-300'
                 size='lg'
                 onClick={() => {
                   if (discordLink !== '#') {
@@ -175,13 +228,13 @@ export default function PremiumPurchaseSuccess() {
   return (
     <div className='min-h-screen flex items-center justify-center bg-linear-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 py-12'>
       <div className='max-w-lg w-full'>
-        <div className='bg-background/80 backdrop-blur-xl border border-border/50 rounded-2xl p-10 shadow-2xl shadow-black/5 dark:shadow-black/20 opacity-0 animate-[fadeIn_0.7s_ease-out_0.1s_forwards,slideUp_0.7s_ease-out_0.1s_forwards]'>
+        <div className='bg-background/80 backdrop-blur-xl border border-border/50 rounded-xl p-10 shadow-2xl shadow-black/5 dark:shadow-black/20 opacity-0 animate-[fadeIn_0.7s_ease-out_0.1s_forwards,slideUp_0.7s_ease-out_0.1s_forwards]'>
           <div className='mb-8 text-center'>
             <div className='relative inline-block mb-6'>
               <div className='absolute inset-0 flex items-center justify-center'>
                 <div className='w-32 h-32 bg-linear-to-br from-primary/20 via-primary/10 to-transparent rounded-full blur-2xl animate-pulse' />
               </div>
-              <div className='relative w-20 h-20 bg-linear-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-lg shadow-green-500/30 opacity-0 scale-95 animate-[zoomIn_0.5s_ease-out_0.3s_forwards]'>
+              <div className='relative w-20 h-20 bg-linear-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto opacity-0 scale-95 animate-[zoomIn_0.5s_ease-out_0.3s_forwards]'>
                 <CheckCircle2 className='w-10 h-10 text-white' strokeWidth={2.5} />
               </div>
             </div>
@@ -194,69 +247,88 @@ export default function PremiumPurchaseSuccess() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className='space-y-6'>
-            <div className='space-y-2'>
-              <label
-                htmlFor='github-email'
-                className='text-sm font-semibold mb-3 flex items-center gap-2 text-linear-to-r from-foreground via-foreground/90 to-foreground/70 bg-clip-text text-transparent'
-              >
-                <Github className='w-4 h-4' />
-                GitHub Email
-              </label>
-              <Input
-                id='github-email'
-                type='email'
-                placeholder='your.email@example.com'
-                value={githubEmail}
-                onChange={(e) => setGithubEmail(e.target.value)}
-                required
-                disabled={isSubmitting}
-                className='h-12 text-base'
-              />
-            </div>
-
-            <div className='space-y-2'>
-              <label
-                htmlFor='twitter-handle'
-                className='text-sm font-semibold mb-3 flex items-center gap-2'
-              >
-                <Twitter className='w-4 h-4' />
-                Twitter Handle
-              </label>
-              <div className='relative'>
-                <span className='absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground text-lg font-medium'>
-                  @
-                </span>
+          <form onSubmit={handleSubmit} className='space-y-8'>
+            <div className='space-y-6'>
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <Label htmlFor='github-email'>GitHub Email</Label>
+                </div>
                 <Input
-                  id='twitter-handle'
-                  type='text'
-                  placeholder='yourhandle'
-                  value={twitterHandle}
-                  onChange={(e) => handleTwitterHandleChange(e.target.value)}
-                  className='pl-10 h-12 text-base'
+                  id='github-email'
+                  name='github-email'
+                  type='email'
+                  placeholder='your.email@example.com'
+                  value={githubEmail}
+                  onChange={handleGithubEmailChange}
                   required
+                  autoCapitalize='none'
+                  autoComplete='email'
+                  autoCorrect='off'
                   disabled={isSubmitting}
+                  size='lg'
+                  className={cn(
+                    'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                    showGithubEmailValidationError &&
+                      githubEmailErrors.length > 0 &&
+                      'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                  )}
                 />
+                {showGithubEmailValidationError && githubEmailErrors.length > 0 && (
+                  <div className='mt-1 space-y-1 text-red-400 text-xs'>
+                    {githubEmailErrors.map((error, index) => (
+                      <p key={index}>{error}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <Label htmlFor='twitter-handle'>Twitter Handle</Label>
+                </div>
+                <div className='relative'>
+                  <Input
+                    id='twitter-handle'
+                    name='twitter-handle'
+                    type='text'
+                    placeholder='yourhandle'
+                    value={twitterHandle}
+                    onChange={handleTwitterHandleChange}
+                    required
+                    autoCapitalize='none'
+                    autoCorrect='off'
+                    disabled={isSubmitting}
+                    size='lg'
+                    className={cn(
+                      'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                      showTwitterHandleValidationError &&
+                        twitterHandleErrors.length > 0 &&
+                        'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                    )}
+                  />
+                </div>
+                {showTwitterHandleValidationError && twitterHandleErrors.length > 0 && (
+                  <div className='mt-1 space-y-1 text-red-400 text-xs'>
+                    {twitterHandleErrors.map((error, index) => (
+                      <p key={index}>{error}</p>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            {(error || formError) && (
-              <div className='text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-4 opacity-0 animate-[fadeIn_0.3s_ease-out_forwards,slideDown_0.3s_ease-out_forwards]'>
-                {formError || error}
+            {formError && (
+              <div className='text-sm text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4'>
+                {formError}
               </div>
             )}
 
-            <Button
-              type='submit'
-              className='w-full h-12 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 mt-2'
-              size='lg'
-              disabled={isSubmitting}
-            >
+            <Button type='submit' size='lg' className='w-full' disabled={isSubmitting}>
               {isSubmitting ? (
-                <span className='flex items-center gap-2'>
-                  <div className='w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin' />
-                  Processing...
-                </span>
+                <>
+                  <Spinner className='h-5 w-5 mr-2' />
+                  <span className='transition-opacity duration-200'>Processing...</span>
+                </>
               ) : (
                 'Continue'
               )}
