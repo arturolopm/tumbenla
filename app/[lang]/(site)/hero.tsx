@@ -1,7 +1,6 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { BiSolidZap } from 'react-icons/bi'
 import { ArrowUpRight } from 'lucide-react'
 import {
   Tooltip,
@@ -10,6 +9,7 @@ import {
   TooltipTrigger,
   TooltipPopup,
 } from '@/components/ui/tooltip'
+import { PremiumButton } from './pricing/premium-button'
 
 const tooltipHandle = TooltipCreateHandle<React.ComponentType>()
 
@@ -44,10 +44,7 @@ export default function Hero() {
             setup so you can spend time building features that actually make money.{' '}
           </p>
           <div className='mx-auto mt-10 flex items-center justify-center gap-4'>
-            <Button variant='default' className='text-white font-semibold h-12! px-8 text-base'>
-              <BiSolidZap className='h-8 w-8' />
-              Get ShipFree
-            </Button>
+            <PremiumButton className='text-white' />
             <Button variant='outline' className='font-semibold h-12! px-8 text-base'>
               Try demo
               <ArrowUpRight className='h-8 w-8' />

@@ -1,11 +1,12 @@
 import { useLingui } from '@lingui/react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle01Icon } from '@hugeicons/core-free-icons'
-import { BiSolidZap } from 'react-icons/bi'
 import { Flame } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+// Premium template purchase - can be removed if not needed
+import { PremiumButton } from './pricing/premium-button'
 
 export default function Pricing() {
   const { i18n } = useLingui()
@@ -140,10 +141,8 @@ export default function Pricing() {
                 ))}
               </ul>
               <div className='flex flex-col gap-2'>
-                <Button className='w-full h-12! text-sm font-medium' size='lg'>
-                  <BiSolidZap className='h-4 w-4' />
-                  Get ShipFree Pro
-                </Button>
+                {/* Premium template purchase - can be removed if not needed */}
+                <PremiumButton />
                 <p className='text-sm text-center text-muted-foreground'>
                   Pay once. Build unlimited projects!
                 </p>

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 
 import { getGitHubStars } from '@/lib/utils'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 
 export default function Navbar() {
   const [stars, setStars] = useState<number | null>(null)
@@ -111,15 +112,21 @@ export default function Navbar() {
               )}
             </a>
 
-            <a
-              href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
-              target='_blank'
-              className='block text-sm font-semibold text-emerald-600 transition-colors duration-200 ease-in-out hover:text-emerald-700 hover:underline underline-offset-4'
-              rel='noopener noreferrer'
-              aria-label='Open token on Bags.fm'
-            >
-              $SHIPFREE COIN
-            </a>
+            <Button
+              variant='link'
+              className='hidden md:flex'
+              render={(props) => (
+                <a
+                  {...props}
+                  href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
+                  target='_blank'
+                  rel='noopener noreferrer'
+                  aria-label='Support dev'
+                >
+                  Support Dev
+                </a>
+              )}
+            />
 
             <button
               type='button'
@@ -165,16 +172,22 @@ export default function Navbar() {
                 FAQ
               </Link>
 
-              <a
-                href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
-                target='_blank'
-                rel='noopener noreferrer'
-                className='block rounded-md px-3 py-2 text-sm font-semibold text-emerald-600 transition-colors duration-200 ease-in-out hover:text-emerald-700 hover:bg-accent/40'
-                aria-label='Open token on Bags.fm'
-                onClick={toggleMenu}
-              >
-                $SHIPFREE
-              </a>
+              <Button
+                variant='link'
+                className='w-full justify-start'
+                render={(props) => (
+                  <a
+                    {...props}
+                    href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    aria-label='Support dev'
+                    onClick={toggleMenu}
+                  >
+                    Support Dev
+                  </a>
+                )}
+              />
 
               <a
                 href={`https://github.com/${repo}`}
