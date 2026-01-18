@@ -12,7 +12,6 @@ export const siteConfig = {
   description:
     'ShipFree is a free open-source Next.js SaaS boilerplate alternative to ShipFast. Simplify and optimize your shipping process with modern web technologies.',
   url: getBaseUrl(),
-  ogImage: '/og.png',
   twitterHandle: '@codedoesdev',
   creator: 'The Revoks Company',
   keywords: [
@@ -87,22 +86,12 @@ const normalizeCanonicalPath = (canonicalPath?: string, allowQuery?: boolean) =>
  * Generate Open Graph metadata
  */
 const getOpenGraph = (options: SEOOptions) => {
-  const ogImage = options.image ? getAbsoluteUrl(options.image) : getAbsoluteUrl(siteConfig.ogImage)
-
   return {
     type: options.type || 'website',
     url: options.canonical ? getAbsoluteUrl(options.canonical) : siteConfig.url,
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     siteName: siteConfig.name,
-    images: [
-      {
-        url: ogImage,
-        width: 1200,
-        height: 630,
-        alt: options.imageAlt || options.title || siteConfig.name,
-      },
-    ],
     ...(options.publishedTime && { publishedTime: options.publishedTime }),
     ...(options.modifiedTime && { modifiedTime: options.modifiedTime }),
     ...(options.authors && { authors: options.authors }),
@@ -113,16 +102,11 @@ const getOpenGraph = (options: SEOOptions) => {
  * Generate Twitter Card metadata
  */
 const getTwitterCard = (options: SEOOptions) => {
-  const twitterImage = options.image
-    ? getAbsoluteUrl(options.image)
-    : getAbsoluteUrl(siteConfig.ogImage)
-
   return {
     card: 'summary_large_image' as const,
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     creator: siteConfig.twitterHandle,
-    images: [twitterImage],
   }
 }
 
@@ -260,7 +244,6 @@ export const getArticleSchema = (options: {
     '@type': 'Article',
     headline: options.title,
     description: options.description,
-    image: options.image ? getAbsoluteUrl(options.image) : getAbsoluteUrl(siteConfig.ogImage),
     datePublished: options.publishedTime,
     ...(options.modifiedTime && { dateModified: options.modifiedTime }),
     author: {
