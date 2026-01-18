@@ -86,12 +86,20 @@ const normalizeCanonicalPath = (canonicalPath?: string, allowQuery?: boolean) =>
  * Generate Open Graph metadata
  */
 const getOpenGraph = (options: SEOOptions) => {
+  const imageUrl = options.image || '/opengraph-image.png'
+
   return {
     type: options.type || 'website',
     url: options.canonical ? getAbsoluteUrl(options.canonical) : siteConfig.url,
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     siteName: siteConfig.name,
+    images: [
+      {
+        url: imageUrl,
+        ...(options.imageAlt && { alt: options.imageAlt }),
+      },
+    ],
     ...(options.publishedTime && { publishedTime: options.publishedTime }),
     ...(options.modifiedTime && { modifiedTime: options.modifiedTime }),
     ...(options.authors && { authors: options.authors }),
@@ -102,11 +110,14 @@ const getOpenGraph = (options: SEOOptions) => {
  * Generate Twitter Card metadata
  */
 const getTwitterCard = (options: SEOOptions) => {
+  const imageUrl = options.image || '/twitter-image.png'
+
   return {
     card: 'summary_large_image' as const,
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     creator: siteConfig.twitterHandle,
+    images: [imageUrl],
   }
 }
 
