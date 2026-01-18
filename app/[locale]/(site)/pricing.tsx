@@ -1,4 +1,6 @@
-import { useLingui } from '@lingui/react'
+'use client'
+
+import { useTranslations } from 'next-intl'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle01Icon } from '@hugeicons/core-free-icons'
 import { Flame } from 'lucide-react'
@@ -9,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { PremiumButton } from './pricing/premium-button'
 
 export default function Pricing() {
-  const { i18n } = useLingui()
+  const t = useTranslations()
 
   const communityFeatures = [
     { text: 'Full Next.js boilerplate', included: true },
@@ -43,7 +45,7 @@ export default function Pricing() {
             className='text-center text-sm font-medium text-muted-foreground mb-8'
             style={{ fontFamily: 'var(--font-geist-mono)' }}
           >
-            {i18n.t('PRICING')}
+            {t('PRICING')}
           </h2>
           <div className='text-center mb-16'>
             <h2 className='text-4xl font-semibold tracking-tight mb-4'>

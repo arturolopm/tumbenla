@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { FaGithub, FaDiscord, FaXTwitter } from 'react-icons/fa6'
 import { SiProducthunt, SiYcombinator, SiPeerlist } from 'react-icons/si'
+import { LanguageSwitcher } from '@/components/language-switcher'
 
 export default function Footer() {
   return (
@@ -209,10 +210,13 @@ export default function Footer() {
               </span>
             </div>
             <p className='text-sm text-muted-foreground'>Turn ideas into products, fast</p>
-            <p className='text-sm text-muted-foreground'>
-              Copyright © {new Date().getFullYear()} -{' '}
-              <Link href='https://revoks.dev'>The Revoks Company</Link>
-            </p>
+            <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+              <p className='text-sm text-muted-foreground'>
+                Copyright © {new Date().getFullYear()} -{' '}
+                <Link href='https://revoks.dev'>The Revoks Company</Link>
+              </p>
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
       </div>

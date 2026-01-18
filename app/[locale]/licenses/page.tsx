@@ -1,6 +1,4 @@
 import type { Metadata } from 'next'
-import { setI18n } from '@lingui/react/server'
-import { getI18nInstance } from '@/locale/server'
 import { generateMetadata as generateSEOMetadata } from '@/lib/seo'
 import Navbar from '../(site)/navbar'
 import Footer from '../(site)/footer'
@@ -12,10 +10,8 @@ export const metadata: Metadata = generateSEOMetadata({
   canonical: '/licenses',
 })
 
-export default async function LicensesPage({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params
-  const i18n = getI18nInstance(lang)
-  setI18n(i18n)
+export default async function LicensesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
 
   return (
     <GridLayout>

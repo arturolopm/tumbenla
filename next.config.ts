@@ -1,25 +1,28 @@
 import { withSentryConfig } from '@sentry/nextjs'
+import createNextIntlPlugin from 'next-intl/plugin'
 import type { NextConfig } from 'next'
+
+const withNextIntl = createNextIntlPlugin({
+  requestConfig: './i18n/request.ts',
+  experimental: {
+    messages: {
+      // Relative path to the directory
+      path: './messages',
+      // Automatically detects locales based on `path`
+      locales: 'infer',
+      // Either 'json' or 'po'
+      format: 'json',
+    },
+  },
+})
 
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker optimization
   // This reduces the Docker image size by including only necessary files
   // output: 'standalone',
-  // to use Lingui macros
-  experimental: {
-    swcPlugins: [['@lingui/swc-plugin', {}]],
-  },
-  turbopack: {
-    rules: {
-      '*.po': {
-        loaders: ['@lingui/loader'],
-        as: '*.js',
-      },
-    },
-  },
 }
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withNextIntl(nextConfig), {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 

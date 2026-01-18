@@ -12,7 +12,7 @@ ShipFree is a production-ready Next.js boilerplate designed to help developers s
 - **Payments**: Multi-provider support (Stripe, Polar, Lemon Squeezy)
 - **Email**: Multi-provider support (Resend, Postmark, Plunk, Nodemailer)
 - **UI**: TailwindCSS 4, BaseUI components, Shadcn-style patterns
-- **Internationalization**: Lingui (i18n) with support for en, es, fr
+- **Internationalization**: next-intl (i18n) with support for en, es, fr
 - **Monitoring**: Sentry integration
 - **Storage**: Cloudflare R2 support
 
@@ -23,7 +23,7 @@ ShipFree is a production-ready Next.js boilerplate designed to help developers s
 ```
 ShipFree/
 ├── app/                    # Next.js App Router pages and routes
-│   ├── [lang]/            # Internationalized routes
+│   ├── [locale]/          # Internationalized routes
 │   │   ├── (auth)/        # Authentication pages (login, register, etc.)
 │   │   ├── (main)/        # Main app pages (dashboard, etc.)
 │   │   └── (site)/        # Marketing/landing pages
@@ -49,10 +49,13 @@ ShipFree/
 │   ├── messaging/       # Email service and providers
 │   ├── storage.ts       # Cloudflare R2 storage client
 │   └── utils/           # Utility functions
-├── locale/               # Internationalization
-│   ├── server.ts        # Server-side i18n
-│   ├── client.ts        # Client-side i18n
-│   └── locales/         # Translation files
+├── i18n/                 # Internationalization configuration
+│   ├── routing.ts       # Routing configuration
+│   └── request.ts       # Request configuration
+├── messages/            # Translation files (JSON format)
+│   ├── en.json
+│   ├── fr.json
+│   └── es.json
 └── hooks/                # React hooks
 ```
 
@@ -67,9 +70,11 @@ ShipFree/
 - They don't affect URL structure but organize layouts
 
 #### 3. **Internationalization**
-- All routes are under `[lang]` dynamic segment
+- All routes are under `[locale]` dynamic segment
 - Supported languages: `en`, `es`, `fr`
-- Use `@lingui/react` for translations
+- Use `next-intl` for translations
+- Server components: Use `getTranslations` from `next-intl/server`
+- Client components: Use `useTranslations` hook from `next-intl`
 
 #### 4. **Environment Configuration**
 - All env vars validated via `@t3-oss/env-nextjs` in `config/env.ts`
@@ -102,7 +107,7 @@ ShipFree/
 
 ### Adding a New Page
 
-1. Create file in `app/[lang]/(group)/page.tsx`
+1. Create file in `app/[locale]/(group)/page.tsx`
 2. Add metadata export if needed
 3. Use appropriate layout group
 4. Add translations if needed
@@ -157,8 +162,6 @@ ShipFree/
 - `bun format`: Format code
 - `bun generate-migration`: Generate DB migration
 - `bun migrate:local`: Run migrations locally
-- `bun intl:extract`: Extract translation strings
-- `bun intl:compile`: Compile translations
 
 ### Testing
 
@@ -184,5 +187,5 @@ ShipFree/
 - **Better-Auth**: https://better-auth.com
 - **Drizzle ORM**: https://orm.drizzle.team
 - **Next.js**: https://nextjs.org/docs
-- **Lingui**: https://lingui.dev
+- **next-intl**: https://next-intl-docs.vercel.app
 - **BaseUI**: https://base-ui.com
