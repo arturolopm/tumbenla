@@ -19,7 +19,7 @@ export default function Footer() {
             <ul className='space-y-3'>
               <li>
                 <Link
-                  href='/pricing'
+                  href='/#pricing'
                   className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
                 >
                   Pricing
@@ -163,7 +163,7 @@ export default function Footer() {
             <ul className='space-y-3'>
               <li>
                 <Link
-                  href='https://github.com'
+                  href='https://github.com/revokslab/shipfree'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
@@ -185,7 +185,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href='https://twitter.com'
+                  href='https://x.com/shipfree_dev'
                   target='_blank'
                   rel='noopener noreferrer'
                   className='flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
