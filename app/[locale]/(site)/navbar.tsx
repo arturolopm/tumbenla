@@ -59,25 +59,25 @@ export default function Navbar() {
           <div className='flex items-center gap-6'>
             <div className='hidden items-center gap-6 md:flex'>
               <Link
-                href='#features'
+                href='/#features'
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
                 Features
               </Link>
               <Link
-                href='#pricing'
+                href='/#pricing'
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
                 Pricing
               </Link>
               <Link
-                href='#wall-of-love'
+                href='/#wall-of-love'
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
                 Wall of love
               </Link>
               <Link
-                href='#faq'
+                href='/#faq'
                 className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
               >
                 FAQ
