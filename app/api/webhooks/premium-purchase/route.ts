@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
+import { eq } from 'drizzle-orm'
+
 import { env } from '@/config/env'
+import { db } from '@/database'
+import { premiumPurchase } from '@/database/schema'
 
 export async function POST(request: Request) {
   try {
@@ -43,11 +47,35 @@ export async function POST(request: Request) {
       const session = event.data.object as Stripe.Checkout.Session
 
       if (session.metadata?.type === 'premium_template_purchase') {
-        console.log('Premium template purchase completed:', {
-          sessionId: session.id,
-          customerEmail: session.customer_email,
-          amountTotal: session.amount_total,
-        })
+        const existingPurchases = await db
+          .select()
+          .from(premiumPurchase)
+          .where(eq(premiumPurchase.stripeSessionId, session.id))
+          .limit(1)
+        const existingPurchase = existingPurchases[0] || null
+
+        const amountPaid = session.amount_total ? (session.amount_total / 100).toString() : null
+        const currency = session.currency?.toUpperCase() || null
+
+        if (existingPurchase) {
+          await db
+            .update(premiumPurchase)
+            .set({
+              stripeCustomerEmail: session.customer_email || null,
+              amountPaid: amountPaid,
+              currency: currency,
+              updatedAt: new Date(),
+            })
+            .where(eq(premiumPurchase.id, existingPurchase.id))
+        } else {
+          await db.insert(premiumPurchase).values({
+            id: session.id,
+            stripeSessionId: session.id,
+            stripeCustomerEmail: session.customer_email || null,
+            amountPaid: amountPaid,
+            currency: currency,
+          })
+        }
       }
     }
 

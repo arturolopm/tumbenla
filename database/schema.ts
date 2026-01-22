@@ -163,6 +163,26 @@ export const payment = pgTable(
   ]
 )
 
+export const premiumPurchase = pgTable(
+  'premium_purchase',
+  {
+    id: text('id').primaryKey(),
+    stripeSessionId: text('stripe_session_id').notNull().unique(),
+    stripeCustomerEmail: text('stripe_customer_email'),
+    githubEmail: text('github_email'),
+    githubUsername: text('github_username'),
+    twitterHandle: text('twitter_handle'),
+    amountPaid: decimal('amount_paid', { precision: 10, scale: 2 }),
+    currency: text('currency'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index('premium_purchase_stripe_sessionId_idx').on(table.stripeSessionId)]
+)
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

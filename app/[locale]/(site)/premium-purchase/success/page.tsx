@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useActionState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useFormStatus } from 'react-dom'
+import { CheckCircle2, Sparkles } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { setPurchasedPremium } from '@/lib/premium-purchase'
 import { useVerifyPremiumPurchase } from '@/lib/premium-purchase/hooks'
-import { CheckCircle2, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { quickValidateEmail } from '@/lib/messaging/email/validation'
+import { saveCommunityInfo } from '@/app/actions/premium-purchase'
 import { Spinner } from '@/components/ui/spinner'
 
 export default function PremiumPurchaseSuccess() {
@@ -26,17 +28,20 @@ export default function PremiumPurchaseSuccess() {
   const isVerified = !!verificationData
   const error = verificationError ? (verificationError as Error).message : null
 
-  const [githubEmail, setGithubEmail] = useState('')
-  const [twitterHandle, setTwitterHandle] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showDiscordLink, setShowDiscordLink] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
+  const initialState = {
+    success: false,
+    message: '',
+    errors: undefined,
+  }
 
-  // Validation states
-  const [githubEmailErrors, setGithubEmailErrors] = useState<string[]>([])
-  const [twitterHandleErrors, setTwitterHandleErrors] = useState<string[]>([])
-  const [showGithubEmailValidationError, setShowGithubEmailValidationError] = useState(false)
-  const [showTwitterHandleValidationError, setShowTwitterHandleValidationError] = useState(false)
+  const [state, formAction, pending] = useActionState(saveCommunityInfo, initialState)
+  const [showDiscordLink, setShowDiscordLink] = useState(false)
+
+  useEffect(() => {
+    if (state.success) {
+      setShowDiscordLink(true)
+    }
+  }, [state.success])
 
   useEffect(() => {
     if (isVerified && verificationData) {
@@ -44,86 +49,20 @@ export default function PremiumPurchaseSuccess() {
     }
   }, [isVerified, verificationData])
 
-  const validateEmailField = (emailValue: string): string[] => {
-    const errors: string[] = []
-
-    if (!emailValue || !emailValue.trim()) {
-      errors.push('Email is required.')
-      return errors
-    }
-
-    const validation = quickValidateEmail(emailValue.trim().toLowerCase())
-    if (!validation.isValid) {
-      errors.push(validation.reason || 'Please enter a valid email address.')
-    }
-
-    return errors
-  }
-
-  const validateTwitterHandle = (handle: string): string[] => {
-    const errors: string[] = []
-
-    if (!handle || !handle.trim()) {
-      errors.push('Twitter handle is required.')
-      return errors
-    }
-
-    const cleaned = handle.replace(/^@+/, '').trim()
-    if (cleaned.length === 0) {
-      errors.push('Twitter handle cannot be empty.')
-    } else if (cleaned.length < 1) {
-      errors.push('Twitter handle must be at least 1 character.')
-    } else if (cleaned.length > 15) {
-      errors.push('Twitter handle cannot exceed 15 characters.')
-    } else if (!/^[a-zA-Z0-9_]+$/.test(cleaned)) {
-      errors.push('Twitter handle can only contain letters, numbers, and underscores.')
-    }
-
-    return errors
-  }
-
-  const handleGithubEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value
-    setGithubEmail(newEmail)
-
-    const errors = validateEmailField(newEmail)
-    setGithubEmailErrors(errors)
-    setShowGithubEmailValidationError(false)
-  }
-
-  const handleTwitterHandleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    const cleaned = value.replace(/^@+/, '')
-    setTwitterHandle(cleaned)
-
-    const errors = validateTwitterHandle(cleaned)
-    setTwitterHandleErrors(errors)
-    setShowTwitterHandleValidationError(false)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const emailValidationErrors = validateEmailField(githubEmail)
-    setGithubEmailErrors(emailValidationErrors)
-    setShowGithubEmailValidationError(emailValidationErrors.length > 0)
-
-    const twitterValidationErrors = validateTwitterHandle(twitterHandle)
-    setTwitterHandleErrors(twitterValidationErrors)
-    setShowTwitterHandleValidationError(twitterValidationErrors.length > 0)
-
-    if (emailValidationErrors.length > 0 || twitterValidationErrors.length > 0) {
-      setFormError(null)
-      return
-    }
-
-    setIsSubmitting(true)
-    setFormError(null)
-
-    setTimeout(() => {
-      setShowDiscordLink(true)
-      setIsSubmitting(false)
-    }, 500)
+  const SubmitButton = () => {
+    const { pending: isPending } = useFormStatus()
+    return (
+      <Button type='submit' size='lg' className='w-full' disabled={isPending || !sessionId}>
+        {isPending ? (
+          <>
+            <Spinner className='h-5 w-5 mr-2' />
+            <span className='transition-opacity duration-200'>Processing...</span>
+          </>
+        ) : (
+          'Continue'
+        )}
+      </Button>
+    )
   }
 
   if (isVerifying) {
@@ -242,12 +181,13 @@ export default function PremiumPurchaseSuccess() {
               Payment Successful!
             </h1>
             <p className='text-muted-foreground text-lg leading-relaxed'>
-              Please provide your GitHub email and Twitter handle to receive access to the private
-              repository and Discord community.
+              Please provide your GitHub email, GitHub username, and Twitter handle to receive
+              access to the private repository and Discord community.
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className='space-y-8'>
+          <form action={formAction} className='space-y-8'>
+            <input type='hidden' name='sessionId' value={sessionId || ''} />
             <div className='space-y-6'>
               <div className='space-y-2'>
                 <div className='flex items-center justify-between'>
@@ -255,27 +195,53 @@ export default function PremiumPurchaseSuccess() {
                 </div>
                 <Input
                   id='github-email'
-                  name='github-email'
+                  name='githubEmail'
                   type='email'
                   placeholder='your.email@example.com'
-                  value={githubEmail}
-                  onChange={handleGithubEmailChange}
                   required
                   autoCapitalize='none'
                   autoComplete='email'
                   autoCorrect='off'
-                  disabled={isSubmitting}
+                  disabled={pending}
                   size='lg'
                   className={cn(
                     'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
-                    showGithubEmailValidationError &&
-                      githubEmailErrors.length > 0 &&
+                    state.errors?.githubEmail &&
                       'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
                   )}
                 />
-                {showGithubEmailValidationError && githubEmailErrors.length > 0 && (
-                  <div className='mt-1 space-y-1 text-red-400 text-xs'>
-                    {githubEmailErrors.map((error, index) => (
+                {state.errors?.githubEmail && (
+                  <div className='mt-1 space-y-1 text-red-400 text-xs' aria-live='polite'>
+                    {state.errors.githubEmail.map((error, index) => (
+                      <p key={index}>{error}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className='space-y-2'>
+                <div className='flex items-center justify-between'>
+                  <Label htmlFor='github-username'>GitHub Username</Label>
+                </div>
+                <Input
+                  id='github-username'
+                  name='githubUsername'
+                  type='text'
+                  placeholder='yourusername'
+                  required
+                  autoCapitalize='none'
+                  autoCorrect='off'
+                  disabled={pending}
+                  size='lg'
+                  className={cn(
+                    'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                    state.errors?.githubUsername &&
+                      'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                  )}
+                />
+                {state.errors?.githubUsername && (
+                  <div className='mt-1 space-y-1 text-red-400 text-xs' aria-live='polite'>
+                    {state.errors.githubUsername.map((error, index) => (
                       <p key={index}>{error}</p>
                     ))}
                   </div>
@@ -289,27 +255,24 @@ export default function PremiumPurchaseSuccess() {
                 <div className='relative'>
                   <Input
                     id='twitter-handle'
-                    name='twitter-handle'
+                    name='twitterHandle'
                     type='text'
                     placeholder='yourhandle'
-                    value={twitterHandle}
-                    onChange={handleTwitterHandleChange}
                     required
                     autoCapitalize='none'
                     autoCorrect='off'
-                    disabled={isSubmitting}
+                    disabled={pending}
                     size='lg'
                     className={cn(
                       'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
-                      showTwitterHandleValidationError &&
-                        twitterHandleErrors.length > 0 &&
+                      state.errors?.twitterHandle &&
                         'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
                     )}
                   />
                 </div>
-                {showTwitterHandleValidationError && twitterHandleErrors.length > 0 && (
-                  <div className='mt-1 space-y-1 text-red-400 text-xs'>
-                    {twitterHandleErrors.map((error, index) => (
+                {state.errors?.twitterHandle && (
+                  <div className='mt-1 space-y-1 text-red-400 text-xs' aria-live='polite'>
+                    {state.errors.twitterHandle.map((error, index) => (
                       <p key={index}>{error}</p>
                     ))}
                   </div>
@@ -317,22 +280,27 @@ export default function PremiumPurchaseSuccess() {
               </div>
             </div>
 
-            {formError && (
-              <div className='text-sm text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4'>
-                {formError}
+            {state.errors?._form && (
+              <div
+                className='text-sm text-red-400 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4'
+                aria-live='polite'
+              >
+                {state.errors._form.map((error, index) => (
+                  <p key={index}>{error}</p>
+                ))}
               </div>
             )}
 
-            <Button type='submit' size='lg' className='w-full' disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Spinner className='h-5 w-5 mr-2' />
-                  <span className='transition-opacity duration-200'>Processing...</span>
-                </>
-              ) : (
-                'Continue'
-              )}
-            </Button>
+            {state.message && state.success && (
+              <div
+                className='text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4'
+                aria-live='polite'
+              >
+                {state.message}
+              </div>
+            )}
+
+            <SubmitButton />
           </form>
         </div>
       </div>

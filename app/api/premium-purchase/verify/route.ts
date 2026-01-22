@@ -35,6 +35,7 @@ export async function GET(request: Request) {
       success: true,
       sessionId: session.id,
       paymentStatus: session.payment_status,
+      customerEmail: session.customer_email || null,
     })
   } catch (error) {
     console.error('Premium purchase verification error:', error)
