@@ -28,14 +28,13 @@ export function PremiumButton({ className }: { className?: string }) {
       {isLoading ? (
         <>
           <Spinner className='h-5 w-5 mr-2' />
-          <span className='transition-opacity duration-200'>Processing...</span>
         </>
       ) : (
         <>
           <BiSolidZap className='h-5 w-5 mr-2 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-12' />
-          <span>Get ShipFree Pro</span>
         </>
       )}
+      <span>Get ShipFree</span>
     </Button>
   )
 }

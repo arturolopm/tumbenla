@@ -18,13 +18,7 @@ const communityInfoSchema = z.object({
       message:
         'GitHub username must be 1-39 characters and can only contain alphanumeric characters and hyphens',
     }),
-  twitterHandle: z
-    .string()
-    .min(1, 'Twitter handle is required')
-    .regex(/^[a-zA-Z0-9_]{1,15}$/, {
-      message:
-        'Twitter handle must be 1-15 characters and can only contain letters, numbers, and underscores',
-    }),
+  twitterHandle: z.string().min(1, 'Twitter handle is required'),
 })
 
 type CommunityInfoState = {
