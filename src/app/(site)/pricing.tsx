@@ -23,13 +23,13 @@ export default function Pricing() {
 
   const premiumFeatures = [
     { text: 'Everything in free', included: true },
-    { text: 'One-click deploys', included: true },
+    { text: 'Internationalization', included: true },
     { text: 'Role-based access & invite system', included: true },
     { text: 'Advanced SEO & Blog', included: true },
+    { text: 'Playwright and CI workflow', included: true },
     { text: 'Analytics hooks ready for Posthog', included: true },
     { text: 'Pro UI kit', included: true },
     { text: 'Private Discord Community', included: true },
-    { text: 'Lifetime updates', included: true },
     { text: 'Priority support', included: true },
   ]
 
