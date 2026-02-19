@@ -5,18 +5,18 @@ description: "Where ShipFree stores its runtime and product configuration."
 
 # Configuration
 
-ShipFree centralizes configuration in `config/` and exposes utilities in `lib/`.
+ShipFree centralizes configuration in `src/config/` and exposes utilities in `src/lib/`.
 
 ## Brand config
 
-`config/branding.ts` defines brand metadata and theme colors used by UI and email templates.
+`src/config/branding.ts` defines brand metadata and theme colors used by UI and email templates.
 
 - `name`, `logoUrl`, `supportEmail`
 - `theme` colors for primary, accent, and background
 
 ## Feature flags
 
-`config/feature-flags.ts` exposes helpers that read validated env values.
+`src/config/feature-flags.ts` exposes helpers that read validated env values.
 
 - `isBillingEnabled`
 - `isEmailVerificationEnabled`
@@ -24,14 +24,14 @@ ShipFree centralizes configuration in `config/` and exposes utilities in `lib/`.
 
 ## Payments catalog
 
-`config/payments.ts` defines plans, features, pricing, and provider product IDs.
+`src/config/payments.ts` defines plans, features, pricing, and provider product IDs.
 
 Update this file when you add or change tiers, pricing, or trial settings.
 
 ## Environment validation
 
-`config/env.ts` uses `@t3-oss/env-nextjs` and `zod` to validate runtime variables.
+`src/config/env.ts` uses `@t3-oss/env-nextjs` and `zod` to validate runtime variables.
 
 <Warning>
-  Do not read `process.env` directly in app code. Use `env` from `config/env.ts` to keep validation consistent.
+  Do not read `process.env` directly in app code. Use `env` from `src/config/env.ts` to keep validation consistent.
 </Warning>

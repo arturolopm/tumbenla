@@ -15,7 +15,7 @@ export function LanguageSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
 
-  const handleLocaleChange = (newLocale: string) => {
+  const handleLocaleChange = (newLocale: (typeof routing.locales)[number]) => {
     router.replace(pathname, { locale: newLocale })
   }
 
@@ -24,7 +24,7 @@ export function LanguageSwitcher() {
       <span className='text-sm font-medium text-muted-foreground'>Language:</span>
       <select
         value={locale}
-        onChange={(e) => handleLocaleChange(e.target.value)}
+        onChange={(e) => handleLocaleChange(e.target.value as any)}
         className='rounded-md border border-[#E4E4E7] bg-white px-3 py-1.5 text-sm font-medium text-foreground transition-colors duration-200 ease-in-out hover:border-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2'
         aria-label='Select language'
       >

@@ -9,26 +9,26 @@ If you do not plan to sell the template itself, you can remove the premium purch
 
 ## Delete folders
 
-- `app/api/premium-purchase/`
-- `app/api/webhooks/premium-purchase/`
-- `app/[locale]/(site)/premium-purchase/`
+- `src/app/api/premium-purchase/`
+- `src/app/api/webhooks/premium-purchase/`
+- `src/app/[locale]/(site)/premium-purchase/`
 
 ## Delete files
 
-- `lib/premium-purchase.ts`
-- `lib/premium-purchase/hooks.ts`
-- `app/[locale]/(site)/pricing/premium-button.tsx`
+- `src/lib/premium-purchase.ts`
+- `src/lib/premium-purchase/hooks.ts`
+- `src/app/[locale]/(site)/pricing/premium-button.tsx`
 
 ## Update pricing page
 
-In `app/[locale]/(site)/pricing.tsx`:
+In `src/app/[locale]/(site)/pricing.tsx`:
 
 - Remove the `PremiumButton` import
 - Replace `<PremiumButton />` with a standard button or remove it
 
 ## Remove env vars
 
-In `config/env.ts` and `.env`:
+In `src/config/env.ts` and `.env`:
 
 - Remove all `PREMIUM_PURCHASE_*` variables
 - Remove `NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY`

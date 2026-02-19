@@ -9,10 +9,10 @@ ShipFree uses `next-intl` with a `[locale]` route segment and JSON message catal
 
 ## Key files
 
-- `i18n/routing.ts` defines supported locales
-- `i18n/request.ts` loads translation messages
-- `i18n/navigation.ts` exports locale-aware navigation helpers
-- `messages/*.json` contains translations
+- `src/i18n/routing.ts` defines supported locales
+- `src/i18n/request.ts` loads translation messages
+- `src/i18n/navigation.ts` exports locale-aware navigation helpers
+- `src/messages/*.json` contains translations
 
 ## Server component usage
 
@@ -40,4 +40,4 @@ export default function Page() {
 
 ## Locales
 
-Default locales are `en`, `fr`, and `es`. Update `i18n/routing.ts` and add new `messages/*.json` files to expand.
+Default locales are `en`, `fr`, and `es`. Update `src/i18n/routing.ts` and add new `src/messages/*.json` files to expand.

@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "format": "biome format --write",
+    "typecheck": "tsc --noEmit --pretty",
     "lint": "biome lint",
     "biome:check": "biome check",
     "generate-migration": "drizzle-kit generate",

@@ -9,9 +9,9 @@ ShipFree includes a provider-based email system for transactional and marketing 
 
 ## Key files
 
-- `lib/messaging/email` for provider selection and sending
-- `components/emails` for React Email templates
-- `components/emails/subjects.ts` for email subject lines
+- `src/lib/messaging/email` for provider selection and sending
+- `src/components/emails` for React Email templates
+- `src/components/emails/subjects.ts` for email subject lines
 
 ## Default behavior
 
@@ -32,7 +32,7 @@ await sendEmail({
 
 ## Email validation
 
-`lib/messaging/email/validation.ts` provides:
+`src/lib/messaging/email/validation.ts` provides:
 
 - Full validation with MX checks (`validateEmail`)
 - Fast validation without MX checks (`quickValidateEmail`)

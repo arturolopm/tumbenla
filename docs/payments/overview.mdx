@@ -9,11 +9,11 @@ ShipFree uses an adapter-based payment system with a shared interface and multip
 
 ## Key files
 
-- `config/payments.ts` defines plans and pricing
-- `lib/payments/service.ts` resolves the active adapter
-- `lib/payments/types.ts` defines shared interfaces
-- `app/api/payments/*` exposes checkout, portal, and subscription routes
-- `app/api/webhooks/payments/route.ts` handles provider webhooks
+- `src/config/payments.ts` defines plans and pricing
+- `src/lib/payments/service.ts` resolves the active adapter
+- `src/lib/payments/types.ts` defines shared interfaces
+- `src/app/api/payments/*` exposes checkout, portal, and subscription routes
+- `src/app/api/webhooks/payments/route.ts` handles provider webhooks
 
 ## API routes
 
@@ -23,7 +23,7 @@ ShipFree uses an adapter-based payment system with a shared interface and multip
 
 ## Database tables
 
-The payment system writes to these tables in `database/schema.ts`:
+The payment system writes to these tables in `src/database/schema.ts`:
 
 - `customer`
 - `subscription`

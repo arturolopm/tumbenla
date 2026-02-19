@@ -9,9 +9,9 @@ ShipFree uses Better-Auth with a Drizzle adapter, email OTP, and optional social
 
 ## Key files
 
-- `lib/auth/auth.ts` for the server-side auth configuration
-- `lib/auth/auth-client.ts` for client-side helpers
-- `app/api/auth/[...all]/route.ts` for Next.js route handlers
+- `src/lib/auth/auth.ts` for the server-side auth configuration
+- `src/lib/auth/auth-client.ts` for client-side helpers
+- `src/app/api/auth/[...all]/route.ts` for Next.js route handlers
 
 ## Email OTP flow
 
@@ -19,11 +19,11 @@ Email OTP is enabled through Better-Auth plugins and uses the email system for d
 
 - OTP length is 6 digits
 - OTP expires after 15 minutes
-- OTP emails go through `sendEmail` in `lib/messaging/email`
+- OTP emails go through `sendEmail` in `src/lib/messaging/email`
 
 ## Email verification
 
-`EMAIL_VERIFICATION_ENABLED` toggles email verification enforcement. When verification succeeds, a welcome email is sent through `components/emails`.
+`EMAIL_VERIFICATION_ENABLED` toggles email verification enforcement. When verification succeeds, a welcome email is sent through `src/components/emails`.
 
 <Info>
   If no email provider is configured, OTPs will be logged to the server console by the log provider.
@@ -31,7 +31,7 @@ Email OTP is enabled through Better-Auth plugins and uses the email system for d
 
 ## Sessions
 
-Session settings are in `lib/auth/auth.ts`:
+Session settings are in `src/lib/auth/auth.ts`:
 
 - 30-day session expiry
 - 24-hour refresh interval
