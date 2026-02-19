@@ -111,23 +111,6 @@ export default function Navbar() {
                 )
               )}
             </a>
-
-            <Button
-              variant='link'
-              className='hidden md:flex'
-              render={(props) => (
-                <a
-                  {...props}
-                  href='https://bags.fm/4jzHA1TJqSCNDrmGrtHX46um1363XGu6HpUHWyn4BAGS'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                  aria-label='Support dev'
-                >
-                  Support Dev
-                </a>
-              )}
-            />
-
             <button
               type='button'
               onClick={toggleMenu}
