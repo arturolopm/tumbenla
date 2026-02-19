@@ -82,6 +82,12 @@ export default function Navbar() {
               >
                 FAQ
               </Link>
+              <Link
+                href='/docs'
+                className='text-sm font-medium text-muted-foreground transition-colors duration-200 ease-in-out hover:text-foreground'
+              >
+                Docs
+              </Link>
             </div>
 
             <div className='hidden h-6 w-px bg-black/30 md:block' />

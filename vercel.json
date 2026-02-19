@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/docs",
+      "destination": "https://shipfree.revoks.dev/docs"
+    },
+    {
+      "source": "/docs/:match*",
+      "destination": "https://shipfree.revoks.dev/docs/:match*"
+    }
+  ]
+}
