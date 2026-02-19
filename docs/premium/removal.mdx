@@ -1,0 +1,39 @@
+---
+title: "Remove Premium Purchase"
+description: "Strip premium purchase routes and env vars if you do not need them."
+---
+
+# Remove premium purchase
+
+If you do not plan to sell the template itself, you can remove the premium purchase feature entirely.
+
+## Delete folders
+
+- `app/api/premium-purchase/`
+- `app/api/webhooks/premium-purchase/`
+- `app/[locale]/(site)/premium-purchase/`
+
+## Delete files
+
+- `lib/premium-purchase.ts`
+- `lib/premium-purchase/hooks.ts`
+- `app/[locale]/(site)/pricing/premium-button.tsx`
+
+## Update pricing page
+
+In `app/[locale]/(site)/pricing.tsx`:
+
+- Remove the `PremiumButton` import
+- Replace `<PremiumButton />` with a standard button or remove it
+
+## Remove env vars
+
+In `config/env.ts` and `.env`:
+
+- Remove all `PREMIUM_PURCHASE_*` variables
+- Remove `NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY`
+- Remove `NEXT_PUBLIC_PREMIUM_PURCHASE_DISCORD_INVITE_LINK`
+
+<Warning>
+  Remove any Stripe webhooks pointing to `/api/webhooks/premium-purchase` after deleting the route.
+</Warning>

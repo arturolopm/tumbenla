@@ -1,0 +1,38 @@
+---
+title: "Email Overview"
+description: "Provider-based email system with templates and validation."
+---
+
+# Email overview
+
+ShipFree includes a provider-based email system for transactional and marketing emails.
+
+## Key files
+
+- `lib/messaging/email` for provider selection and sending
+- `components/emails` for React Email templates
+- `components/emails/subjects.ts` for email subject lines
+
+## Default behavior
+
+If no real provider is configured, ShipFree falls back to the log provider and prints emails to the server console.
+
+## Usage
+
+```ts
+import { sendEmail } from '@/lib/messaging/email'
+
+await sendEmail({
+  to: 'user@example.com',
+  subject: 'Welcome',
+  html: '<p>Welcome to ShipFree</p>',
+  emailType: 'transactional',
+})
+```
+
+## Email validation
+
+`lib/messaging/email/validation.ts` provides:
+
+- Full validation with MX checks (`validateEmail`)
+- Fast validation without MX checks (`quickValidateEmail`)

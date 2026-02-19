@@ -1,0 +1,50 @@
+---
+title: "ShipFree"
+description: "Production-ready Next.js template with auth, payments, email, and i18n."
+---
+
+# ShipFree
+
+ShipFree is a production-ready Next.js template that ships the boring parts for you: auth, payments, email, storage, i18n, and a clean UI system.
+
+<Info>
+  This documentation is written for both community users and premium customers. Premium-only features are clearly marked when they apply.
+</Info>
+
+## What you get
+
+- Next.js App Router with server components by default
+- Better-Auth with email OTP and social providers
+- Payments with Stripe, Polar, and Lemon Squeezy adapters
+- Email delivery with Resend, Postmark, Plunk, SMTP, or a custom provider
+- Internationalization with next-intl (en, fr, es)
+- Cloudflare R2 storage client
+- Sentry instrumentation hooks
+
+## Core design principles
+
+- Server components by default, client components only for interactivity
+- Environment variables are validated in `config/env.ts`
+- Adapter-based providers for payments and email
+- Clear route groups for auth, main app, and marketing pages
+
+## Where to start
+
+<Steps>
+  <Step title="Install dependencies">
+    Run `bun install` in the repo root.
+  </Step>
+  <Step title="Configure environment">
+    Copy `.env.example` to `.env` and fill in required values.
+  </Step>
+  <Step title="Run migrations">
+    Run `bun run migrate:local` to initialize the database.
+  </Step>
+  <Step title="Start development">
+    Run `bun dev` and open the app at `http://localhost:3000`.
+  </Step>
+</Steps>
+
+## Support
+
+For support, update the default support email in `config/branding.ts` and use it in your customer-facing comms.

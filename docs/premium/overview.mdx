@@ -1,0 +1,27 @@
+---
+title: "Premium Overview"
+description: "Premium customer onboarding and access."
+---
+
+# Premium overview
+
+The repository includes a premium purchase flow used to sell the template itself. This flow is separate from your app's billing system.
+
+## What the premium flow does
+
+- Creates a one-time Stripe Checkout session
+- Verifies payment on success
+- Collects GitHub email, GitHub username, and Twitter handle
+- Stores purchase data in `premium_purchase`
+
+## Key files
+
+- `app/api/premium-purchase/*`
+- `app/api/webhooks/premium-purchase/route.ts`
+- `app/actions/premium-purchase.ts`
+- `lib/premium-purchase.ts`
+- `lib/premium-purchase/hooks.ts`
+
+<Info>
+  If you are a premium customer using the template, the purchase flow can be removed from your product after you are done selling the template itself.
+</Info>

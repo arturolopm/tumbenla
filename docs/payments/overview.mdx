@@ -1,0 +1,34 @@
+---
+title: "Payments Overview"
+description: "Subscription billing with provider adapters."
+---
+
+# Payments overview
+
+ShipFree uses an adapter-based payment system with a shared interface and multiple providers.
+
+## Key files
+
+- `config/payments.ts` defines plans and pricing
+- `lib/payments/service.ts` resolves the active adapter
+- `lib/payments/types.ts` defines shared interfaces
+- `app/api/payments/*` exposes checkout, portal, and subscription routes
+- `app/api/webhooks/payments/route.ts` handles provider webhooks
+
+## API routes
+
+- `POST /api/payments/checkout` creates a checkout session
+- `POST /api/payments/portal` creates a customer portal session
+- `GET /api/payments/subscription` returns the current user subscription
+
+## Database tables
+
+The payment system writes to these tables in `database/schema.ts`:
+
+- `customer`
+- `subscription`
+- `payment`
+
+<Info>
+  The active payment provider is selected with `PAYMENT_PROVIDER`. Use `BILLING_ENABLED` to gate access to paid features.
+</Info>

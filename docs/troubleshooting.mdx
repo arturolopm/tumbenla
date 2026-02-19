@@ -1,0 +1,27 @@
+---
+title: "Troubleshooting"
+description: "Common issues and fixes."
+---
+
+# Troubleshooting
+
+## Auth redirects loop
+
+- Verify `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` match your domain
+- Confirm cookies are allowed in your browser
+
+## Email not sending
+
+- Set `EMAIL_PROVIDER` and provider credentials
+- Check server logs for the log provider output
+
+## Webhook signature errors
+
+- Confirm the correct webhook secret is set
+- Ensure the correct header is sent by your provider
+- Verify the webhook endpoint is `/api/webhooks/payments`
+
+## Payments show missing price IDs
+
+- Set the public price or product IDs in `.env`
+- Ensure `config/payments.ts` references the correct IDs

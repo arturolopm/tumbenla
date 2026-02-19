@@ -1,0 +1,26 @@
+---
+title: "Webhooks"
+description: "How to configure payment webhooks."
+---
+
+# Webhooks
+
+All payment provider webhooks are handled by a single route:
+
+- `POST /api/webhooks/payments`
+
+The handler verifies the signature for the active provider and uses the adapter to process the event and update the database.
+
+## Configure your provider
+
+- Stripe uses the `stripe-signature` header
+- Polar uses the `polar-webhook-signature` header
+- Lemon Squeezy uses the `x-signature` header
+
+## Local development
+
+When testing locally, point the provider webhook to your local dev URL using a tunneling tool and ensure the correct webhook secret is set.
+
+<Info>
+  The webhook handler updates `customer`, `subscription`, and `payment` tables based on the adapter result.
+</Info>

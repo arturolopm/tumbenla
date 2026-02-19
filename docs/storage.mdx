@@ -1,0 +1,40 @@
+---
+title: "Storage"
+description: "Cloudflare R2 upload and signed URLs."
+---
+
+# Storage
+
+ShipFree includes an R2 client built on `aws4fetch` in `lib/storage.ts`.
+
+## Capabilities
+
+- Upload base64 strings or remote URLs
+- Upload blobs and buffers
+- Generate signed upload and download URLs
+- Delete objects from public or private buckets
+
+## Required environment variables
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`
+- `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_URL`
+- `R2_PUBLIC_BUCKET`
+- `R2_PRIVATE_BUCKET`
+
+## Usage
+
+```ts
+import { storage } from '@/lib/storage'
+
+await storage.upload({
+  key: 'avatars/user-1.png',
+  body: someBlob,
+  bucket: 'public',
+})
+```
+
+<Warning>
+  Uploads will fail if bucket configuration is missing. Validate your R2 settings before enabling storage features.
+</Warning>

@@ -1,0 +1,65 @@
+---
+title: "Environment"
+description: "Required and optional environment variables."
+---
+
+# Environment
+
+ShipFree validates environment variables in `config/env.ts` and provides a template in `.env.example`.
+
+## Minimum required values
+
+Set these to start the app locally:
+
+- `DATABASE_URL`
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL`
+- `NEXT_PUBLIC_APP_URL`
+
+## Common optional values
+
+### Auth
+
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+- `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`
+- `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
+
+### Email
+
+- `EMAIL_PROVIDER` (`resend`, `postmark`, `nodemailer`, `plunk`, `custom`, `log`)
+- `RESEND_API_KEY`, `RESEND_DOMAIN`
+- `POSTMARK_API_TOKEN`
+- `PLUNK_API_KEY`
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`
+- `DEFAULT_FROM_EMAIL`, `DEFAULT_FROM_NAME`
+
+### Payments
+
+- `PAYMENT_PROVIDER` (`stripe`, `polar`, `lemonsqueezy`)
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+- `POLAR_ACCESS_TOKEN`, `POLAR_WEBHOOK_SECRET`, `POLAR_ORGANIZATION_ID`, `POLAR_PRODUCT_ID`
+- `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_WEBHOOK_SECRET`
+
+### Storage
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+- `R2_BUCKET_URL`, `R2_STORAGE_BASE_URL`
+- `R2_PUBLIC_BUCKET`, `R2_PRIVATE_BUCKET`
+
+### Monitoring
+
+- `SENTRY_DSN`
+
+### Premium template purchase
+
+- `PREMIUM_PURCHASE_STRIPE_SECRET_KEY`
+- `PREMIUM_PURCHASE_STRIPE_PRICE_ID`
+- `PREMIUM_PURCHASE_STRIPE_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_PREMIUM_PURCHASE_DISCORD_INVITE_LINK`
+
+<Info>
+  Use `.env.example` as the source of truth and keep it updated whenever you add a new variable.
+</Info>

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "ShipFree",
+  "description": "Production-ready Next.js template with auth, payments, email, and i18n.",
+  "colors": {
+    "primary": "#0f172a",
+    "light": "#f8fafc",
+    "dark": "#0b1220"
+  },
+  "logo": {
+    "light": "/image.png",
+    "dark": "/image.png",
+    "href": "/"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "/quickstart"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "expanded": false,
+        "pages": [
+          "index",
+          "quickstart",
+          "project-structure",
+          "configuration",
+          "environment"
+        ]
+      },
+      {
+        "group": "Core",
+        "expanded": false,
+        "pages": [
+          "auth/overview",
+          "auth/providers",
+          "payments/overview",
+          "payments/providers",
+          "payments/webhooks",
+          "email/overview",
+          "email/providers",
+          "i18n",
+          "storage",
+          "monitoring"
+        ]
+      },
+      {
+        "group": "Guides",
+        "expanded": false,
+        "pages": [
+          "docs-site",
+          "deployment",
+          "troubleshooting",
+          "faq"
+        ]
+      },
+      {
+        "group": "Premium",
+        "expanded": false,
+        "pages": [
+          "premium/overview",
+          "premium/purchase-flow",
+          "premium/removal"
+        ]
+      }
+    ]
+  }
+}

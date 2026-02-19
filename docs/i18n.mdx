@@ -1,0 +1,43 @@
+---
+title: "Internationalization"
+description: "next-intl configuration and usage."
+---
+
+# Internationalization
+
+ShipFree uses `next-intl` with a `[locale]` route segment and JSON message catalogs.
+
+## Key files
+
+- `i18n/routing.ts` defines supported locales
+- `i18n/request.ts` loads translation messages
+- `i18n/navigation.ts` exports locale-aware navigation helpers
+- `messages/*.json` contains translations
+
+## Server component usage
+
+```tsx
+import { getTranslations } from 'next-intl/server'
+
+export default async function Page() {
+  const t = await getTranslations('MyPage')
+  return <h1>{t('title')}</h1>
+}
+```
+
+## Client component usage
+
+```tsx
+'use client'
+
+import { useTranslations } from 'next-intl'
+
+export default function Page() {
+  const t = useTranslations('MyPage')
+  return <h1>{t('title')}</h1>
+}
+```
+
+## Locales
+
+Default locales are `en`, `fr`, and `es`. Update `i18n/routing.ts` and add new `messages/*.json` files to expand.

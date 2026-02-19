@@ -1,0 +1,37 @@
+---
+title: "Email Providers"
+description: "Resend, Postmark, SMTP, Plunk, and custom providers."
+---
+
+# Email providers
+
+Configure the provider with `EMAIL_PROVIDER`. If set, ShipFree uses that provider. If not set, it auto-discovers the first configured provider.
+
+## Resend
+
+- `RESEND_API_KEY`
+- `RESEND_DOMAIN`
+
+## Postmark
+
+- `POSTMARK_API_TOKEN`
+
+## Plunk
+
+- `PLUNK_API_KEY`
+
+## Nodemailer (SMTP)
+
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_SECURE`
+
+## Custom provider
+
+Implement a custom provider and register it in `lib/messaging/email/providers/custom.ts`.
+
+<Info>
+  Set `DEFAULT_FROM_EMAIL` and `DEFAULT_FROM_NAME` to control sender identity.
+</Info>

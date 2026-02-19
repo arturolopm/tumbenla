@@ -1,0 +1,58 @@
+---
+title: "Payment Providers"
+description: "Stripe, Polar, and Lemon Squeezy configuration."
+---
+
+# Payment providers
+
+ShipFree ships with Stripe, Polar, and Lemon Squeezy adapters. Configure one provider and set `PAYMENT_PROVIDER`.
+
+## Stripe
+
+Required:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_ID`
+
+Optional public price IDs for UI display:
+
+- `NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY`
+- `NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY`
+- `NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY`
+- `NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY`
+- `NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_MONTHLY`
+- `NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE_YEARLY`
+
+## Polar
+
+Required:
+
+- `POLAR_ACCESS_TOKEN`
+- `POLAR_WEBHOOK_SECRET`
+- `POLAR_ORGANIZATION_ID`
+- `POLAR_PRODUCT_ID`
+
+Optional public product IDs:
+
+- `NEXT_PUBLIC_POLAR_PRODUCT_STARTER_MONTHLY`
+- `NEXT_PUBLIC_POLAR_PRODUCT_PRO_MONTHLY`
+- `NEXT_PUBLIC_POLAR_PRODUCT_ENTERPRISE_MONTHLY`
+
+## Lemon Squeezy
+
+Required:
+
+- `LEMONSQUEEZY_API_KEY`
+- `LEMONSQUEEZY_STORE_ID`
+- `LEMONSQUEEZY_WEBHOOK_SECRET`
+
+Optional public product IDs:
+
+- `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY`
+- `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY`
+- `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY`
+
+<Warning>
+  If the configured provider is missing credentials, the payment system will fail at runtime.
+</Warning>

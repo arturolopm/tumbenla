@@ -1,0 +1,32 @@
+---
+title: "Project Structure"
+description: "How the ShipFree repo is organized."
+---
+
+# Project structure
+
+```
+app/                    # App Router routes and layouts
+  [locale]/             # Locale segment for next-intl
+    (auth)/             # Auth pages (login, register, verify)
+    (main)/             # Main app pages (dashboard)
+    (site)/             # Marketing pages
+  api/                  # Route handlers
+components/             # UI and reusable components
+config/                 # Runtime configuration
+database/               # Drizzle schema and database connection
+i18n/                   # next-intl configuration
+lib/                    # Auth, payments, messaging, storage, utils
+messages/               # Translation JSON files
+scripts/                # Runtime scripts (migrations)
+```
+
+## Route groups
+
+- `(auth)` contains login, register, reset password, and verify flows
+- `(main)` contains authenticated app pages like the dashboard
+- `(site)` contains marketing pages and premium purchase pages
+
+## Server and client components
+
+ShipFree is server-component-first. Client components are explicitly marked with `use client` when interactivity is needed.

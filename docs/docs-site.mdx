@@ -1,0 +1,37 @@
+---
+title: "Docs Site"
+description: "Run and customize the Mintlify documentation site."
+---
+
+# Docs site
+
+ShipFree documentation is structured for Mintlify. The config lives in `docs/docs.json` and content pages are MDX files under `docs/`.
+
+## Local preview
+
+```bash
+npm i -g mint
+cd docs
+mint dev
+```
+
+The docs server runs on `http://localhost:3000` by default.
+
+## Navigation
+
+Update `docs/docs.json` to add groups, pages, and ordering. Each page is referenced by its path without the `.mdx` extension.
+
+## Frontmatter
+
+Every MDX page includes frontmatter to define metadata:
+
+```mdx
+---
+title: "Page title"
+description: "Page description"
+---
+```
+
+## Mintlify components
+
+You can use built-in MDX components like `Info`, `Warning`, `Tip`, `Steps`, and `CodeGroup` to structure content.

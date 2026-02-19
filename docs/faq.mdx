@@ -1,0 +1,22 @@
+---
+title: "FAQ"
+description: "Frequently asked questions."
+---
+
+# FAQ
+
+## Does ShipFree require Bun?
+
+Yes. The repository is configured for Bun as the package manager and runtime.
+
+## Can I use Node.js instead?
+
+You can, but you will need to adjust scripts, tooling, and dependency management. The template assumes Bun.
+
+## How do I add a new locale?
+
+Update `i18n/routing.ts`, add a new file in `messages/`, and extend any language selector UI.
+
+## How do I remove the premium purchase feature?
+
+Follow the steps in the Premium section and delete the related routes, APIs, and environment variables.

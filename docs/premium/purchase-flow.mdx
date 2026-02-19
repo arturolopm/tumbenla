@@ -1,0 +1,33 @@
+---
+title: "Purchase Flow"
+description: "Stripe checkout and verification for template purchases."
+---
+
+# Purchase flow
+
+This flow is distinct from your app's billing system and is used to sell the ShipFree template.
+
+## Checkout
+
+- `POST /api/premium-purchase/checkout` creates a Stripe Checkout session
+- Uses `PREMIUM_PURCHASE_STRIPE_SECRET_KEY` and `PREMIUM_PURCHASE_STRIPE_PRICE_ID`
+
+## Verification
+
+- `GET /api/premium-purchase/verify` validates the Checkout session
+- Confirms payment status and session metadata
+
+## Webhook
+
+- `POST /api/webhooks/premium-purchase` processes `checkout.session.completed`
+- Stores purchase details in `premium_purchase`
+
+## Success page
+
+After payment, users are sent to the success page where they submit:
+
+- GitHub email
+- GitHub username
+- Twitter handle
+
+These are persisted via the server action `app/actions/premium-purchase.ts`.

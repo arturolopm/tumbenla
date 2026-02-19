@@ -12,7 +12,8 @@
     "biome:check": "biome check",
     "generate-migration": "drizzle-kit generate",
     "migrate:local": "bun run ./scripts/migrate.ts",
-    "migrate:prod": "cross-env NODE_ENV=production bun run ./scripts/migrate.ts"
+    "migrate:prod": "cross-env NODE_ENV=production bun run ./scripts/migrate.ts",
+    "docs:dev": "cd docs && mintlify dev"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
@@ -63,6 +64,7 @@
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
+    "mintlify": "^4.2.363",
     "react-email": "5.1.1",
     "resend": "^6.6.0",
     "tailwindcss": "^4",

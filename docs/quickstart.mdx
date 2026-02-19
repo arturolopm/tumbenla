@@ -1,0 +1,51 @@
+---
+title: "Quickstart"
+description: "Get ShipFree running locally in minutes."
+---
+
+# Quickstart
+
+## Prerequisites
+
+- Bun installed
+- PostgreSQL running locally or accessible
+
+## Install and run
+
+<Steps>
+  <Step title="Install dependencies">
+    ```bash
+    bun install
+    ```
+  </Step>
+  <Step title="Set environment variables">
+    ```bash
+    cp .env.example .env
+    ```
+    Update at least these values:
+    - `DATABASE_URL`
+    - `BETTER_AUTH_SECRET`
+    - `BETTER_AUTH_URL`
+    - `NEXT_PUBLIC_APP_URL`
+  </Step>
+  <Step title="Run migrations">
+    ```bash
+    bun run migrate:local
+    ```
+  </Step>
+  <Step title="Start dev server">
+    ```bash
+    bun dev
+    ```
+  </Step>
+</Steps>
+
+## Verify core flows
+
+- Visit `/login` and try email OTP sign-in
+- Open `/dashboard` after login
+- Trigger a password reset to validate email delivery
+
+<Info>
+  If you do not configure an email provider, emails are logged to the console by the log provider.
+</Info>

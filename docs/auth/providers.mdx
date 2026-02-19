@@ -1,0 +1,28 @@
+---
+title: "Social Providers"
+description: "Configure OAuth providers for Better-Auth."
+---
+
+# Social providers
+
+ShipFree supports Google, GitHub, Microsoft, and Facebook OAuth out of the box.
+
+## Environment variables
+
+Set the provider credentials you want to enable:
+
+- Google: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- GitHub: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+- Microsoft: `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`
+- Facebook: `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`
+
+## Provider availability
+
+The login and register pages check which providers are configured and only render available options.
+
+- `app/[locale]/(auth)/login/page.tsx`
+- `app/[locale]/(auth)/register/page.tsx`
+
+<Warning>
+  Make sure `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` match your deployed domain to avoid OAuth callback errors.
+</Warning>

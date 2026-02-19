@@ -1,0 +1,37 @@
+---
+title: "Deployment"
+description: "Build and run ShipFree in production."
+---
+
+# Deployment
+
+## Build
+
+```bash
+bun build
+```
+
+## Start
+
+```bash
+bun start
+```
+
+## Database migrations
+
+For production deployments:
+
+```bash
+bun run migrate:prod
+```
+
+## Required configuration
+
+Make sure these variables are configured for your environment:
+
+- `DATABASE_URL`
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL`
+- `NEXT_PUBLIC_APP_URL`
+
+If you use auth providers, payments, email, storage, or Sentry, set those values as well.
