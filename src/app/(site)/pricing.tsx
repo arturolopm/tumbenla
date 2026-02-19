@@ -1,6 +1,5 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CheckmarkCircle01Icon } from '@hugeicons/core-free-icons'
 import { Flame } from 'lucide-react'
@@ -11,15 +10,12 @@ import { Badge } from '@/components/ui/badge'
 import { PremiumButton } from './pricing/premium-button'
 
 export default function Pricing() {
-  const t = useTranslations()
-
   const communityFeatures = [
     { text: 'Full Next.js boilerplate', included: true },
     { text: 'Auth, payments & UI prewired', included: true },
     { text: 'Built-in SEO', included: true },
     { text: 'Resend transaction emails', included: true },
     { text: 'Payments via Stripe / Lemon Squeezy / Polar', included: true },
-    { text: 'Internationalization (i18n) with TypeScript', included: true },
     { text: 'Up to 100+ hours saved', included: true },
     { text: 'MIT open-source license', included: true },
     { text: 'Community Releases & fixes', included: true },
@@ -45,7 +41,7 @@ export default function Pricing() {
             className='text-center text-sm font-medium text-muted-foreground mb-8'
             style={{ fontFamily: 'var(--font-geist-mono)' }}
           >
-            {t('PRICING')}
+            Pricing
           </h2>
           <div className='text-center mb-16'>
             <h2 className='text-4xl font-semibold tracking-tight mb-4'>

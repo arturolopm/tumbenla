@@ -10,9 +10,7 @@ export const metadata: Metadata = generateSEOMetadata({
   canonical: '/licenses',
 })
 
-export default async function LicensesPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-
+export default async function LicensesPage() {
   return (
     <GridLayout>
       <Navbar />

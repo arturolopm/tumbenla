@@ -10,9 +10,7 @@ export const metadata: Metadata = generateSEOMetadata({
   canonical: '/privacy',
 })
 
-export default async function PrivacyPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-
+export default async function PrivacyPage() {
   return (
     <GridLayout>
       <Navbar />

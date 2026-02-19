@@ -8,17 +8,14 @@ description: "How the ShipFree repo is organized."
 ```
 src/                    # Application source (path alias @/* maps here)
   app/                  # App Router routes and layouts
-    [locale]/           # Locale segment for next-intl
-      (auth)/           # Auth pages (login, register, verify)
-      (main)/           # Main app pages (dashboard)
-      (site)/           # Marketing pages
+    (auth)/             # Auth pages (login, register, verify)
+    (main)/             # Main app pages (dashboard)
+    (site)/             # Marketing pages
     api/                # Route handlers
   components/           # UI and reusable components
   config/               # Runtime configuration
   database/             # Drizzle schema and database connection
-  i18n/                 # next-intl configuration
   lib/                  # Auth, payments, messaging, storage, utils
-  messages/             # Translation JSON files
   hooks/                # React hooks
 scripts/                # Runtime scripts (migrations) — at repo root
 migrations/             # Drizzle migrations — at repo root

@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { FaGithub, FaDiscord, FaXTwitter } from 'react-icons/fa6'
 import { SiProducthunt, SiYcombinator, SiPeerlist } from 'react-icons/si'
-import { LanguageSwitcher } from '@/components/language-switcher'
 
 export default function Footer() {
   return (
@@ -215,7 +214,6 @@ export default function Footer() {
                 Copyright © {new Date().getFullYear()} -{' '}
                 <Link href='https://revoks.dev'>The Revoks Company</Link>
               </p>
-              <LanguageSwitcher />
             </div>
           </div>
         </div>

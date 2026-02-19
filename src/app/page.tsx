@@ -8,9 +8,7 @@ import CTA from './(site)/cta'
 import Footer from './(site)/footer'
 import { GridLayout, SectionDivider } from './(site)/grid-layout'
 
-export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params
-
+export default function Page() {
   return (
     <GridLayout>
       <Navbar />

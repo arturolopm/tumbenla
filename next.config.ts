@@ -1,20 +1,5 @@
 import { withSentryConfig } from '@sentry/nextjs'
-import createNextIntlPlugin from 'next-intl/plugin'
 import type { NextConfig } from 'next'
-
-const withNextIntl = createNextIntlPlugin({
-  requestConfig: './src/i18n/request.ts',
-  experimental: {
-    messages: {
-      // Relative path to the directory
-      path: './src/messages',
-      // Automatically detects locales based on `path`
-      locales: 'infer',
-      // Either 'json' or 'po'
-      format: 'json',
-    },
-  },
-})
 
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker optimization
@@ -25,7 +10,7 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(withNextIntl(nextConfig), {
+export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
