@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/docs",
-      "destination": "https://shipfree.mintlify.dev/docs"
+      "destination": "https://revoks.mintlify.dev/docs"
     },
     {
       "source": "/docs/:match*",
-      "destination": "https://shipfree.mintlify.dev/docs/:match*"
+      "destination": "https://revoks.mintlify.dev/docs/:match*"
     }
   ]
 }
