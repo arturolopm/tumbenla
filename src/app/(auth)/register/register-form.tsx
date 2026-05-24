@@ -13,6 +13,33 @@ import { cn } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 
+const getSignUpErrorMessage = (error: { message?: string; code?: string } | null | undefined) => {
+  if (!error) {
+    return 'Could not create your account. Please try again.'
+  }
+
+  if (error.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL') {
+    return 'An account with this email already exists. Sign in instead, or use a different email.'
+  }
+
+  return error.message || 'Could not create your account. Please try again.'
+}
+
+async function tryClearUnverifiedUser(email: string): Promise<boolean> {
+  const response = await fetch('/api/auth/clear-unverified-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+
+  if (!response.ok) {
+    return false
+  }
+
+  const data = (await response.json()) as { canResume?: boolean }
+  return Boolean(data.canResume)
+}
+
 const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []
 
@@ -77,6 +104,7 @@ export default function RegisterForm({
   const [email, setEmail] = useState('')
   const [emailErrors, setEmailErrors] = useState<string[]>([])
   const [showEmailValidationError, setShowEmailValidationError] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const [callbackUrl, setCallbackUrl] = useState('/dashboard')
 
@@ -129,6 +157,7 @@ export default function RegisterForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
+    setSubmitError('')
 
     const formData = new FormData(event.currentTarget)
     const emailRaw = formData.get('email') as string
@@ -161,7 +190,7 @@ export default function RegisterForm({
     }
 
     try {
-      const response = await client.signUp.email(
+      let response = await client.signUp.email(
         {
           email: emailValue,
           password: passwordValue,
@@ -170,7 +199,22 @@ export default function RegisterForm({
         {}
       )
 
+      if (
+        response?.error?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' &&
+        (await tryClearUnverifiedUser(emailValue))
+      ) {
+        response = await client.signUp.email(
+          {
+            email: emailValue,
+            password: passwordValue,
+            name: nameValue,
+          },
+          {}
+        )
+      }
+
       if (!response || response.error) {
+        setSubmitError(getSignUpErrorMessage(response?.error))
         setIsLoading(false)
         return
       }
@@ -182,6 +226,7 @@ export default function RegisterForm({
       router.push('/verify?fromSignup=true')
     } catch (error) {
       console.error('Signup error:', error)
+      setSubmitError('Could not create your account. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -301,6 +346,17 @@ export default function RegisterForm({
             )}
           </div>
         </div>
+
+        {submitError ? (
+          <p className='text-center text-sm text-red-400' role='alert'>
+            {submitError}{' '}
+            {submitError.includes('already exists') ? (
+              <Link href='/login' className='underline underline-offset-2'>
+                Sign in
+              </Link>
+            ) : null}
+          </p>
+        ) : null}
 
         <Button
           type='submit'

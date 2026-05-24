@@ -204,11 +204,21 @@ export default function LoginPage({
         {
           onError: (ctx) => {
             console.error('Login error:', ctx.error)
-            const errorMessage: string[] = ['Invalid email or password']
 
-            if (ctx.error.code?.includes('EMAIL_NOT_VERIFIED')) {
+            if (
+              ctx.error.code?.includes('EMAIL_NOT_VERIFIED') ||
+              ctx.error.message?.includes('Email not verified') ||
+              ctx.error.message?.includes('not verified')
+            ) {
+              if (typeof window !== 'undefined') {
+                sessionStorage.setItem('verificationEmail', email)
+              }
+              router.push('/verify?fromSignup=false')
+              setIsLoading(false)
               return
             }
+
+            const errorMessage: string[] = ['Invalid email or password']
             if (
               ctx.error.code?.includes('BAD_REQUEST') ||
               ctx.error.message?.includes('Email and password sign in is not enabled')
