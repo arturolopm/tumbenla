@@ -18,14 +18,33 @@ const getSignUpErrorMessage = (error: { message?: string; code?: string } | null
     return 'Could not create your account. Please try again.'
   }
 
-  if (error.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL') {
+  if (isDuplicateEmailError(error)) {
     return 'An account with this email already exists. Sign in instead, or use a different email.'
   }
 
   return error.message || 'Could not create your account. Please try again.'
 }
 
-async function tryClearUnverifiedUser(email: string): Promise<boolean> {
+function isDuplicateEmailError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) {
+    return false
+  }
+
+  const code = error.code?.toUpperCase() ?? ''
+  const message = error.message?.toLowerCase() ?? ''
+
+  return (
+    code.includes('USER_ALREADY_EXISTS') ||
+    code.includes('EMAIL_ALREADY_EXISTS') ||
+    message.includes('already exists') ||
+    message.includes('use another email')
+  )
+}
+
+type PrepareSignupEmailResult = 'ready' | 'verified_exists' | 'failed'
+
+/** Clears an abandoned unverified signup so register can proceed without a failed retry. */
+async function prepareSignupEmail(email: string): Promise<PrepareSignupEmailResult> {
   const response = await fetch('/api/auth/clear-unverified-user', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -33,11 +52,20 @@ async function tryClearUnverifiedUser(email: string): Promise<boolean> {
   })
 
   if (!response.ok) {
-    return false
+    return 'failed'
   }
 
-  const data = (await response.json()) as { canResume?: boolean }
-  return Boolean(data.canResume)
+  const data = (await response.json()) as { result?: string; canResume?: boolean }
+
+  if (data.result === 'verified_exists') {
+    return 'verified_exists'
+  }
+
+  if (data.canResume) {
+    return 'ready'
+  }
+
+  return 'failed'
 }
 
 const validateEmailField = (emailValue: string): string[] => {
@@ -190,7 +218,21 @@ export default function RegisterForm({
     }
 
     try {
-      let response = await client.signUp.email(
+      const prep = await prepareSignupEmail(emailValue)
+
+      if (prep === 'verified_exists') {
+        setSubmitError(getSignUpErrorMessage({ code: 'USER_ALREADY_EXISTS' }))
+        setIsLoading(false)
+        return
+      }
+
+      if (prep === 'failed') {
+        setSubmitError('Could not prepare signup. Please try again.')
+        setIsLoading(false)
+        return
+      }
+
+      const response = await client.signUp.email(
         {
           email: emailValue,
           password: passwordValue,
@@ -198,20 +240,6 @@ export default function RegisterForm({
         },
         {}
       )
-
-      if (
-        response?.error?.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL' &&
-        (await tryClearUnverifiedUser(emailValue))
-      ) {
-        response = await client.signUp.email(
-          {
-            email: emailValue,
-            password: passwordValue,
-            name: nameValue,
-          },
-          {}
-        )
-      }
 
       if (!response || response.error) {
         setSubmitError(getSignUpErrorMessage(response?.error))
