@@ -29,6 +29,9 @@ export async function POST(req: Request) {
       case 'lemonsqueezy':
         signature = headerList.get('x-signature') || ''
         break
+      case 'creem':
+        signature = headerList.get('creem-signature') || ''
+        break
     }
 
     if (!signature) {
@@ -62,6 +65,9 @@ export async function POST(req: Request) {
       } else if (provider === 'lemonsqueezy') {
         // Lemon Squeezy event name is in meta.event_name
         type = parsedBody.meta?.event_name
+      } else if (provider === 'creem') {
+        // Creem event name is in eventType
+        type = parsedBody.eventType
       }
 
       if (!type) {
@@ -73,7 +79,7 @@ export async function POST(req: Request) {
         type: type as WebhookEvent['type'],
         provider,
         data:
-          provider === 'lemonsqueezy'
+          provider === 'lemonsqueezy' || provider === 'creem'
             ? parsedBody
             : parsedBody.data?.object || parsedBody.data || parsedBody,
         rawEvent: parsedBody,
