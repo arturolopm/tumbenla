@@ -40,5 +40,8 @@ export const isStripeConfigured = Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_WE
 /** Check if Polar is configured (@polar-sh/better-auth) */
 export const isPolarConfigured = Boolean(env.POLAR_ACCESS_TOKEN)
 
+/** Check if Creem is configured (@creem_io/better-auth) */
+export const isCreemConfigured = Boolean(env.CREEM_API_KEY)
+
 /** Check if any billing provider is configured */
-export const hasBillingProvider = isStripeConfigured || isPolarConfigured
+export const hasBillingProvider = isStripeConfigured || isPolarConfigured || isCreemConfigured

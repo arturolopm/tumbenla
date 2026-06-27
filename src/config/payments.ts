@@ -6,7 +6,7 @@
  */
 
 export type PlanName = 'free' | 'starter' | 'pro' | 'enterprise'
-export type PaymentProvider = 'stripe' | 'polar' | 'lemonsqueezy'
+export type PaymentProvider = 'stripe' | 'polar' | 'lemonsqueezy' | 'creem'
 export type Interval = 'month' | 'year' | null // null for one-time payments
 
 export interface PriceConfig {
@@ -104,6 +104,17 @@ export const paymentConfig = {
             type: 'recurring' as const,
           },
         ],
+        creem: [
+          {
+            productId: process.env.NEXT_PUBLIC_CREEM_PRODUCT_STARTER_MONTHLY || '',
+            interval: 'month' as const,
+            amount: 990,
+            currency: 'usd',
+            seatBased: false,
+            trialPeriodDays: 14,
+            type: 'recurring' as const,
+          },
+        ],
       },
       features: [
         'Up to 10 projects',
@@ -153,6 +164,17 @@ export const paymentConfig = {
         lemonsqueezy: [
           {
             productId: process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY || '',
+            interval: 'month' as const,
+            amount: 2990,
+            currency: 'usd',
+            seatBased: true,
+            trialPeriodDays: 14,
+            type: 'recurring' as const,
+          },
+        ],
+        creem: [
+          {
+            productId: process.env.NEXT_PUBLIC_CREEM_PRODUCT_PRO_MONTHLY || '',
             interval: 'month' as const,
             amount: 2990,
             currency: 'usd',
@@ -212,6 +234,17 @@ export const paymentConfig = {
         lemonsqueezy: [
           {
             productId: process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY || '',
+            interval: 'month' as const,
+            amount: 9990,
+            currency: 'usd',
+            seatBased: true,
+            trialPeriodDays: 30,
+            type: 'recurring' as const,
+          },
+        ],
+        creem: [
+          {
+            productId: process.env.NEXT_PUBLIC_CREEM_PRODUCT_ENTERPRISE_MONTHLY || '',
             interval: 'month' as const,
             amount: 9990,
             currency: 'usd',

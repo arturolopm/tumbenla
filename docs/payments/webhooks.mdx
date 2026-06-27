@@ -16,6 +16,7 @@ The handler verifies the signature for the active provider and uses the adapter 
 - Stripe uses the `stripe-signature` header
 - Polar uses the `polar-webhook-signature` header
 - Lemon Squeezy uses the `x-signature` header
+- Creem uses the `creem-signature` header (HMAC-SHA256 of the raw body with `CREEM_WEBHOOK_SECRET`)
 
 ## Local development
 

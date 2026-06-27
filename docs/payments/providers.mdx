@@ -1,11 +1,11 @@
 ---
 title: "Payment Providers"
-description: "Stripe, Polar, and Lemon Squeezy configuration."
+description: "Stripe, Polar, Lemon Squeezy, and Creem configuration."
 ---
 
 # Payment providers
 
-ShipFree ships with Stripe, Polar, and Lemon Squeezy adapters. Configure one provider and set `PAYMENT_PROVIDER`.
+ShipFree ships with Stripe, Polar, Lemon Squeezy, and Creem adapters. Configure one provider and set `PAYMENT_PROVIDER` (`stripe`, `polar`, `lemonsqueezy`, or `creem`).
 
 ## Stripe
 
@@ -52,6 +52,30 @@ Optional public product IDs:
 - `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY`
 - `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY`
 - `NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_ENTERPRISE_MONTHLY`
+
+## Creem
+
+[Creem](https://creem.io) is an EU-based Merchant of Record with low fees. Get your API key from the dashboard under the **Developers** menu.
+
+<Note>
+  Creem uses **different API keys** for test mode and production. Set `CREEM_TEST_MODE=true`
+  to target `test-api.creem.io` with your test-mode key.
+</Note>
+
+Required:
+
+- `CREEM_API_KEY`
+- `CREEM_WEBHOOK_SECRET`
+
+Optional:
+
+- `CREEM_TEST_MODE` (`true` to use the Creem test environment)
+
+Optional public product IDs:
+
+- `NEXT_PUBLIC_CREEM_PRODUCT_STARTER_MONTHLY`
+- `NEXT_PUBLIC_CREEM_PRODUCT_PRO_MONTHLY`
+- `NEXT_PUBLIC_CREEM_PRODUCT_ENTERPRISE_MONTHLY`
 
 <Warning>
   If the configured provider is missing credentials, the payment system will fail at runtime.
