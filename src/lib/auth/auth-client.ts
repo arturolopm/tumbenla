@@ -18,8 +18,26 @@ export const client = createAuthClient({
   baseURL: getBaseUrl(),
   plugins: [emailOTPClient(), organizationClient()],
   fetchOptions: {
-    onError(error) {
-      console.error('Auth error:', error)
+    onError(context) {
+      const message =
+        context.error?.message ||
+        (typeof context.error?.status === 'number'
+          ? `Request failed (${context.error.status})`
+          : 'Authentication request failed')
+
+      const code = context.error?.code?.toUpperCase() ?? ''
+      const normalizedMessage = message.toLowerCase()
+      const isDuplicateEmail =
+        code.includes('USER_ALREADY_EXISTS') ||
+        code.includes('EMAIL_ALREADY_EXISTS') ||
+        normalizedMessage.includes('already exists') ||
+        normalizedMessage.includes('use another email')
+
+      if (isDuplicateEmail) {
+        return
+      }
+
+      console.error('Auth error:', message, context.error)
     },
     onSuccess(data) {
       console.log('Auth action successful:', data)

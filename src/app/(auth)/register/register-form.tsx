@@ -13,6 +13,61 @@ import { cn } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 
+const getSignUpErrorMessage = (error: { message?: string; code?: string } | null | undefined) => {
+  if (!error) {
+    return 'Could not create your account. Please try again.'
+  }
+
+  if (isDuplicateEmailError(error)) {
+    return 'An account with this email already exists. Sign in instead, or use a different email.'
+  }
+
+  return error.message || 'Could not create your account. Please try again.'
+}
+
+function isDuplicateEmailError(error: { message?: string; code?: string } | null | undefined) {
+  if (!error) {
+    return false
+  }
+
+  const code = error.code?.toUpperCase() ?? ''
+  const message = error.message?.toLowerCase() ?? ''
+
+  return (
+    code.includes('USER_ALREADY_EXISTS') ||
+    code.includes('EMAIL_ALREADY_EXISTS') ||
+    message.includes('already exists') ||
+    message.includes('use another email')
+  )
+}
+
+type PrepareSignupEmailResult = 'ready' | 'verified_exists' | 'failed'
+
+/** Clears an abandoned unverified signup so register can proceed without a failed retry. */
+async function prepareSignupEmail(email: string): Promise<PrepareSignupEmailResult> {
+  const response = await fetch('/api/auth/clear-unverified-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+
+  if (!response.ok) {
+    return 'failed'
+  }
+
+  const data = (await response.json()) as { result?: string; canResume?: boolean }
+
+  if (data.result === 'verified_exists') {
+    return 'verified_exists'
+  }
+
+  if (data.canResume) {
+    return 'ready'
+  }
+
+  return 'failed'
+}
+
 const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []
 
@@ -77,6 +132,7 @@ export default function RegisterForm({
   const [email, setEmail] = useState('')
   const [emailErrors, setEmailErrors] = useState<string[]>([])
   const [showEmailValidationError, setShowEmailValidationError] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const [callbackUrl, setCallbackUrl] = useState('/dashboard')
 
@@ -129,6 +185,7 @@ export default function RegisterForm({
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setIsLoading(true)
+    setSubmitError('')
 
     const formData = new FormData(event.currentTarget)
     const emailRaw = formData.get('email') as string
@@ -161,6 +218,20 @@ export default function RegisterForm({
     }
 
     try {
+      const prep = await prepareSignupEmail(emailValue)
+
+      if (prep === 'verified_exists') {
+        setSubmitError(getSignUpErrorMessage({ code: 'USER_ALREADY_EXISTS' }))
+        setIsLoading(false)
+        return
+      }
+
+      if (prep === 'failed') {
+        setSubmitError('Could not prepare signup. Please try again.')
+        setIsLoading(false)
+        return
+      }
+
       const response = await client.signUp.email(
         {
           email: emailValue,
@@ -171,6 +242,7 @@ export default function RegisterForm({
       )
 
       if (!response || response.error) {
+        setSubmitError(getSignUpErrorMessage(response?.error))
         setIsLoading(false)
         return
       }
@@ -182,6 +254,7 @@ export default function RegisterForm({
       router.push('/verify?fromSignup=true')
     } catch (error) {
       console.error('Signup error:', error)
+      setSubmitError('Could not create your account. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -301,6 +374,17 @@ export default function RegisterForm({
             )}
           </div>
         </div>
+
+        {submitError ? (
+          <p className='text-center text-sm text-red-400' role='alert'>
+            {submitError}{' '}
+            {submitError.includes('already exists') ? (
+              <Link href='/login' className='underline underline-offset-2'>
+                Sign in
+              </Link>
+            ) : null}
+          </p>
+        ) : null}
 
         <Button
           type='submit'
