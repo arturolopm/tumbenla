@@ -133,6 +133,8 @@ ShipFree/
 2. Add relations if needed
 3. Generate migration: `bun run generate-migration`
 4. Run migration: `bun run migrate:local`
+5. Commit the generated files in `migrations/` together with the schema change —
+   they are tracked in git so every environment applies identical SQL
 
 ### Adding a UI Component
 
@@ -152,13 +154,22 @@ ShipFree/
 
 ## Development Workflow
 
-### Setup
+### First-time setup (once per machine)
 
 1. Install dependencies: `bun install`
-2. Copy `.env.example` to `.env`
-3. Set up PostgreSQL database
-4. Run migrations: `bun run migrate:local`
+2. Copy `.env.example` to `.env` (defaults work for local development)
+3. Start Postgres: `bun run db:up` (Docker Desktop must be running)
+4. Apply migrations: `bun run migrate:local` — `migrations/` is committed, so
+   nothing is generated here
 5. Start dev server: `bun dev`
+
+Steps 3-4 are wrapped in `bun run setup`. Full guide: `docs/quickstart.mdx`.
+
+### Starting again afterwards
+
+`bun run db:up && bun dev`. The setup is not repeated. Run `bun install` only
+when dependencies change, and `bun run migrate:local` only when a new migration
+is committed. Data lives in the `pgdata` Docker volume and survives restarts.
 
 ### Scripts
 
@@ -169,6 +180,19 @@ ShipFree/
 - `bun format`: Format code
 - `bun generate-migration`: Generate DB migration
 - `bun migrate:local`: Run migrations locally
+- `bun run setup`: db:up + migrate:local
+- `bun run db:up` / `db:down` / `db:reset` / `db:logs` / `db:psql`: Local services
+  (defined in `compose.yaml` at the repo root: Postgres on 5432, Mailpit on 8025)
+
+### Email
+
+Resend is the default provider in every environment, so local testing uses the
+same delivery path as production; only `DEFAULT_FROM_EMAIL` differs. Requires
+`RESEND_API_KEY`. Resend only sends from a verified domain — until one exists,
+`onboarding@resend.dev` is the sender and it delivers only to the Resend
+account's own address. Set `EMAIL_PROVIDER=nodemailer` to capture mail in the
+local Mailpit container instead (http://localhost:8025). Without a key the
+mailer degrades to Mailpit locally. See `docs/email/providers.mdx`.
 
 ### Testing
 
@@ -196,3 +220,48 @@ ShipFree/
 - **Next.js**: https://nextjs.org/docs
 - **next-intl**: https://next-intl-docs.vercel.app
 - **BaseUI**: https://base-ui.com
+
+<!-- gitnexus:start -->
+# GitNexus — Code Intelligence
+
+This project is indexed by GitNexus as **ShipFree** (1673 symbols, 3445 relationships, 126 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
+
+## Always Do
+
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
+
+## Never Do
+
+- NEVER edit a function, class, or method without first running `impact` on it.
+- NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
+- NEVER rename symbols with find-and-replace — use `rename` which understands the call graph.
+- NEVER commit changes without running `detect_changes()` to check affected scope.
+
+## Resources
+
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/ShipFree/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/ShipFree/clusters` | All functional areas |
+| `gitnexus://repo/ShipFree/processes` | All execution flows |
+| `gitnexus://repo/ShipFree/process/{name}` | Step-by-step execution trace |
+
+## CLI
+
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+
+<!-- gitnexus:end -->

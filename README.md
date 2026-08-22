@@ -15,6 +15,53 @@ ShipFree is a free alternative to ShipFast, designed to simplify and optimize yo
 - Drizzle ORM and Postgres for database operations
 - Internationalization (i18n) with next-intl supporting English, French, and Spanish
 
+## Getting Started
+
+**Prerequisites:** [Bun](https://bun.sh) 1.2+ and [Docker Desktop](https://docs.docker.com/desktop/) (running).
+
+### First time on this machine
+
+```bash
+bun install
+cp .env.example .env
+bun run setup     # starts Postgres, applies migrations
+bun dev           # http://localhost:3000
+```
+
+`bun run setup` is a shortcut for two steps:
+
+| Step | Command | What it does |
+| --- | --- | --- |
+| 1 | `bun run db:up` | Starts the `compose.yaml` services — Postgres on 5432 and Mailpit (mail catcher) on 8025 — and waits until they are healthy |
+| 2 | `bun run migrate:local` | Applies the committed migrations in `migrations/` to your local database |
+
+No third-party credentials are needed to boot: emails print to the console via
+the `log` provider and billing is disabled by default. Set `BETTER_AUTH_SECRET`
+(`openssl rand -base64 32`) before deploying anywhere real.
+
+### Every time after that
+
+```bash
+bun run db:up     # start the database (no-op if already running)
+bun dev
+```
+
+You do not repeat the setup. `bun install` is only needed when dependencies
+change, and `bun run migrate:local` only when someone commits a new migration.
+
+Email uses Resend in every environment, so add `RESEND_API_KEY` to `.env` to
+send for real locally. Until a company domain is verified, the sender stays
+`onboarding@resend.dev`, which only delivers to your own Resend account address.
+Set `EMAIL_PROVIDER=nodemailer` to capture mail locally in Mailpit instead
+([http://localhost:8025](http://localhost:8025)). See
+[docs/email/providers.mdx](docs/email/providers.mdx).
+
+Other database commands: `db:down` (stop, keep data), `db:reset` (wipe and
+re-migrate), `db:logs`, `db:psql`.
+
+Full walkthrough, verification steps, and optional integrations:
+[docs/quickstart.mdx](docs/quickstart.mdx). Stuck? [docs/troubleshooting.mdx](docs/troubleshooting.mdx).
+
 ## Docs
 
 For full documentation, visit: [ShipFree Docs](https://shipfree.revoks.dev/docs)

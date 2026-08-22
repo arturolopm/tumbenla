@@ -13,7 +13,13 @@
     "biome:check": "biome check",
     "generate-migration": "drizzle-kit generate",
     "migrate:local": "bun run ./scripts/migrate.ts",
-    "migrate:prod": "cross-env NODE_ENV=production bun run ./scripts/migrate.ts"
+    "migrate:prod": "cross-env NODE_ENV=production bun run ./scripts/migrate.ts",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d --wait && bun run migrate:local",
+    "db:logs": "docker compose logs -f db",
+    "db:psql": "docker compose exec db psql -U postgres -d shipfree",
+    "setup": "bun run db:up && bun run migrate:local"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

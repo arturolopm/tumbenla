@@ -1,16 +1,49 @@
 ---
 title: "Quickstart"
-description: "Get ShipFree running locally in minutes."
+description: "Get a complete ShipFree development environment running locally."
 ---
 
 # Quickstart
 
+There are two different situations, and they need different commands:
+
+- **[First-time setup](#first-time-setup)** — you just cloned the repo, or you
+  are on a machine that has never run this project. Four one-time steps.
+- **[Starting the project again](#starting-the-project-again)** — you have done
+  the setup before on this machine and just want the app running. Two commands.
+
+If you are unsure which applies, run `docker volume ls | grep pgdata`. Output
+means your database already exists and you want the second section.
+
 ## Prerequisites
 
-- Bun installed
-- PostgreSQL running locally or accessible
+| Tool | Why | Check |
+| --- | --- | --- |
+| [Bun](https://bun.sh) 1.2+ | Runtime and package manager (this project does not use Node/npm) | `bun --version` |
+| [Docker Desktop](https://docs.docker.com/desktop/) | Runs the local Postgres service | `docker compose version` |
 
-## Install and run
+`bun run db:up` starts two containers: Postgres on port 5432 and
+[Mailpit](https://mailpit.axllent.org) — an optional mail catcher — on port
+8025, used when you set `EMAIL_PROVIDER=nodemailer` to work offline.
+
+Docker Desktop must be **running**, not just installed — every `docker` command
+fails with `Cannot connect to the Docker daemon` while it is closed.
+
+Run every command in this guide from the repository root. The database commands
+resolve `compose.yaml` relative to your working directory, and they use Compose
+v2 syntax (`docker compose`, two words). If `docker compose version` fails but
+`docker-compose version` works, you are on the deprecated v1 standalone binary —
+update Docker Desktop.
+
+<Info>
+  Prefer a Postgres you already have (Homebrew, Postgres.app, a hosted branch)?
+  Skip the `db:up` step below and point `DATABASE_URL` at it instead. Everything
+  else is identical.
+</Info>
+
+## First-time setup
+
+Do this once per machine.
 
 <Steps>
   <Step title="Install dependencies">
@@ -18,34 +51,199 @@ description: "Get ShipFree running locally in minutes."
     bun install
     ```
   </Step>
-  <Step title="Set environment variables">
+
+  <Step title="Create your .env">
     ```bash
     cp .env.example .env
     ```
-    Update at least these values:
-    - `DATABASE_URL`
-    - `BETTER_AUTH_SECRET`
-    - `BETTER_AUTH_URL`
-    - `NEXT_PUBLIC_APP_URL`
+
+    The defaults work as-is for local development. Every variable is optional or
+    defaulted in `src/config/env.ts`, so the app boots without any third-party
+    credentials — email falls back to the `log` provider, and billing is off.
+
+    Two values are worth setting before you get far:
+
+    - `DATABASE_URL` — already points at the local Docker service
+      (`postgres://postgres:postgres@localhost:5432/shipfree`). Leave it alone
+      unless you are using your own Postgres.
+    - `BETTER_AUTH_SECRET` — generate a real one with `openssl rand -base64 32`.
+      It falls back to a shared dev default, which is fine locally but must never
+      reach production.
   </Step>
-  <Step title="Run migrations">
+
+  <Step title="Start Postgres">
+    ```bash
+    bun run db:up
+    ```
+
+    This runs `docker compose up -d --wait` against the root `compose.yaml`,
+    which starts `postgres:16` on port 5432 with the `shipfree` database created
+    and credentials matching the default `DATABASE_URL`. The `--wait` flag blocks
+    until the container's healthcheck passes, so the next step cannot race a
+    still-booting server.
+  </Step>
+
+  <Step title="Create the database schema">
     ```bash
     bun run migrate:local
     ```
+
+    Expect `Connecting to: ...` followed by `Migrations completed!`. Anything
+    else means the step failed — see [Troubleshooting](/troubleshooting).
+
+    <Info>
+      The migration files in `migrations/` are committed to the repository, so
+      you do not generate anything here — you only apply what is already there.
+      `bun run generate-migration` is for when *you* change
+      `src/database/schema.ts`; see [After changing the schema](#after-changing-the-schema).
+    </Info>
   </Step>
-  <Step title="Start dev server">
+
+  <Step title="Start the dev server">
     ```bash
     bun dev
     ```
+
+    The app is served at [http://localhost:3000](http://localhost:3000).
   </Step>
 </Steps>
 
-## Verify core flows
+### The short version
 
-- Visit `/login` and try email OTP sign-in
-- Open `/dashboard` after login
-- Trigger a password reset to validate email delivery
+Steps 3 and 4 are wrapped in a single script:
 
-<Info>
-  If you do not configure an email provider, emails are logged to the console by the log provider.
-</Info>
+```bash
+bun install
+cp .env.example .env
+bun run setup     # db:up + migrate:local
+bun dev
+```
+
+## Verify it works
+
+- Load [http://localhost:3000](http://localhost:3000) — the landing page renders
+- Visit `/login` and request an email OTP. Where the code arrives depends on
+  whether `RESEND_API_KEY` is set: with a key it is emailed for real to your
+  Resend account address; without one it lands in the local Mailpit inbox at
+  [http://localhost:8025](http://localhost:8025). See
+  [Email providers](/email/providers)
+- Open `/dashboard` after signing in
+- Confirm rows exist: `bun run db:psql` then `\dt` to list the created tables
+
+## Starting the project again
+
+Once the setup above has been done on this machine, you never repeat it. To pick
+the project back up:
+
+```bash
+bun run db:up   # start the database container
+bun dev         # start the app
+```
+
+`db:up` is safe to run every time. If the container is already running it is
+left alone — Compose reports `Running` rather than recreating it — and the
+command just re-confirms the healthcheck, which takes a few seconds. Your data
+is in the `pgdata` Docker volume and survives reboots, `db:down`, and Docker
+Desktop restarts.
+
+Because the service is declared `restart: unless-stopped`, the container also
+comes back by itself when Docker Desktop starts, so often it is already running
+before you type anything.
+
+### What to run when
+
+| Situation | Commands |
+| --- | --- |
+| Fresh clone, or a machine that never ran this project | The four [first-time steps](#first-time-setup) |
+| Normal day, picking the project back up | `bun run db:up` then `bun dev` |
+| Someone else changed `src/database/schema.ts` | `git pull`, then `bun run migrate:local` |
+| You changed `src/database/schema.ts` | `bun run generate-migration` then `bun run migrate:local` |
+| Dependencies changed in `package.json` | `bun install` |
+| Database is in a bad state and you want a clean one | `bun run db:reset` (destroys local data) |
+
+You only need `bun install` again when dependencies change, and `migrate:local`
+again when migrations change — not on every start.
+
+## Working with the database
+
+| Command | What it does |
+| --- | --- |
+| `bun run db:up` | Start Postgres, wait until it is accepting connections |
+| `bun run db:down` | Stop the container; the `pgdata` volume keeps your data |
+| `bun run db:logs` | Tail Postgres logs |
+| `bun run db:psql` | Open a `psql` shell against the `shipfree` database |
+| `bun run db:reset` | **Destroys all local data**, recreates the volume, re-applies migrations |
+
+### After changing the schema
+
+`migrations/` is committed, so a migration is a reviewable artifact that every
+developer and every environment applies identically.
+
+```bash
+bun run generate-migration   # writes a new SQL file into migrations/
+bun run migrate:local        # applies it to your local database
+git add migrations/          # commit it alongside the schema change
+```
+
+Commit the generated SQL in the same commit as your `src/database/schema.ts`
+edit. When you pull someone else's schema change, run `bun run migrate:local` to
+catch up — nothing needs regenerating.
+
+### Changing the database credentials
+
+The `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` values in
+`compose.yaml` are read by the Postgres image **only on the very first boot**,
+when it initializes the data directory. After that the credentials live inside
+the `pgdata` volume, so editing `compose.yaml` and restarting changes nothing —
+the container comes back up with the old password and your app fails to
+authenticate.
+
+To actually change them, either update the running database:
+
+```bash
+docker compose exec db psql -U postgres -c "ALTER USER postgres PASSWORD 'newpass';"
+```
+
+or discard the volume so initialization runs again:
+
+```bash
+bun run db:reset   # destroys all local data
+```
+
+Either way, update `DATABASE_URL` in `.env` to match. The two must agree:
+`postgres://<POSTGRES_USER>:<POSTGRES_PASSWORD>@localhost:5432/<POSTGRES_DB>`.
+
+### Shutting down
+
+```bash
+# stop the dev server with Ctrl-C, then:
+bun run db:down        # stops Postgres, keeps your data
+docker compose down -v # also deletes the data volume
+```
+
+Postgres is set to `restart: unless-stopped`, so once started it comes back
+automatically when Docker Desktop restarts, until you run `db:down`.
+
+## Optional integrations
+
+None of these are needed to run the app. Add them when you need the feature:
+
+| Feature | Variables | Docs |
+| --- | --- | --- |
+| Social login | `GOOGLE_*`, `GITHUB_*`, `MICROSOFT_*`, `FACEBOOK_*` | [Auth providers](/auth/providers) |
+| Email delivery (all environments) | `RESEND_API_KEY`, `DEFAULT_FROM_EMAIL` | [Email providers](/email/providers) |
+| Billing | `PAYMENT_PROVIDER`, `BILLING_ENABLED=true` + provider keys | [Payments](/payments/overview) |
+| File uploads | `CLOUDFLARE_ACCOUNT_ID`, `R2_*` | [Storage](/storage) |
+| Error tracking | `SENTRY_DSN` | [Monitoring](/monitoring) |
+
+## Containerizing the app itself
+
+`compose.yaml` at the repo root provisions **backing services only** — the app
+runs on your host via `bun dev`, which is what you want for hot reload.
+
+The `docker/` directory is a separate concern: it builds production-style images
+of the app itself (`bun run build` with standalone output) for the development,
+staging, and production environments. See [`docker/README.md`](https://github.com/revokslab/shipfree/blob/main/docker/README.md).
+Those images expect a database reachable from inside the container, so
+`localhost` in `DATABASE_URL` will not resolve — point them at `host.docker.internal`
+or attach them to the same compose network.

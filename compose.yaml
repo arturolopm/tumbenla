@@ -1,0 +1,56 @@
+# Local development services.
+#
+# This file provisions ONLY the backing services the app needs while you run
+# Next.js on the host with `bun dev`. The app itself is not containerized here —
+# see docker/ for environment-specific app images (development/staging/production).
+#
+#   bun run db:up      start the services and wait until Postgres accepts connections
+#   bun run db:down    stop them (data is preserved in the pgdata volume)
+#   bun run db:reset   destroy the data and re-migrate from scratch
+#
+# Services:
+#   db       Postgres 16          localhost:5432
+#   mailpit  local mail catcher   localhost:8025 (web UI), localhost:1025 (SMTP)
+
+services:
+  db:
+    image: postgres:16
+    container_name: shipfree-db
+    restart: unless-stopped
+    environment:
+      # These match the default DATABASE_URL in .env.example:
+      #   postgres://postgres:postgres@localhost:5432/shipfree
+      # Local-only credentials on loopback — change them in .env and here together.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shipfree
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Lets `docker compose up --wait` block until Postgres is actually ready,
+      # so migrations can't race a still-booting server.
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d shipfree']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Catches every email the app sends in development so nothing reaches a real
+  # inbox. Open http://localhost:8025 to read them with full HTML rendering.
+  # Messages are held in memory only and disappear when the container stops.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: shipfree-mailpit
+    restart: unless-stopped
+    environment:
+      # Accept any username/password. The nodemailer provider requires SMTP_USER
+      # and SMTP_PASS to be non-empty, so it always presents credentials.
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - '8025:8025' # web UI
+      - '1025:1025' # SMTP
+
+volumes:
+  pgdata:

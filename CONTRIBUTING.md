@@ -13,28 +13,49 @@ Thank you for considering contributing to ShipFree! We welcome contributions fro
    cd shipfree
    ```
 
-3. **Create a branch**:
+3. **Set up your development environment**:
+
+   Requires [Bun](https://bun.sh) 1.2+ and [Docker Desktop](https://docs.docker.com/desktop/) (running).
+
+   ```sh
+   bun install
+   cp .env.example .env
+   bun run setup     # starts Postgres, applies migrations
+   bun dev           # http://localhost:3000
+   ```
+
+   That is a one-time setup. On later sessions just run `bun run db:up && bun dev`.
+
+   No third-party API keys are needed — emails print to the console and billing
+   is off by default. See [docs/quickstart.mdx](docs/quickstart.mdx) for the full
+   walkthrough and [docs/troubleshooting.mdx](docs/troubleshooting.mdx) if a step
+   fails.
+
+   If your change touches `src/database/schema.ts`, run `bun run generate-migration`
+   and commit the generated files in `migrations/` with your change.
+
+4. **Create a branch**:
 
    ```sh
    git checkout -b my-feature-branch
    ```
 
-4. **Make your changes**: Implement your feature or bug fix.
+5. **Make your changes**: Implement your feature or bug fix.
 
-5. **Commit your changes**:
+6. **Commit your changes**:
 
    ```sh
    git add .
    git commit -m "Description of your changes"
    ```
 
-6. **Push to your fork**:
+7. **Push to your fork**:
 
    ```sh
    git push origin my-feature-branch
    ```
 
-7. **Create a Pull Request**: Go to the original repository and click the "New Pull Request" button.
+8. **Create a Pull Request**: Go to the original repository and click the "New Pull Request" button.
 
 ## Code of Conduct
 

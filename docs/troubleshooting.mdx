@@ -5,15 +5,113 @@ description: "Common issues and fixes."
 
 # Troubleshooting
 
+## `Can't find meta/_journal.json file`
+
+`bun run migrate:local` fails before it ever reaches the database — Drizzle reads
+the migration files off disk first, and `migrations/meta/_journal.json` is
+missing.
+
+`migrations/` is committed to the repository, so on a clean checkout this should
+never happen. If it does, the folder was deleted or never checked out:
+
+```bash
+git status migrations/      # deleted files show here
+git checkout -- migrations/ # restore them
+```
+
+Only regenerate (`bun run generate-migration`) if the folder is genuinely absent
+from the repository — regenerating when it is merely missing locally produces a
+differently named migration that will conflict with everyone else's.
+
+## `ECONNREFUSED 127.0.0.1:5432`
+
+Nothing is listening on the Postgres port. Start the local service:
+
+```bash
+bun run db:up
+```
+
+If that errors with `Cannot connect to the Docker daemon`, Docker Desktop is not
+running — open it and retry. Check what the container is doing with
+`bun run db:logs`.
+
+## `Bind for 0.0.0.0:5432 failed: port is already allocated`
+
+Something else already owns port 5432 — usually a Homebrew or Postgres.app
+install, or a Postgres container from another project. Find it:
+
+```bash
+lsof -nP -iTCP:5432 -sTCP:LISTEN   # a local install
+docker ps --filter publish=5432    # another container
+```
+
+Then either stop that service (`brew services stop postgresql@16`, or
+`docker stop <name>`), or move this project's database to a free port by
+changing the host side of the mapping in `compose.yaml`:
+
+```yaml
+ports:
+  - '5433:5432'   # host:container — only the left number changes
+```
+
+and updating the port in `DATABASE_URL` to match.
+
+## `password authentication failed for user "postgres"`
+
+The credentials in `DATABASE_URL` do not match the ones the database was created
+with. Postgres only reads `POSTGRES_PASSWORD` on **first** boot, so editing
+`compose.yaml` after the volume exists changes nothing. Either restore the
+original password in `.env`, or wipe the volume and start over:
+
+```bash
+bun run db:reset   # destroys all local data
+```
+
+## `migrate:local` prints an error but the command succeeds
+
+`scripts/migrate.ts` catches migration errors, logs `Migrations failed:`, and
+still exits 0. Read the output rather than trusting the exit code — this matters
+inside chained scripts like `bun run setup`.
+
 ## Auth redirects loop
 
 - Verify `BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` match your domain
 - Confirm cookies are allowed in your browser
 
-## Email not sending
+## Email not arriving in development
 
-- Set `EMAIL_PROVIDER` and provider credentials
-- Check server logs for the log provider output
+Resend is the provider locally as well as in production, so mail is really
+delivered. Check in order:
+
+- **`RESEND_API_KEY` is set in `.env`.** Without it the mailer falls through to
+  Mailpit, and your email is sitting at
+  [http://localhost:8025](http://localhost:8025) rather than in an inbox. The
+  server log prints `Default provider "resend" is not configured`
+- **You are sending to your own Resend account address.** With
+  `DEFAULT_FROM_EMAIL=onboarding@resend.dev`, Resend refuses every other
+  recipient. Verify a domain to send elsewhere
+- **`DEFAULT_FROM_EMAIL` is set.** The fallback sender `noreply@example.com` is
+  rejected on every send
+- **Restart `bun dev` after editing `.env`** — environment variables are read at
+  startup, not per request
+- Check the Resend dashboard's Emails tab: a message accepted by the API but
+  bounced shows there, not in your logs
+
+## Email reports success but is never delivered
+
+`sendEmail()` falls back to the log provider whenever the real provider throws,
+and the log provider always succeeds, so the caller sees `success: true`. Look
+for these two lines in the server log:
+
+```
+Primary email provider "resend" failed: <reason>
+Falling back to log provider
+```
+
+In production the usual causes are an invalid `RESEND_API_KEY` or a `From`
+address on a domain not verified with Resend — the default
+`noreply@example.com` is always rejected. Set `DEFAULT_FROM_EMAIL` to an address
+on a verified domain.
 
 ## Webhook signature errors
 

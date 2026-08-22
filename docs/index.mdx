@@ -29,20 +29,21 @@ ShipFree is a production-ready Next.js template that ships the boring parts for 
 
 ## Where to start
 
-<Steps>
-  <Step title="Install dependencies">
-    Run `bun install` in the repo root.
-  </Step>
-  <Step title="Configure environment">
-    Copy `.env.example` to `.env` and fill in required values.
-  </Step>
-  <Step title="Run migrations">
-    Run `bun run migrate:local` to initialize the database.
-  </Step>
-  <Step title="Start development">
-    Run `bun dev` and open the app at `http://localhost:3000`.
-  </Step>
-</Steps>
+From a fresh clone, with [Bun](https://bun.sh) and a running
+[Docker Desktop](https://docs.docker.com/desktop/):
+
+```bash
+bun install
+cp .env.example .env
+bun run setup     # starts Postgres, applies migrations
+bun dev           # http://localhost:3000
+```
+
+That is the **first-time** setup. Afterwards you only need `bun run db:up` and
+`bun dev` — the setup is not repeated.
+
+The [Quickstart](/quickstart) explains each step, what to verify afterwards, and
+which commands to run in which situation.
 
 ## Support
 
