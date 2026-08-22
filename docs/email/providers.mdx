@@ -1,37 +1,132 @@
 ---
 title: "Email Providers"
-description: "Resend, Postmark, SMTP, Plunk, and custom providers."
+description: "How the provider is chosen, Mailpit for local development, and Resend for production."
 ---
 
 # Email providers
 
-Configure the provider with `EMAIL_PROVIDER`. If set, ShipFree uses that provider. If not set, it auto-discovers the first configured provider.
+## How the provider is chosen
 
-## Resend
+**Resend is the default in every environment**, local included, so what you test
+locally is the same delivery path that runs in production. `EMAIL_PROVIDER` is
+unset by default and should stay that way.
 
-- `RESEND_API_KEY`
-- `RESEND_DOMAIN`
+The only thing that differs between environments is the sender address.
 
-## Postmark
+| | Local | Production |
+| --- | --- | --- |
+| Provider | Resend | Resend |
+| `RESEND_API_KEY` | your key (a separate one is wise) | production key |
+| `DEFAULT_FROM_EMAIL` | `onboarding@resend.dev` | `noreply@yourcompany.com` |
+| Delivers to | only your own Resend account address | anyone |
 
-- `POSTMARK_API_TOKEN`
+Setting `EMAIL_PROVIDER` overrides the default entirely:
 
-## Plunk
+- `nodemailer` — the local Mailpit container, for working offline or avoiding
+  quota (see below)
+- `log` — prints to the server console
+- `postmark`, `plunk`, `custom` — the other adapters
 
-- `PLUNK_API_KEY`
+If the selected provider is not configured, ShipFree falls back to
+auto-discovery: `resend`, `postmark`, `nodemailer`, `plunk`, `custom`, `log`.
+Locally that means a missing `RESEND_API_KEY` quietly lands you on Mailpit
+rather than erroring — convenient, but check which provider you are on before
+concluding that Resend works.
 
-## Nodemailer (SMTP)
+The logic is `getConfiguredProvider()` in `src/lib/messaging/email/mailer.ts`.
 
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_SECURE`
+## Sender identity
 
-## Custom provider
+Resend will only send **from a domain you have verified** in its dashboard. You
+cannot send from `gmail.com`, `outlook.com`, or any address you do not control
+the DNS for.
 
-Implement a custom provider and register it in `src/lib/messaging/email/providers/custom.ts`.
+Until the company domain is verified:
 
-<Info>
-  Set `DEFAULT_FROM_EMAIL` and `DEFAULT_FROM_NAME` to control sender identity.
-</Info>
+```bash
+DEFAULT_FROM_EMAIL=onboarding@resend.dev
+DEFAULT_FROM_NAME=ShipFree
+```
+
+`onboarding@resend.dev` is Resend's shared testing sender. It delivers **only to
+the email address registered on your own Resend account** — enough to exercise
+signup, verification, and password reset against a real inbox, and unable to
+reach anyone else.
+
+Once the domain is verified, swap in an address on it:
+
+```bash
+DEFAULT_FROM_EMAIL=noreply@yourcompany.com
+DEFAULT_FROM_NAME=Your Company
+```
+
+<Warning>
+  Leaving `DEFAULT_FROM_EMAIL` unset falls back to `ShipFree <noreply@example.com>`,
+  which Resend rejects on every send. See `getFromEmailAddress()` in
+  `src/lib/messaging/email/utils.ts`.
+</Warning>
+
+`RESEND_DOMAIN` is an alternative: setting it makes the sender
+`noreply@<RESEND_DOMAIN>`.
+
+## Getting a key
+
+1. Sign up at [resend.com](https://resend.com). The account's email address is
+   the only one you can send to before verifying a domain — use one you can read
+2. Create a key at [resend.com/api-keys](https://resend.com/api-keys)
+3. Put it in `.env` as `RESEND_API_KEY=`. `.env` is gitignored
+4. Restart `bun dev`
+
+Use a **separate key per environment** so a leaked local key can be revoked
+without taking production down.
+
+## Working offline: Mailpit
+
+[Mailpit](https://mailpit.axllent.org) runs as a service in `compose.yaml` and
+captures mail instead of delivering it. Use it when you are offline, or when a
+test would burn Resend quota, or when you want to inspect raw message source.
+
+```bash
+EMAIL_PROVIDER=nodemailer   # in .env
+bun run db:up               # Mailpit is already started by this
+```
+
+Read captured mail at **http://localhost:8025**. The matching `SMTP_*` values
+are already in `.env`; Mailpit accepts any credentials, they just have to be
+non-empty. Messages live in memory and vanish when the container stops.
+
+Comment `EMAIL_PROVIDER` back out to return to Resend.
+
+## Other providers
+
+Reachable by setting `EMAIL_PROVIDER` explicitly. All packages are already
+installed.
+
+| Provider | `EMAIL_PROVIDER` | Variables |
+| --- | --- | --- |
+| Postmark | `postmark` | `POSTMARK_API_TOKEN` |
+| Plunk | `plunk` | `PLUNK_API_KEY` |
+| A real SMTP server | `nodemailer` | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE` |
+| Console output | `log` | none |
+| Custom | `custom` | see `src/lib/messaging/email/providers/custom.ts` |
+
+To point nodemailer at a real SMTP server instead of Mailpit, replace the
+`SMTP_*` values in `.env`.
+
+## A failed send does not surface as a failure
+
+If the selected provider throws, `sendEmail()` catches it, logs the error, and
+retries through the **log provider** — which always succeeds. The caller
+receives `success: true` even though nothing was delivered.
+
+In development that is harmless. In production it means a bad `RESEND_API_KEY`
+or an unverified sender domain looks like healthy behavior from the outside,
+while every email is silently written to the server log. Watch for these lines:
+
+```
+Primary email provider "resend" failed: <reason>
+Falling back to log provider
+```
+
+Alert on them, or check `hasEmailService()` and `getActiveProviderName()` on
+boot to confirm the intended provider is live.

@@ -57,8 +57,27 @@ function resolveProviderNameFromEnv(): EmailProviderName | null {
 }
 
 /**
+ * The provider to use when EMAIL_PROVIDER is not set explicitly.
+ *
+ * Resend in every environment, so local testing exercises the same delivery
+ * path as production. The only thing that differs between environments is the
+ * sender address in DEFAULT_FROM_EMAIL.
+ *
+ * Set EMAIL_PROVIDER to override this — `nodemailer` routes to the local
+ * Mailpit container, `log` prints to the console.
+ */
+const DEFAULT_PROVIDER_NAME: EmailProviderName = 'resend'
+
+/**
  * Get the configured email provider based on environment settings.
- * Uses explicit EMAIL_PROVIDER if set, otherwise auto-discovers.
+ *
+ * Order of precedence:
+ * 1. EMAIL_PROVIDER, when set to a provider that is actually configured
+ * 2. Resend, when RESEND_API_KEY is present
+ * 3. Auto-discovery of any configured provider, ending at the log provider
+ *
+ * Step 3 matters locally: without RESEND_API_KEY this falls through to Mailpit
+ * (or the log provider), so a missing key degrades instead of failing.
  */
 function getConfiguredProvider(): EmailProvider {
   const explicitName = resolveProviderNameFromEnv()
@@ -69,6 +88,12 @@ function getConfiguredProvider(): EmailProvider {
     if (explicitProvider) return explicitProvider
     console.warn(
       `Configured provider "${explicitName}" is not available, falling back to auto-discovery`
+    )
+  } else {
+    const defaultProvider = getProvider(DEFAULT_PROVIDER_NAME)
+    if (defaultProvider) return defaultProvider
+    console.warn(
+      `Default provider "${DEFAULT_PROVIDER_NAME}" is not configured (RESEND_API_KEY missing?), falling back to auto-discovery`
     )
   }
 

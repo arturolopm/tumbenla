@@ -15,7 +15,16 @@ ShipFree includes a provider-based email system for transactional and marketing 
 
 ## Default behavior
 
-If no real provider is configured, ShipFree falls back to the log provider and prints emails to the server console.
+Resend is the provider in every environment, local included, so local testing
+exercises the same delivery path as production. Only the sender address differs:
+`onboarding@resend.dev` locally, a verified company address in production.
+
+Set `EMAIL_PROVIDER=nodemailer` to route to the local Mailpit container instead
+(offline work, no quota spent) and read the mail at http://localhost:8025. If
+nothing is configured, ShipFree falls back to the log provider and prints emails
+to the server console.
+
+See [Email providers](/email/providers) for the full selection rules and setup.
 
 ## Usage
 

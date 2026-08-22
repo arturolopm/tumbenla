@@ -23,9 +23,12 @@ export const env = createEnv({
     R2_PRIVATE_BUCKET: z.string().optional(),
 
     // Optional: Email providers
+    // Left optional on purpose: when unset, the mailer picks the provider from
+    // NODE_ENV (production -> resend, otherwise -> the local Mailpit container).
+    // Setting it forces one provider regardless of environment.
     EMAIL_PROVIDER: z
       .enum(['resend', 'postmark', 'nodemailer', 'plunk', 'custom', 'log'])
-      .default('log'),
+      .optional(),
     RESEND_API_KEY: z.string().optional(),
     RESEND_DOMAIN: z.string().optional(),
     POSTMARK_API_TOKEN: z.string().optional(),

@@ -1,4 +1,16 @@
-'use client'
+/**
+ * Resend Email Provider
+ *
+ * https://resend.com
+ *
+ * To use this provider:
+ * 1. Set RESEND_API_KEY in your .env
+ * 2. Either set EMAIL_PROVIDER=resend, or run with NODE_ENV=production, which
+ *    selects Resend by default.
+ *
+ * Server-only: this module reads RESEND_API_KEY, which is a server variable in
+ * src/config/env.ts. It must never carry a 'use client' directive.
+ */
 
 import { Resend } from 'resend'
 
