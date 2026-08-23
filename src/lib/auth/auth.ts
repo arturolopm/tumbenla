@@ -1,7 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { nextCookies } from 'better-auth/next-js'
-import { emailOTP, organization } from 'better-auth/plugins'
+import { emailOTP } from 'better-auth/plugins'
 
 import { db } from '@/database'
 import { APP_COOKIE_NAME, isProd } from '@/lib/constants'
@@ -26,9 +26,11 @@ export const auth = betterAuth({
 
   advanced: {
     cookiePrefix: APP_COOKIE_NAME, // Change this to your cookie prefix
+    // Only share cookies across subdomains when a domain is actually configured.
+    // Hardcoding a domain here breaks sign-in on every other host.
     crossSubDomainCookies: {
-      enabled: isProd,
-      domain: '.shipfree.app', // Change this to your domain, if you are using a custom domain
+      enabled: isProd && Boolean(env.COOKIE_DOMAIN),
+      domain: env.COOKIE_DOMAIN,
     },
     useSecureCookies: isProd,
   },
@@ -195,29 +197,10 @@ export const auth = betterAuth({
       otpLength: 6, // Explicitly set the OTP length
       expiresIn: 15 * 60, // 15 minutes in seconds
     }),
-
-    organization({
-      // allowUserToCreateOrganization: async (user) => {
-      //   const dbSubscriptions = await db
-      //     .select()
-      //     .from(schema.subscription)
-      //     .where(eq(schema.subscription.referenceId, user.id))
-
-      //   const hasTeamPlan = dbSubscriptions.some(
-      //     (sub) => sub.status === 'active' && (sub.plan === 'team' || sub.plan === 'enterprise')
-      //   )
-
-      //   return hasTeamPlan
-      // },
-      organizationCreation: {
-        afterCreate: async ({ organization, user }) => {
-          console.info('[organizationCreation.afterCreate] Organization created', {
-            organizationId: organization.id,
-            creatorId: user.id,
-          })
-        },
-      },
-    }),
+    // The organization() plugin was removed on purpose: its `organization`,
+    // `member` and `invitation` tables never existed in the schema, so every
+    // call against that API failed at runtime. Re-enable it only together with
+    // the tables (`npx @better-auth/cli generate`).
   ],
 
   pages: {

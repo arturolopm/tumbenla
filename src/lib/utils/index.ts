@@ -1,3 +1,5 @@
 export * from './css'
 export * from './github'
+export * from './id'
+export * from './slug'
 export * from './urls'

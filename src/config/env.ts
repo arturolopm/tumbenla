@@ -7,8 +7,22 @@ export const env = createEnv({
     DATABASE_URL: z.string().optional(),
     BETTER_AUTH_SECRET: z.string().default('dev-secret-change-in-production'),
     BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
-    BILLING_ENABLED: z.boolean().default(false),
-    EMAIL_VERIFICATION_ENABLED: z.boolean().default(false),
+    // Strings, not z.boolean(). Everything in process.env arrives as a string,
+    // so z.boolean() rejected any value at all and setting the flag crashed the
+    // app at boot. isTruthy() below does the coercion.
+    BILLING_ENABLED: z.string().optional(),
+
+    // Apex domain for sharing the session cookie across subdomains, e.g. '.tumbenla.co'.
+    // Left unset, cross-subdomain cookies stay off, which is correct for a single host.
+    COOKIE_DOMAIN: z.string().optional(),
+
+    EMAIL_VERIFICATION_ENABLED: z.string().optional(),
+
+    // Comma-separated emails allowed into /admin.
+    // Fails closed: unset or empty means nobody is an admin. Admin access also
+    // requires a verified email, so keep EMAIL_VERIFICATION_ENABLED on wherever
+    // this is set.
+    ADMIN_EMAILS: z.string().default(''),
 
     // Optional: Sentry
     SENTRY_DSN: z.string().optional(),
@@ -126,6 +140,8 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     BILLING_ENABLED: process.env.BILLING_ENABLED,
+    COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
+    ADMIN_EMAILS: process.env.ADMIN_EMAILS,
     EMAIL_VERIFICATION_ENABLED: process.env.EMAIL_VERIFICATION_ENABLED,
     SENTRY_DSN: process.env.SENTRY_DSN,
     CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,

@@ -1,4 +1,4 @@
-import { emailOTPClient, organizationClient } from 'better-auth/client/plugins'
+import { emailOTPClient } from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 
 import { getBaseUrl } from '../utils'
@@ -6,7 +6,7 @@ import { getBaseUrl } from '../utils'
 /**
  * Auth Client
  *
- * Core authentication client with email OTP and organization support.
+ * Core authentication client with email OTP support.
  *
  * For billing operations, use the useBilling() hook from '@/lib/billing/client'.
  * The billing client plugin is configured separately to maintain proper TypeScript types.
@@ -16,7 +16,7 @@ import { getBaseUrl } from '../utils'
  */
 export const client = createAuthClient({
   baseURL: getBaseUrl(),
-  plugins: [emailOTPClient(), organizationClient()],
+  plugins: [emailOTPClient()],
   fetchOptions: {
     onError(context) {
       const message =

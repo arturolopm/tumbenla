@@ -12,7 +12,7 @@ ShipFree is a production-ready Next.js boilerplate designed to help developers s
 - **Payments**: Multi-provider support (Stripe, Polar, Lemon Squeezy, Creem)
 - **Email**: Multi-provider support (Resend, Postmark, Plunk, Nodemailer)
 - **UI**: TailwindCSS 4, BaseUI components, Shadcn-style patterns
-- **Internationalization**: next-intl (i18n) with support for en, es, fr
+- **Language**: Spanish only. There is no i18n library (next-intl was removed upstream in `8b458d9`); copy is written directly into components
 - **Monitoring**: Sentry integration
 - **Storage**: Cloudflare R2 support
 
@@ -26,10 +26,10 @@ Application code lives under `src/`. The path alias `@/*` maps to `src/*` (e.g. 
 ShipFree/
 ├── src/                    # Application source
 │   ├── app/                # Next.js App Router pages and routes
-│   │   ├── [locale]/       # Internationalized routes
-│   │   │   ├── (auth)/     # Authentication pages (login, register, etc.)
-│   │   │   ├── (main)/     # Main app pages (dashboard, etc.)
-│   │   │   └── (site)/     # Marketing/landing pages
+│   │   ├── (auth)/         # Authentication pages (login, register, etc.)
+│   │   ├── (publico)/      # Public Tumbenla pages (sitios, transparencia)
+│   │   ├── (admin)/        # Operator-only pages, gated by requireAdmin()
+│   │   ├── (site)/         # Landing-page section components (NOT routes)
 │   │   ├── api/            # API routes
 │   │   │   ├── auth/       # Better-Auth endpoints
 │   │   │   ├── payments/   # Payment processing
@@ -52,13 +52,6 @@ ShipFree/
 │   │   ├── messaging/    # Email service and providers
 │   │   ├── storage.ts    # Cloudflare R2 storage client
 │   │   └── utils/        # Utility functions
-│   ├── i18n/              # Internationalization configuration
-│   │   ├── routing.ts    # Routing configuration
-│   │   └── request.ts    # Request configuration
-│   ├── messages/          # Translation files (JSON format)
-│   │   ├── en.json
-│   │   ├── fr.json
-│   │   └── es.json
 │   └── hooks/             # React hooks
 ├── scripts/               # Runtime scripts (e.g. migrate.ts)
 ├── migrations/            # Drizzle migrations
@@ -73,15 +66,18 @@ ShipFree/
 - Client components are used for interactivity (forms, state, etc.)
 
 #### 2. **Route Groups**
-- `(auth)`, `(main)`, `(site)` are route groups for organization
-- They don't affect URL structure but organize layouts
+- `(auth)`, `(publico)`, `(admin)` are route groups: they organize layouts without
+  affecting the URL
+- `(site)` is the exception. It has no `layout.tsx` and no `page.tsx`, so it produces
+  no routes at all. It is a folder of landing-page section components that
+  `src/app/page.tsx` imports by relative path
 
-#### 3. **Internationalization**
-- All routes are under `[locale]` dynamic segment
-- Supported languages: `en`, `es`, `fr`
-- Use `next-intl` for translations
-- Server components: Use `getTranslations` from `next-intl/server`
-- Client components: Use `useTranslations` hook from `next-intl`
+#### 3. **Language: Spanish, no i18n layer**
+- Routes are flat. There is no `[locale]` segment, no `src/i18n/`, no `src/messages/`
+- `next-intl` is NOT installed. `getTranslations` / `useTranslations` do not exist here
+- All user-facing copy is written in Spanish directly in the component
+- `proxy.ts` at the repo root (Next 16's renamed `middleware.ts`) is a no-op passthrough
+- Do not reintroduce an i18n library without being asked
 
 #### 4. **Environment Configuration**
 - All env vars validated via `@t3-oss/env-nextjs` in `src/config/env.ts`
@@ -114,10 +110,10 @@ ShipFree/
 
 ### Adding a New Page
 
-1. Create file in `src/app/[locale]/(group)/page.tsx`
+1. Create file in `src/app/(group)/page.tsx`
 2. Add metadata export if needed
 3. Use appropriate layout group
-4. Add translations if needed
+4. Write the copy in Spanish, directly in the component
 
 ### Adding an API Route
 
@@ -209,7 +205,7 @@ mailer degrades to Mailpit locally. See `docs/email/providers.mdx`.
 5. **Authentication**: Use Better-Auth client/server APIs, don't access DB directly
 6. **Payments**: Use payment service, don't call providers directly
 7. **Email**: Use email mailer, don't call providers directly
-8. **Internationalization**: All user-facing text should be translatable
+8. **Language**: All user-facing text is Spanish, written inline. There is no translation layer
 9. **Error Handling**: Always handle errors gracefully with proper messages
 10. **Type Safety**: Leverage TypeScript, avoid `any` types
 
@@ -218,7 +214,6 @@ mailer degrades to Mailpit locally. See `docs/email/providers.mdx`.
 - **Better-Auth**: https://better-auth.com
 - **Drizzle ORM**: https://orm.drizzle.team
 - **Next.js**: https://nextjs.org/docs
-- **next-intl**: https://next-intl-docs.vercel.app
 - **BaseUI**: https://base-ui.com
 
 <!-- gitnexus:start -->

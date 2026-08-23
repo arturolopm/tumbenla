@@ -6,7 +6,9 @@ const nextConfig: NextConfig = {
   // This reduces the Docker image size by including only necessary files
   // output: 'standalone',
   typescript: {
-    ignoreBuildErrors: true,
+    // Type errors fail the build. Left on, a green build proved nothing about
+    // types and `bun run typecheck` was the only real gate.
+    ignoreBuildErrors: false,
   },
 }
 
@@ -14,9 +16,11 @@ export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  org: 'quibi-tt',
+  // Inherited from the boilerplate and pointing at someone else's Sentry
+  // project. Set SENTRY_ORG / SENTRY_PROJECT before enabling error reporting.
+  org: process.env.SENTRY_ORG,
 
-  project: 'elixir',
+  project: process.env.SENTRY_PROJECT,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
