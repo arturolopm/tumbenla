@@ -183,7 +183,7 @@ const purchases = [
     title: 'Cemento y bloques, primera entrega',
     summary: 'Material para levantar dos muros de carga.',
     story:
-      'Primera compra con lo que juntaron los sitios en las dos primeras semanas. Se entrego directo en obra. Los recibos estan abajo.',
+      'Primera compra con lo que juntaron los sitios en las dos primeras semanas. Se entrego directo en obra.',
     municipality: 'Municipio por confirmar',
     department: 'Departamento por confirmar',
     beneficiaryLabel: 'Una familia del sector',
@@ -194,6 +194,8 @@ const purchases = [
     receiptNumber: 'EJEMPLO-0001',
     status: 'published',
     publishedAt: new Date('2026-08-19'),
+    // Placeholder image with nothing personal on it, so it can be shown.
+    receiptConsent: true,
     items: [
       { name: 'Cemento gris 50 kg', quantity: '40.00', unit: 'bulto', unitCost: '32000.00', subtotal: '1280000.00' },
       { name: 'Bloque estructural n.4', quantity: '600.00', unit: 'unidad', unitCost: '1900.00', subtotal: '1140000.00' },
@@ -215,6 +217,10 @@ const purchases = [
     receiptNumber: 'EJEMPLO-0002',
     status: 'published',
     publishedAt: new Date('2026-08-22'),
+    // Left unconsented on purpose: this is what an evidence record looks like
+    // before someone has actually made the consent decision, and the public
+    // page must withhold it.
+    receiptConsent: false,
     items: [
       { name: 'Teja de fibrocemento 2.44 m', quantity: '28.00', unit: 'lamina', unitCost: '48000.00', subtotal: '1344000.00' },
       { name: 'Correa de madera 3 m', quantity: '22.00', unit: 'unidad', unitCost: '26000.00', subtotal: '572000.00' },
@@ -238,7 +244,7 @@ async function main() {
   )
   console.log(`  ${venues.length} venues`)
 
-  for (const { items, ...purchase } of purchases) {
+  for (const { items, receiptConsent, ...purchase } of purchases) {
     const purchaseId = createId(ID_PREFIX.materialPurchase)
 
     await db.insert(materialPurchase).values({ id: purchaseId, ...purchase })
@@ -252,16 +258,15 @@ async function main() {
       }))
     )
 
-    // consentGiven stays false on the sample receipt: publishing evidence
-    // photos requires an explicit consent decision, and the seed should not
-    // pretend that decision was made.
+    // The consent gate covers ALL media, not only photos of people. A receipt
+    // can carry a delivery address, so it goes through the same check.
     await db.insert(materialPurchaseMedia).values({
       id: createId(ID_PREFIX.materialPurchaseMedia),
       purchaseId,
       kind: 'receipt',
       url: '/image.png',
       caption: 'Recibo de ejemplo. Reemplazar con el real.',
-      consentGiven: false,
+      consentGiven: receiptConsent,
       position: '0',
     })
   }

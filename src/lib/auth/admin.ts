@@ -65,8 +65,9 @@ export type AdminCheck =
   | { ok: false; error: string }
 
 /**
- * For server actions, which must never throw. Mirrors the discriminated-result
- * contract in src/app/actions/premium-purchase.ts.
+ * For server actions, which must never throw. Returns a discriminated result
+ * that the caller turns into form state, the same shape every action in this
+ * codebase uses.
  *
  * A layout gate does not protect server actions. They are independently
  * addressable POST endpoints, so every one of them has to call this itself.

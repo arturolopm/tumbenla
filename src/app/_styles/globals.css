@@ -233,6 +233,9 @@
      springs with useReducedMotion(); this catches everything else, including
      the smooth scroll above, which was previously unconditional. */
   @media (prefers-reduced-motion: reduce) {
+    /* biome-ignore-start lint/complexity/noImportantStyles: a reduced-motion
+       reset has to beat utility and inline animation declarations, which is the
+       one place !important is the correct tool. */
     *,
     *::before,
     *::after {
@@ -241,5 +244,6 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+    /* biome-ignore-end lint/complexity/noImportantStyles: end of the reset. */
   }
 }

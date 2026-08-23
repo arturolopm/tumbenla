@@ -91,12 +91,6 @@ export const env = createEnv({
     MICROSOFT_TENANT_ID: z.string().optional(),
     FACEBOOK_CLIENT_ID: z.string().optional(),
     FACEBOOK_CLIENT_SECRET: z.string().optional(),
-
-    // Premium Template Purchase (completely separate from template's payment system)
-    // Can be removed if not needed - see README for removal instructions
-    PREMIUM_PURCHASE_STRIPE_SECRET_KEY: z.string().optional(),
-    PREMIUM_PURCHASE_STRIPE_PRICE_ID: z.string().optional(),
-    PREMIUM_PURCHASE_STRIPE_WEBHOOK_SECRET: z.string().optional(),
   },
 
   client: {
@@ -123,10 +117,6 @@ export const env = createEnv({
     NEXT_PUBLIC_CREEM_PRODUCT_STARTER_MONTHLY: z.string().optional(),
     NEXT_PUBLIC_CREEM_PRODUCT_PRO_MONTHLY: z.string().optional(),
     NEXT_PUBLIC_CREEM_PRODUCT_ENTERPRISE_MONTHLY: z.string().optional(),
-
-    // Premium Template Purchase (public)
-    NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
-    NEXT_PUBLIC_PREMIUM_PURCHASE_DISCORD_INVITE_LINK: z.string().optional(),
   },
 
   // Variables available on both server and client
@@ -172,9 +162,6 @@ export const env = createEnv({
     MICROSOFT_TENANT_ID: process.env.MICROSOFT_TENANT_ID,
     FACEBOOK_CLIENT_ID: process.env.FACEBOOK_CLIENT_ID,
     FACEBOOK_CLIENT_SECRET: process.env.FACEBOOK_CLIENT_SECRET,
-    PREMIUM_PURCHASE_STRIPE_SECRET_KEY: process.env.PREMIUM_PURCHASE_STRIPE_SECRET_KEY,
-    PREMIUM_PURCHASE_STRIPE_PRICE_ID: process.env.PREMIUM_PURCHASE_STRIPE_PRICE_ID,
-    PREMIUM_PURCHASE_STRIPE_WEBHOOK_SECRET: process.env.PREMIUM_PURCHASE_STRIPE_WEBHOOK_SECRET,
     PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
@@ -215,10 +202,6 @@ export const env = createEnv({
     NEXT_PUBLIC_CREEM_PRODUCT_PRO_MONTHLY: process.env.NEXT_PUBLIC_CREEM_PRODUCT_PRO_MONTHLY,
     NEXT_PUBLIC_CREEM_PRODUCT_ENTERPRISE_MONTHLY:
       process.env.NEXT_PUBLIC_CREEM_PRODUCT_ENTERPRISE_MONTHLY,
-    NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_STRIPE_PUBLISHABLE_KEY,
-    NEXT_PUBLIC_PREMIUM_PURCHASE_DISCORD_INVITE_LINK:
-      process.env.NEXT_PUBLIC_PREMIUM_PURCHASE_DISCORD_INVITE_LINK,
   },
   emptyStringAsUndefined: true,
 })

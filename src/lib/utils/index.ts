@@ -1,4 +1,5 @@
 export * from './css'
+export * from './format'
 export * from './github'
 export * from './id'
 export * from './slug'
