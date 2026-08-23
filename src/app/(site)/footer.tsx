@@ -4,15 +4,12 @@ import { SiProducthunt, SiYcombinator, SiPeerlist } from 'react-icons/si'
 
 export default function Footer() {
   return (
-    <footer className='border-t border-[#E4E4E7] bg-[#F4F4F5] py-12'>
+    <footer className='border-t border-border bg-background py-12'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <div className='grid grid-cols-2 gap-8 md:grid-cols-4'>
           {/* Column 1: Links */}
           <div>
-            <h3
-              className='mb-4 text-sm font-semibold uppercase'
-              style={{ fontFamily: 'var(--font-geist-mono)' }}
-            >
+            <h3 className='mb-4 font-mono text-sm font-semibold uppercase tracking-wide'>
               Links
             </h3>
             <ul className='space-y-3'>
@@ -61,10 +58,7 @@ export default function Footer() {
 
           {/* Column 2: Legal */}
           <div>
-            <h3
-              className='mb-4 text-sm font-semibold uppercase'
-              style={{ fontFamily: 'var(--font-geist-mono)' }}
-            >
+            <h3 className='mb-4 font-mono text-sm font-semibold uppercase tracking-wide'>
               Legal
             </h3>
             <ul className='space-y-3'>
@@ -97,10 +91,7 @@ export default function Footer() {
 
           {/* Column 3: Featured On */}
           <div>
-            <h3
-              className='mb-4 text-sm font-semibold uppercase'
-              style={{ fontFamily: 'var(--font-geist-mono)' }}
-            >
+            <h3 className='mb-4 font-mono text-sm font-semibold uppercase tracking-wide'>
               Featured On
             </h3>
             <ul className='space-y-3'>
@@ -153,10 +144,7 @@ export default function Footer() {
 
           {/* Column 4: Community */}
           <div>
-            <h3
-              className='mb-4 text-sm font-semibold uppercase'
-              style={{ fontFamily: 'var(--font-geist-mono)' }}
-            >
+            <h3 className='mb-4 font-mono text-sm font-semibold uppercase tracking-wide'>
               Community
             </h3>
             <ul className='space-y-3'>
@@ -197,15 +185,12 @@ export default function Footer() {
         </div>
 
         {/* Bottom Section */}
-        <div className='mt-12 pt-8 border-t border-[#E4E4E7]'>
+        <div className='mt-12 pt-8 border-t border-border'>
           <div className='flex flex-col gap-4'>
             <div className='flex items-center gap-2'>
-              <img src='/image.png' alt='ShipFree Logo' className='h-6 w-6 object-contain' />
-              <span
-                className='text-base font-semibold text-foreground'
-                style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                ShipFree
+              <img src='/image.png' alt='Tumbenla' className='h-6 w-6 object-contain' />
+              <span className='font-display text-base font-semibold tracking-tight text-foreground'>
+                Tumbenla
               </span>
             </div>
             <p className='text-sm text-muted-foreground'>Turn ideas into products, fast</p>

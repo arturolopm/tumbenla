@@ -78,7 +78,7 @@ export default function Features() {
   ]
 
   return (
-    <section id="features" className='py-24 bg-[#F4F4F5]'>
+    <section id="features" className='py-24 bg-background'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <h2
           className='text-center text-sm font-medium text-muted-foreground mb-8'
@@ -95,15 +95,15 @@ export default function Features() {
           </p>
         </div>
 
-        <div className='border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent'>
+        <div className='border border-border rounded-none overflow-hidden bg-transparent'>
           <div className='grid grid-cols-4 grid-rows-3 h-full'>
             {[...features, ...stack].map((item, index) => (
                 <div
                   key={index}
                   className={`p-6 bg-transparent flex flex-col ${
-                  index % 4 !== 3 ? 'border-r border-[#E4E4E7]' : ''
+                  index % 4 !== 3 ? 'border-r border-border' : ''
                 } ${
-                  index < 8 ? 'border-b border-[#E4E4E7]' : ''
+                  index < 8 ? 'border-b border-border' : ''
                 }`}
               >
                 {item.logo && !item.logos && (

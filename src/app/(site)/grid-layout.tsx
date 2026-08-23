@@ -33,7 +33,7 @@ interface SectionDividerProps {
 export const SectionDivider = ({ className = '' }: SectionDividerProps) => {
   return (
     <div className={`${className}`}>
-      <div className='h-px w-full bg-[#E4E4E7]' />
+      <div className='h-px w-full bg-border' />
     </div>
   )
 }

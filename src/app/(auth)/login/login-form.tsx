@@ -359,7 +359,7 @@ export default function LoginPage({
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-black tracking-tight'>Sign in</h1>
+        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>Sign in</h1>
         <p className='font-[380] text-[16px] text-muted-foreground'>Enter your details</p>
       </div>
 
@@ -473,7 +473,7 @@ export default function LoginPage({
             <div className='w-full border-t border-gray-200' />
           </div>
           <div className='relative flex justify-center text-sm'>
-            <span className='bg-white px-4 font-[340] text-muted-foreground'>Or continue with</span>
+            <span className='bg-background px-4 font-[340] text-muted-foreground'>Or continue with</span>
           </div>
         </div>
       )}
@@ -525,7 +525,7 @@ export default function LoginPage({
       <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle className='text-xl font-semibold tracking-tight text-black'>
+            <DialogTitle className='text-xl font-semibold tracking-tight text-foreground'>
               Reset Password
             </DialogTitle>
             <DialogDescription className='text-sm text-muted-foreground'>
@@ -558,7 +558,7 @@ export default function LoginPage({
               )}
             </div>
             {resetStatus.type === 'success' && (
-              <div className='mt-1 space-y-1 text-xs text-[#4CAF50]'>
+              <div className='mt-1 space-y-1 text-xs text-success-foreground'>
                 <p>{resetStatus.message}</p>
               </div>
             )}

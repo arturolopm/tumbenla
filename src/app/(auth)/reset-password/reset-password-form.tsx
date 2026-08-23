@@ -59,7 +59,7 @@ export function RequestResetForm({
         {/* Status message display */}
         {statusType && statusMessage && (
           <div
-            className={cn('text-xs', statusType === 'success' ? 'text-[#4CAF50]' : 'text-red-400')}
+            className={cn('text-xs', statusType === 'success' ? 'text-success-foreground' : 'text-red-400')}
           >
             <p>{statusMessage}</p>
           </div>
@@ -234,7 +234,7 @@ export function SetNewPasswordForm({
           <div
             className={cn(
               'mt-1 space-y-1 text-xs',
-              statusType === 'success' ? 'text-[#4CAF50]' : 'text-red-400'
+              statusType === 'success' ? 'text-success-foreground' : 'text-red-400'
             )}
           >
             <p>{statusMessage}</p>

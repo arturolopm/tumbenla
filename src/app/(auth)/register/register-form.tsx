@@ -266,7 +266,7 @@ export default function RegisterForm({
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-black tracking-tight'>Create an account</h1>
+        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>Create an account</h1>
         <p className='font-[380] text-[16px] text-muted-foreground'>Enter your details</p>
       </div>
 
@@ -413,7 +413,7 @@ export default function RegisterForm({
             <div className='w-full border-t border-gray-200' />
           </div>
           <div className='relative flex justify-center text-sm'>
-            <span className='bg-white px-4 font-[340] text-muted-foreground'>Or continue with</span>
+            <span className='bg-background px-4 font-[340] text-muted-foreground'>Or continue with</span>
           </div>
         </div>
       )}

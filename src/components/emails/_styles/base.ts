@@ -1,6 +1,17 @@
 /**
  * Base styles for all email templates.
+ *
+ * Emails stay LIGHT-themed even though the app is dark-only. Dark HTML email is
+ * a compatibility minefield across clients, and people read auth mail in bright
+ * inboxes anyway.
+ *
+ * Brand colors are read from src/config/branding.ts rather than redeclared.
+ * This file used to hardcode #6f3dfa while branding.ts said #701ffc, so the two
+ * had already drifted apart.
  */
+import { getBrandConfig } from '@/config/branding'
+
+const brand = getBrandConfig()
 
 /** Color tokens (light mode) */
 export const colors = {
@@ -16,8 +27,10 @@ export const colors = {
   textTertiary: '#5c5c5c',
   /** Muted text (footer) */
   textMuted: '#737373',
-  /** Brand primary - purple */
-  brandPrimary: '#6f3dfa',
+  /** Brand primary, from branding.ts. Amber. */
+  brandPrimary: brand.theme?.primaryColor ?? '#F0A73C',
+  /** Brand accent, from branding.ts. Magenta. */
+  brandAccent: brand.theme?.accentColor ?? '#F04E9E',
   /** Brand tertiary - green (matches Run/Deploy buttons) */
   brandTertiary: '#32bd7e',
   /** Border/divider color */

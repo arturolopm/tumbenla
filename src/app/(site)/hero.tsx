@@ -26,7 +26,7 @@ export default function Hero() {
   return (
     <main
       id='hero'
-      className='flex min-h-screen flex-col bg-[#F4F4F5] items-center justify-start pt-40 pb-24'
+      className='flex min-h-screen flex-col bg-background items-center justify-start pt-40 pb-24'
     >
       <div className='mx-auto w-full max-w-6xl px-4 sm:px-6'>
         <div className='mx-auto max-w-4xl text-center'>

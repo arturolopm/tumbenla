@@ -19,23 +19,38 @@ export interface BrandConfig {
 }
 
 /**
- * Default brand configuration values
+ * Brand values for the two places that cannot read CSS custom properties: the
+ * PWA manifest and the email templates.
+ *
+ * src/app/_styles/globals.css is the source of truth for the app itself. These
+ * hex values mirror its oklch tokens and must be updated alongside them. CSS
+ * cannot import TypeScript, so the sync is manual by necessity, not by
+ * accident. Previously this file said #701ffc while the emails said #6f3dfa and
+ * neither matched the stylesheet at all.
+ *
+ * These hex values are the exact sRGB fallbacks Tailwind compiles from the oklch
+ * tokens, read back out of the built stylesheet rather than eyeballed:
+ *
+ *   primary   oklch(0.78 0.155 68)   -> #f7a232   amber
+ *   accent    oklch(0.68 0.225 349)  -> #f54bae   magenta
+ *   surface   oklch(0.145 0.012 295) -> #0a090f   near-black
+ *   card      oklch(0.185 0.013 295) -> #131218
  */
 const defaultConfig: BrandConfig = {
-  name: 'ShipFree',
+  name: 'Tumbenla',
   logoUrl: undefined,
   faviconUrl: '/favicon/favicon.ico',
   customCssUrl: undefined,
-  supportEmail: 'hi@revoks.dev',
+  supportEmail: 'hola@tumbenla.co',
   documentationUrl: undefined,
-  termsUrl: undefined,
-  privacyUrl: undefined,
+  termsUrl: '/terminos',
+  privacyUrl: '/privacidad',
   theme: {
-    primaryColor: '#701ffc',
-    primaryHoverColor: '#802fff',
-    accentColor: '#9d54ff',
-    accentHoverColor: '#a66fff',
-    backgroundColor: '#0c0c0c',
+    primaryColor: '#f7a232',
+    primaryHoverColor: '#f9b45c',
+    accentColor: '#f54bae',
+    accentHoverColor: '#f76fc0',
+    backgroundColor: '#0a090f',
   },
 }
 

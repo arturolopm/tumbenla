@@ -5,10 +5,29 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-bricolage-grotesque: var(--font-bricolage-grotesque);
+  /* The wordmark face. Use font-display, not an inline style prop. */
+  --font-display: var(--font-bricolage-grotesque), ui-sans-serif, system-ui, sans-serif;
+
+  --color-party: var(--party);
+  --color-party-foreground: var(--party-foreground);
+  --color-glass: var(--glass);
+  --color-glass-border: var(--glass-border);
+  --color-elevated: var(--elevated);
+
+  /* The iOS sheet curve. Slow out, fast settle. */
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
   --animate-skeleton: skeleton 2s -1s infinite linear;
+  /* These keyframes were declared below but never bound to --animate-*, so they
+     were unreachable dead CSS. Binding them makes animate-fade-in and friends
+     real utilities. */
+  --animate-fade-in: fadeIn 220ms var(--ease-out-soft) both;
+  --animate-slide-up: slideUp 320ms var(--ease-ios) both;
+  --animate-slide-down: slideDown 220ms var(--ease-ios) both;
+  --animate-zoom-in: zoomIn 200ms var(--ease-out-soft) both;
   --color-warning-foreground: var(--warning-foreground);
   --color-warning: var(--warning);
   --color-success-foreground: var(--success-foreground);
@@ -93,88 +112,98 @@
   }
 }
 
-:root {
-  --radius: 0.625rem;
-  --grid-line-color: #E4E4E7;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --destructive-foreground: var(--color-red-700);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-700);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-700);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-700);
-}
+/*
+ * Tumbenla. Dark-only.
+ *
+ * The concept is the light you see from the street: warm amber against a
+ * near-black with a violet cast. Amber is the bar sign, the hard hat and the
+ * bulb hanging in a half-built house. It carries every CTA and brand accent.
+ *
+ * Magenta is the party, and it lives in --party, NOT in --accent. In this token
+ * system --accent is the neutral hover surface behind every menu item and ghost
+ * button; putting a brand color there turns every dropdown hot pink.
+ *
+ * :root and .dark carry the same values on purpose. <html> has a hardcoded
+ * class="dark", so .dark is what actually applies and keeps the 126 authored
+ * dark: variants working. Duplicating into :root stops portals and
+ * global-error.tsx, which renders its own <html>, from flashing white.
+ *
+ * Canonical hex, mirrored by hand in src/config/branding.ts because CSS cannot
+ * import TypeScript:
+ *   amber    #f7a232      magenta  #f54bae
+ *   surface  #0a090f      card     #131218
+ */
 
+:root,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
+  --radius: 0.625rem;
+
+  --background: oklch(0.145 0.012 295);
+  --foreground: oklch(0.97 0.004 295);
+
+  --card: oklch(0.185 0.013 295);
+  --card-foreground: oklch(0.97 0.004 295);
+  --popover: oklch(0.205 0.014 295);
+  --popover-foreground: oklch(0.97 0.004 295);
+
+  /* Ambar: la marca. CTAs, badges de compromiso, foco. */
+  --primary: oklch(0.78 0.155 68);
+  --primary-foreground: oklch(0.18 0.045 68);
+
+  --secondary: oklch(0.255 0.014 295);
+  --secondary-foreground: oklch(0.97 0.004 295);
+
+  --muted: oklch(0.245 0.013 295);
+  --muted-foreground: oklch(0.715 0.012 295);
+
+  /* Superficie de hover, no la marca. Ver la nota de arriba. */
+  --accent: oklch(0.265 0.016 295);
+  --accent-foreground: oklch(0.97 0.004 295);
+
+  /* Magenta de rumba. Da 6.13:1 sobre el fondo, o sea que si pasa AA hasta para
+     texto de cuerpo. Se reserva igual para acentos y momentos de fiesta, por
+     restriccion de diseno y no por contraste: si el magenta esta en todas
+     partes deja de significar algo. */
+  --party: oklch(0.68 0.225 349);
+  --party-foreground: oklch(0.16 0.04 349);
+
+  --destructive: oklch(0.68 0.2 25);
+  --destructive-foreground: oklch(0.8 0.14 25);
+
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.78 0.155 68 / 55%);
+
+  --success: oklch(0.72 0.15 160);
+  --success-foreground: oklch(0.8 0.13 160);
+  --info: oklch(0.7 0.13 240);
+  --info-foreground: oklch(0.78 0.11 240);
+  --warning: oklch(0.8 0.15 85);
+  --warning-foreground: oklch(0.86 0.13 85);
+
+  /* Antes solo existia en :root con un gris casi blanco, asi que las guias del
+     landing salian brillantes sobre fondo oscuro. */
+  --grid-line-color: oklch(1 0 0 / 7%);
+
+  /* Materiales translucidos. */
+  --glass: oklch(0.185 0.013 295 / 68%);
+  --glass-border: oklch(1 0 0 / 9%);
+  --elevated: oklch(0.225 0.014 295);
+
+  --sidebar: oklch(0.175 0.013 295);
+  --sidebar-foreground: oklch(0.97 0.004 295);
+  --sidebar-primary: oklch(0.78 0.155 68);
+  --sidebar-primary-foreground: oklch(0.18 0.045 68);
+  --sidebar-accent: oklch(0.265 0.016 295);
+  --sidebar-accent-foreground: oklch(0.97 0.004 295);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-  --destructive-foreground: var(--color-red-400);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-400);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-400);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-400);
+  --sidebar-ring: oklch(0.78 0.155 68 / 55%);
+
+  --chart-1: oklch(0.78 0.155 68);
+  --chart-2: oklch(0.68 0.225 349);
+  --chart-3: oklch(0.72 0.15 160);
+  --chart-4: oklch(0.7 0.13 240);
+  --chart-5: oklch(0.8 0.11 30);
 }
 
 @layer base {
@@ -186,5 +215,31 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Spanish headings run about 20% longer than English and wrap badly without
+     this. text-wrap: balance evens the last line out. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Global floor for reduced motion. Individual components still gate their
+     springs with useReducedMotion(); this catches everything else, including
+     the smooth scroll above, which was previously unconditional. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

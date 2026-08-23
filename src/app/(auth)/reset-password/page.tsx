@@ -72,7 +72,7 @@ function ResetPasswordContent() {
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className={`font-medium text-[32px] text-black tracking-tight`}>Reset your password</h1>
+        <h1 className={`font-medium text-[32px] text-foreground tracking-tight`}>Reset your password</h1>
         <p className={`font-[380] text-[16px] text-muted-foreground`}>
           Enter a new password for your account
         </p>

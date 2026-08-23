@@ -8,12 +8,12 @@ export default function manifest(): MetadataRoute.Manifest {
     name: brand.name,
     short_name: brand.name,
     description:
-      'ShipFree is a free open-source Next.js SaaS boilerplate alternative to ShipFast. Simplify and optimize your shipping process with modern web technologies like Supabase, Stripe, LemonSqueezy, Drizzle ORM, and Mailgun.',
+      'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Mira cuales son, donde quedan, y en que se fue la plata.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: brand.theme?.primaryColor,
+    background_color: brand.theme?.backgroundColor,
+    theme_color: brand.theme?.backgroundColor,
     orientation: 'portrait-primary',
     icons: [
       {
@@ -32,16 +32,22 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
     ],
-    categories: ['developer tools', 'productivity', 'saas'],
+    categories: ['food', 'lifestyle', 'social'],
     shortcuts: [
       {
-        name: 'Open dashboard',
-        short_name: 'Dashboard',
-        description: 'Go to your ShipFree dashboard',
-        url: '/dashboard',
+        name: 'Ver los sitios',
+        short_name: 'Sitios',
+        description: 'Bares y discotecas que estan poniendo',
+        url: '/sitios',
+      },
+      {
+        name: 'En que se fue la plata',
+        short_name: 'Transparencia',
+        description: 'Recibos y fotos de cada compra',
+        url: '/transparencia',
       },
     ],
-    lang: 'en-US',
+    lang: 'es-CO',
     dir: 'ltr',
   }
 }

@@ -10,26 +10,22 @@ const brandConfig = getBrandConfig()
 export const siteConfig = {
   name: brandConfig.name,
   description:
-    'ShipFree is a free open-source Next.js SaaS boilerplate alternative to ShipFast. Simplify and optimize your shipping process with modern web technologies.',
+    'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Mira cuales son, donde quedan, y en que se fue la plata.',
   url: getBaseUrl(),
-  twitterHandle: '@codedoesdev',
-  creator: 'The Revoks Company',
+  twitterHandle: '@tumbenla',
+  creator: 'Tumbenla',
+  locale: 'es_CO',
   keywords: [
-    'ShipFree',
-    'ShipFast alternative',
-    'Next.js SaaS boilerplate',
-    'Open source boilerplate',
-    'SaaS template',
-    'Next.js template',
-    'Shipping solution',
-    'E-commerce boilerplate',
-    'Stripe integration',
-    'LemonSqueezy integration',
-    'Supabase authentication',
-    'Drizzle ORM',
-    'Mailgun',
-    'TypeScript boilerplate',
-    'React SaaS',
+    'Tumbenla',
+    'bares que donan',
+    'discotecas que donan',
+    'rumba con causa',
+    'material de construccion',
+    'reconstruccion Colombia',
+    'donaciones Colombia',
+    'vida nocturna Colombia',
+    'bares Colombia',
+    'discotecas Colombia',
   ],
 } as const
 
@@ -94,6 +90,7 @@ const getOpenGraph = (options: SEOOptions) => {
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     siteName: siteConfig.name,
+    locale: siteConfig.locale,
     images: [
       {
         url: imageUrl,

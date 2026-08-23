@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono, Bricolage_Grotesque } from 'next/font/google'
 
 import '@/app/_styles/globals.css'
@@ -23,9 +23,9 @@ const bricolageGrotesque = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   ...generateMetadata({
-    title: 'ShipFree - Turn Ideas Into Products, Fast',
+    title: 'Tumbenla',
     description:
-      'Ship your startup in days, not weeks. A production-ready Next.js boilerplate with auth, payments, and everything you need to launch fast. Free forever, open source.',
+      'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Mira cuales son, donde quedan, y en que se fue la plata.',
     isRootLayout: true,
   }),
   icons: {
@@ -35,15 +35,25 @@ export const metadata: Metadata = {
   },
 }
 
+/**
+ * Dark-only, so the theme is declared rather than negotiated. This is what
+ * turns native form controls, scrollbars and the mobile browser chrome dark;
+ * the class alone only styles our own elements.
+ */
+export const viewport: Viewport = {
+  colorScheme: 'dark',
+  themeColor: '#0a090f',
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es" className="dark">
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${bricolageGrotesque.variable} font-sans antialiased`}
       >
         <QueryProvider>
           <ToastProvider>{children}</ToastProvider>
-          <div className="h-screen w-full fixed top-0 left-0 -z-10  bg-[url('/grain.jpg')] opacity-5" />
+          <div className="h-screen w-full fixed top-0 left-0 -z-10 bg-[url('/grain.jpg')] opacity-5" />
         </QueryProvider>
       </body>
     </html>

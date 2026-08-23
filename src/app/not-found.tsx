@@ -10,12 +10,12 @@ export default function NotFound() {
 
   return (
     <div className='relative min-h-screen'>
-      <div className='-z-50 pointer-events-none fixed inset-0 bg-white' />
+      <div className='-z-50 pointer-events-none fixed inset-0 bg-background' />
       <div className='flex min-h-[calc(100vh-120px)] items-center justify-center px-4'>
         <div className='w-full max-w-[410px]'>
           <div className='flex flex-col items-center justify-center'>
             <div className='space-y-1 text-center'>
-              <h1 className='font-medium text-[32px] text-black tracking-tight'>Page Not Found</h1>
+              <h1 className='font-medium text-[32px] text-foreground tracking-tight'>Page Not Found</h1>
               <p className='font-[380] text-[16px] text-muted-foreground'>
                 The page you’re looking for doesn’t exist or has been moved.
               </p>

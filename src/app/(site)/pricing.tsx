@@ -34,7 +34,7 @@ export default function Pricing() {
   ]
 
   return (
-    <section id='pricing' className='py-24 bg-[#F4F4F5]'>
+    <section id='pricing' className='py-24 bg-background'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <div className='mx-auto max-w-4xl'>
           <h2
@@ -52,9 +52,9 @@ export default function Pricing() {
             </p>
           </div>
 
-          <div className='grid md:grid-cols-2 border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent'>
+          <div className='grid md:grid-cols-2 border border-border rounded-none overflow-hidden bg-transparent'>
             {/* Community */}
-            <div className='flex flex-col p-8 border-r border-[#E4E4E7]'>
+            <div className='flex flex-col p-8 border-r border-border'>
               <div className='mb-6'>
                 <h3 className='text-2xl font-semibold mb-4'>Community</h3>
                 <div className='mb-4'>
@@ -104,7 +104,7 @@ export default function Pricing() {
               <div className='mb-6'>
                 <div className='flex items-start justify-between mb-4'>
                   <h3 className='text-2xl font-semibold'>Premium</h3>
-                  <Badge className='bg-white border border-[#DBDAD6] text-[#878787] rounded-full px-3 py-3 font-medium flex items-center gap-1.5'>
+                  <Badge className='bg-card border border-border text-muted-foreground rounded-full px-3 py-3 font-medium flex items-center gap-1.5'>
                     <Flame className='h-3.5 w-3.5' />
                     Most popular
                   </Badge>

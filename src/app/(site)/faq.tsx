@@ -56,7 +56,7 @@ export default function FAQ() {
   ]
 
   return (
-    <section id='faq' className='py-24 border-t border-b border-[#E4E4E7] bg-[#F4F4F5]'>
+    <section id='faq' className='py-24 border-t border-b border-border bg-background'>
       <div className='mx-auto max-w-6xl px-4 sm:px-6'>
         <h2
           className='text-center text-sm font-medium text-muted-foreground mb-8'
@@ -86,7 +86,7 @@ export default function FAQ() {
             <div>
               <Accordion className='space-y-0'>
                 {faqs.map((faq, index) => (
-                  <AccordionItem key={index} className='border-b border-[#E4E4E7] last:border-b-0'>
+                  <AccordionItem key={index} className='border-b border-border last:border-b-0'>
                     <AccordionTrigger className='text-left py-4 text-base font-medium hover:no-underline'>
                       {faq.question}
                     </AccordionTrigger>

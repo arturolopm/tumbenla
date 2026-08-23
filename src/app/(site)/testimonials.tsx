@@ -55,7 +55,7 @@ export default function Testimonials() {
   ];
 
   return (
-    <section id="wall-of-love" className="py-24 bg-[#F4F4F5]">
+    <section id="wall-of-love" className="py-24 bg-background">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <h2 className="text-center text-sm font-medium text-muted-foreground mb-8" style={{ fontFamily: 'var(--font-geist-mono)' }}>
           TESTIMONIALS
@@ -69,15 +69,15 @@ export default function Testimonials() {
           </p>
         </div>
 
-        <div className="border border-[#E4E4E7] rounded-none overflow-hidden bg-transparent">
+        <div className="border border-border rounded-none overflow-hidden bg-transparent">
           <div className="grid grid-cols-2 md:grid-cols-3 auto-rows-auto">
             {testimonials.map((testimonial, index) => (
               <div
                 key={index}
                 className={`p-4 bg-transparent flex flex-col relative ${
-                  index % 3 !== 2 ? 'border-r border-[#E4E4E7]' : ''
+                  index % 3 !== 2 ? 'border-r border-border' : ''
                 } ${
-                  index < 3 ? 'border-b border-[#E4E4E7]' : ''
+                  index < 3 ? 'border-b border-border' : ''
                 }`}
               >
                 {/* Quote */}

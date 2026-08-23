@@ -69,7 +69,7 @@ function VerificationForm({
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-black tracking-tight'>
+        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>
           {isVerified ? 'Email Verified!' : 'Verify Your Email'}
         </h1>
         <p className='font-[380] text-[16px] text-muted-foreground'>
@@ -98,7 +98,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={0}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
@@ -107,7 +107,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={1}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
@@ -116,7 +116,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={2}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
@@ -125,7 +125,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={3}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
@@ -134,7 +134,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={4}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
@@ -143,7 +143,7 @@ function VerificationForm({
                   <InputOTPSlot
                     index={5}
                     className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-white text-center font-medium text-lg shadow-sm transition-all duration-200',
+                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-gray-300 hover:border-gray-400',
                       'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
                       isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'

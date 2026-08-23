@@ -6,7 +6,7 @@ import { PremiumButton } from './pricing/premium-button'
 
 export default function CTA() {
   return (
-    <section className='py-24 px-4 sm:px-6 bg-[#F4F4F5]'>
+    <section className='py-24 px-4 sm:px-6 bg-background'>
       <div className='mx-auto max-w-4xl'>
         {/* Section label */}
         <h2

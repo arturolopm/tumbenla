@@ -40,16 +40,13 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className='fixed inset-x-0 top-0 z-30 border-b border-[#E4E4E7] bg-[#F4F4F5]'>
+      <nav className='fixed inset-x-0 top-0 z-30 border-b border-border bg-background'>
         <div className='mx-auto max-w-7xl flex h-14 items-center justify-between gap-8 px-4 sm:px-6'>
           <div className='flex items-center gap-3'>
             <Link href='/' className='flex items-center gap-2'>
-              <img src='/image.png' alt='ShipFree Logo' className='h-6 w-6 object-contain' />
-              <span
-                className='text-base font-semibold text-foreground'
-                style={{ fontFamily: 'var(--font-bricolage-grotesque)' }}
-              >
-                ShipFree
+              <img src='/image.png' alt='Tumbenla' className='h-6 w-6 object-contain' />
+              <span className='font-display text-base font-semibold tracking-tight text-foreground'>
+                Tumbenla
               </span>
             </Link>
           </div>
@@ -90,7 +87,7 @@ export default function Navbar() {
               </Link>
             </div>
 
-            <div className='hidden h-6 w-px bg-black/30 md:block' />
+            <div className='hidden h-6 w-px bg-border md:block' />
 
             <a
               href={`https://github.com/${repo}`}
@@ -101,7 +98,7 @@ export default function Navbar() {
             >
               <svg
                 viewBox='0 0 16 16'
-                className='h-5 w-5 text-[#38383A]'
+                className='h-5 w-5 text-foreground'
                 fill='currentColor'
                 aria-hidden='true'
               >
