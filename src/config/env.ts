@@ -4,7 +4,15 @@ import { z } from 'zod'
 export const env = createEnv({
   server: {
     // Core Database and Authentication
-    DATABASE_URL: z.string().optional(),
+    // Requerida, no opcional. Con .optional() una variable ausente pasaba la
+    // validacion y la app moria despues, adentro de una consulta: en Vercel eso
+    // es un deploy verde que falla en la primera visita. emptyStringAsUndefined
+    // ya esta activo, asi que una variable vacia tambien cuenta como ausente.
+    //
+    // La URL DIRECTA de Neon no va aca: este es el entorno de la app, se valida
+    // al importarse, y la app nunca la necesita. Solo la usan el migrador y
+    // drizzle-kit, que corren fuera de Next.
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL es obligatoria'),
     BETTER_AUTH_SECRET: z.string().default('dev-secret-change-in-production'),
     BETTER_AUTH_URL: z.string().default('http://localhost:3000'),
     // Strings, not z.boolean(). Everything in process.env arrives as a string,
@@ -213,3 +221,33 @@ export const isTruthy = (value: string | boolean | number | undefined) =>
 // Utility to check if a value is explicitly false (defaults to false only if explicitly set)
 export const isFalsy = (value: string | boolean | number | undefined) =>
   typeof value === 'string' ? value.toLowerCase() === 'false' || value === '0' : value === false
+
+/**
+ * Secretos de relleno: prohibidos en produccion.
+ *
+ * Better-Auth NO lee este archivo. Resuelve el secreto por su cuenta desde
+ * process.env.BETTER_AUTH_SECRET, asi que el .default() de arriba solo existe
+ * para que la validacion no falle en local; nunca llega a firmar una sesion.
+ *
+ * Better-Auth ya se niega a arrancar en produccion con SU secreto por defecto,
+ * pero no puede reconocer los nuestros. El peligroso es el de .env.example:
+ * esta publicado en el repositorio, mide mas de 32 caracteres y por lo tanto
+ * pasa todas las comprobaciones de la libreria. Copiarlo al panel de Vercel
+ * daria un despliegue verde en el que cualquiera que haya leido el repositorio
+ * puede firmar una sesion, y con una sesion falsificada de un correo de
+ * ADMIN_EMAILS se entra a /admin.
+ *
+ * Aca si se lanza, no se avisa. Un aviso en los logs de una funcion serverless
+ * no lo ve nadie, y lo que esta en juego es el panel de operacion.
+ */
+const SECRETOS_DE_RELLENO = new Set([
+  'dev-secret-change-in-production',
+  'your-secret-key-here-generate-with-openssl-rand-base64-32',
+])
+
+if (env.NODE_ENV === 'production' && SECRETOS_DE_RELLENO.has(process.env.BETTER_AUTH_SECRET ?? '')) {
+  throw new Error(
+    'BETTER_AUTH_SECRET es un valor de ejemplo del repositorio. Genera uno real con ' +
+      '`openssl rand -base64 32` y ponlo en las variables de entorno del despliegue.'
+  )
+}

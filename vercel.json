@@ -1,12 +1,5 @@
 {
-  "rewrites": [
-    {
-      "source": "/docs",
-      "destination": "https://revoks.mintlify.dev/docs"
-    },
-    {
-      "source": "/docs/:match*",
-      "destination": "https://revoks.mintlify.dev/docs/:match*"
-    }
-  ]
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bun run migrate && bun run build",
+  "framework": "nextjs"
 }
