@@ -299,6 +299,24 @@ CU-horas.
 
 ### Que variable va en cada ambiente
 
+La URL publica NO se configura: `getBaseUrl()` la deduce de las variables de
+sistema de Vercel. En produccion usa `NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL`,
+que Vercel define como el dominio propio mas corto o el de vercel.app si no hay
+ninguno, asi que **agregar el dominio propio no pide tocar codigo ni variables**:
+basta redesplegar. En preview usa la URL de la RAMA, que sobrevive al siguiente
+push. `NEXT_PUBLIC_APP_URL` sigue existiendo como anulacion explicita y gana.
+
+Dos cosas que hay que tener presentes:
+
+- **`NEXT_PUBLIC_*` se incrusta en el bundle durante el BUILD.** Cambiar
+  cualquiera de estas en el panel no surte efecto hasta el siguiente despliegue.
+  Vale tambien para el dominio propio.
+- Depende de **"Enable access to System Environment Variables"**, activo por
+  defecto. Si se apaga, el build falla diciendolo, que es lo que se quiere: la
+  version vieja tenia un `.default()` de localhost y devolvia
+  `http://localhost:3000` en silencio, dejando el despliegue verde con todos los
+  enlaces de correo y los callbacks de sesion rotos.
+
 `.env.vercel.example` (versionado, sin secretos) es la lista con el ambito de
 cada una. **El `.env` local no se pega en Vercel**: apunta al Postgres de Docker
 y al Mailpit local, y trae variables que alli no hacen nada.

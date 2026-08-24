@@ -102,7 +102,28 @@ export const env = createEnv({
   },
 
   client: {
-    NEXT_PUBLIC_APP_URL: z.string().default('http://localhost:3000'),
+    // SIN .default(). Antes traia 'http://localhost:3000', y ese default era
+    // justo lo que hacia silencioso el error: si faltaba en el despliegue, la
+    // app salia verde y todos los enlaces de correo y los callbacks de sesion
+    // apuntaban a localhost. Ahora, cuando no esta, getBaseUrl() la deduce de
+    // las variables de sistema de Vercel y en produccion lanza si no hay nada.
+    //
+    // Sigue mandando sobre todo lo demas: el dia que exista el dominio propio,
+    // se pone aca y gana.
+    NEXT_PUBLIC_APP_URL: z.string().optional(),
+
+    // Variables de sistema de Vercel, con el prefijo que las expone al
+    // navegador. Las pone Vercel solo mientras "Enable access to System
+    // Environment Variables" este activo (viene activo). En local no existen.
+    NEXT_PUBLIC_VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
+    // El dominio de produccion del proyecto: el dominio propio mas corto, o el
+    // de vercel.app si todavia no hay ninguno. Esto es lo que hace que pasar a
+    // un dominio propio no requiera tocar codigo ni variables.
+    NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL: z.string().optional(),
+    // URL estable de la rama, no la del despliegue suelto: sobrevive al
+    // siguiente push, asi que los enlaces de un correo viejo siguen sirviendo.
+    NEXT_PUBLIC_VERCEL_BRANCH_URL: z.string().optional(),
+    NEXT_PUBLIC_VERCEL_URL: z.string().optional(),
     // Lemon Squeezy product IDs (public)
     NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY: z.string().optional(),
     NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY: z.string().optional(),
@@ -186,6 +207,11 @@ export const env = createEnv({
     CREEM_WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET,
     CREEM_TEST_MODE: process.env.CREEM_TEST_MODE,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
+    NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL:
+      process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL,
+    NEXT_PUBLIC_VERCEL_BRANCH_URL: process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL,
+    NEXT_PUBLIC_VERCEL_URL: process.env.NEXT_PUBLIC_VERCEL_URL,
     NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY:
       process.env.NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_STARTER_MONTHLY,
     NEXT_PUBLIC_LEMONSQUEEZY_PRODUCT_PRO_MONTHLY:
