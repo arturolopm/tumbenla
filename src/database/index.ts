@@ -70,6 +70,30 @@ const createClient = () =>
  * Avisa, no lanza. Tumbar un sitio que funciona mal pero funciona es peor que
  * dejar el aviso en los logs.
  */
+/**
+ * Que base esta viendo este despliegue, dicho en voz alta.
+ *
+ * El error caro de este montaje no es que falle: es que funcione. Si
+ * DATABASE_URL queda con ambito "Production and Preview", cada preview lee y
+ * escribe la base de produccion, y ademas cada build de preview corre
+ * `bun run migrate`, asi que una rama con una migracion nueva se la aplica a
+ * produccion. Todo eso se ve verde.
+ *
+ * Cada rama de Neon tiene su propio endpoint (`ep-...`), asi que imprimirlo
+ * convierte una equivocacion invisible en dos lineas de log comparables: si el
+ * despliegue de preview y el de produccion muestran el MISMO endpoint, estan
+ * compartiendo base.
+ *
+ * No lleva credenciales: solo el identificador del endpoint, el ambito y si va
+ * por el pooler.
+ */
+if (process.env.VERCEL) {
+  const endpoint = databaseUrl.match(/@([^.@]+)\./)?.[1] ?? 'desconocido'
+  console.log(
+    `[db] entorno=${process.env.VERCEL_ENV ?? '?'} endpoint=${endpoint} pooled=${isPooled}`
+  )
+}
+
 if (process.env.NODE_ENV === 'production' && !isPooled) {
   console.warn(
     '[db] DATABASE_URL no apunta al pooler. En serverless usa el host con -pooler; ' +
