@@ -5,17 +5,58 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-montserrat), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-bricolage-grotesque: var(--font-bricolage-grotesque);
-  /* The wordmark face. Use font-display, not an inline style prop. */
-  --font-display: var(--font-bricolage-grotesque), ui-sans-serif, system-ui, sans-serif;
+  /* Headlines and the wordmark. Use font-display, not an inline style prop. */
+  --font-display: var(--font-anybody), ui-sans-serif, system-ui, sans-serif;
+
+  /* Stitch type scale. Anybody carries display through headline, Montserrat the
+     body, and the label steps are the wide-tracked metadata caps. */
+  --text-display: 5rem;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.04em;
+  --text-display--font-weight: 900;
+  --text-headline-lg: 3rem;
+  --text-headline-lg--line-height: 3.25rem;
+  --text-headline-lg--letter-spacing: -0.02em;
+  --text-headline-lg--font-weight: 800;
+  --text-headline-md: 2rem;
+  --text-headline-md--line-height: 2.25rem;
+  --text-headline-md--font-weight: 700;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.75rem;
+  --text-body-lg--font-weight: 500;
+  --text-body-md: 1rem;
+  --text-body-md--line-height: 1.5rem;
+  --text-body-md--font-weight: 400;
+  --text-label-lg: 0.875rem;
+  --text-label-lg--line-height: 1rem;
+  --text-label-lg--letter-spacing: 0.1em;
+  --text-label-lg--font-weight: 700;
+  --text-label-sm: 0.75rem;
+  --text-label-sm--line-height: 0.875rem;
+  --text-label-sm--letter-spacing: 0.05em;
+  --text-label-sm--font-weight: 600;
+
+  /* Ritmo de Stitch, base 8px. section-gap es el respiro grande entre bloques
+     de "rumba" y bloques de "reconstruccion"; el diseno lo usa para dar un
+     tiempo psicologico entre lo que es fiesta y lo que es impacto. */
+  --spacing-gutter: 16px;
+  --spacing-section-gap: 80px;
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 40px;
 
   --color-party: var(--party);
   --color-party-foreground: var(--party-foreground);
   --color-glass: var(--glass);
   --color-glass-border: var(--glass-border);
   --color-elevated: var(--elevated);
+  /* The brightest point in the palette, reserved for selection. See the note
+     in the token block. */
+  --color-lime: var(--lime);
+  --color-street-white: var(--street-white);
+  /* Light orange, for orange TEXT. The fill orange fails AA under body text. */
+  --color-primary-text: var(--primary-text);
 
   /* The iOS sheet curve. Slow out, fast settle. */
   --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
@@ -64,13 +105,18 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Los pasos con nombre de Stitch, fijados y no derivados de --radius con
+     calc(). Derivarlos hacia arriba desde una base de 4px daba una escala que no
+     caia en 0.5rem ni 0.75rem, que son los dos radios que el sistema nombra
+     (lg para controles, xl para tarjetas). Fijarlos hace que rounded-xl
+     signifique en el codigo lo mismo que xl significa en Stitch. */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.25rem;
+  --radius-4xl: 1.5rem;
   @keyframes skeleton {
     to {
       background-position: -200% 0;
@@ -113,97 +159,121 @@
 }
 
 /*
- * Tumbenla. Dark-only.
+ * Tumbenla. Dark-only. Sistema de diseno de Stitch, "Calor de Barrio".
  *
- * The concept is the light you see from the street: warm amber against a
- * near-black with a violet cast. Amber is the bar sign, the hard hat and the
- * bulb hanging in a half-built house. It carries every CTA and brand accent.
+ * Fuente de verdad: el HTML de las cuatro pantallas "Calor de Barrio" del
+ * proyecto de Stitch 4902520162175887944. OJO: el designTheme del proyecto es
+ * OTRO sistema (tricolor colombiano, oro #fcd116 sobre navy, Montserrat/Inter).
+ * Las pantallas mandan. Si algo se regenera en Stitch desde el designTheme, va
+ * a salir con la paleta equivocada.
  *
- * Magenta is the party, and it lives in --party, NOT in --accent. In this token
- * system --accent is the neutral hover surface behind every menu item and ghost
- * button; putting a brand color there turns every dropdown hot pink.
+ * El concepto es la calle de noche: naranja caliente y ambar sobre un navy
+ * profundo, con lima acida como el punto mas brillante de todo el sistema.
  *
- * :root and .dark carry the same values on purpose. <html> has a hardcoded
- * class="dark", so .dark is what actually applies and keeps the 126 authored
- * dark: variants working. Duplicating into :root stops portals and
- * global-error.tsx, which renders its own <html>, from flashing white.
+ * --party ya no es magenta, es el ambar #f5a202. Sigue siendo el color de
+ * fiesta y sigue viviendo en --party, NO en --accent: en este sistema --accent
+ * es la superficie neutra de hover detras de cada item de menu y boton fantasma;
+ * meter un color de marca ahi vuelve naranja cada dropdown.
  *
- * Canonical hex, mirrored by hand in src/config/branding.ts because CSS cannot
- * import TypeScript:
- *   amber    #f7a232      magenta  #f54bae
- *   surface  #0a090f      card     #131218
+ * REGLA DE CONTRASTE, medida contra el fondo #0d1321:
+ *   Texto blanco sobre --primary #f56218 da 3.00:1 y NO pasa AA. El boton
+ *   primario va con texto oscuro (--primary-foreground, 5.87:1). Lo mismo con
+ *   --destructive #ff544f: blanco encima es 3.00:1, solo texto grande o
+ *   elementos no textuales.
+ *   Para texto naranja sobre el fondo se usa --primary-text #ffb598 (10.88:1),
+ *   nunca el naranja de relleno.
+ *
+ * :root y .dark llevan los mismos valores a proposito. <html> tiene un
+ * class="dark" fijo, asi que .dark es lo que aplica y mantiene funcionando las
+ * variantes dark: ya escritas. Duplicar en :root evita que los portales y
+ * global-error.tsx, que renderiza su propio <html>, parpadeen en blanco.
+ *
+ * Hex canonicos, espejados a mano en src/config/branding.ts porque CSS no puede
+ * importar TypeScript:
+ *   naranja relleno #f56218   ambar #f5a202   lima #B4FF39
+ *   fondo           #0d1321   card  #191f2e   rojo #ff544f
  */
 
 :root,
 .dark {
-  --radius: 0.625rem;
+  /* Stitch es de filo duro: DEFAULT 0.25rem, tarjetas en xl (0.75rem). La
+     escala sm -> 4xl de abajo se recalcula sola desde aca. */
+  --radius: 0.25rem;
 
-  --background: oklch(0.145 0.012 295);
-  --foreground: oklch(0.97 0.004 295);
+  --background: oklch(0.188 0.03 265.9);
+  --foreground: oklch(0.915 0.028 274.6);
 
-  --card: oklch(0.185 0.013 295);
-  --card-foreground: oklch(0.97 0.004 295);
-  --popover: oklch(0.205 0.014 295);
-  --popover-foreground: oklch(0.97 0.004 295);
+  --card: oklch(0.241 0.03 267.3);
+  --card-foreground: oklch(0.915 0.028 274.6);
+  --popover: oklch(0.286 0.029 267.6);
+  --popover-foreground: oklch(0.915 0.028 274.6);
 
-  /* Ambar: la marca. CTAs, badges de compromiso, foco. */
-  --primary: oklch(0.78 0.155 68);
-  --primary-foreground: oklch(0.18 0.045 68);
+  /* Naranja de relleno: la marca. CTAs, pines del mapa, foco.
+     Solo como FONDO. Para texto naranja existe --primary-text. */
+  --primary: oklch(0.676 0.196 41.9);
+  --primary-foreground: oklch(0.188 0.03 265.9);
+  --primary-text: oklch(0.836 0.095 42.3);
 
-  --secondary: oklch(0.255 0.014 295);
-  --secondary-foreground: oklch(0.97 0.004 295);
+  --secondary: oklch(0.33 0.028 267.8);
+  --secondary-foreground: oklch(0.915 0.028 274.6);
 
-  --muted: oklch(0.245 0.013 295);
-  --muted-foreground: oklch(0.715 0.012 295);
+  --muted: oklch(0.224 0.031 267.2);
+  --muted-foreground: oklch(0.831 0.044 41.4);
 
   /* Superficie de hover, no la marca. Ver la nota de arriba. */
-  --accent: oklch(0.265 0.016 295);
-  --accent-foreground: oklch(0.97 0.004 295);
+  --accent: oklch(0.286 0.029 267.6);
+  --accent-foreground: oklch(0.915 0.028 274.6);
 
-  /* Magenta de rumba. Da 6.13:1 sobre el fondo, o sea que si pasa AA hasta para
+  /* Ambar de rumba. Da 8.88:1 sobre el fondo, o sea que pasa AA hasta para
      texto de cuerpo. Se reserva igual para acentos y momentos de fiesta, por
-     restriccion de diseno y no por contraste: si el magenta esta en todas
+     restriccion de diseno y no por contraste: si el ambar esta en todas
      partes deja de significar algo. */
-  --party: oklch(0.68 0.225 349);
-  --party-foreground: oklch(0.16 0.04 349);
+  --party: oklch(0.776 0.165 72.6);
+  --party-foreground: oklch(0.188 0.03 265.9);
 
-  --destructive: oklch(0.68 0.2 25);
-  --destructive-foreground: oklch(0.8 0.14 25);
+  /* Lima acida: 15.28:1, el punto mas brillante del sistema. Por eso es el
+     estado seleccionado y nada mas. Si aparece en dos lugares a la vez deja de
+     leerse como seleccion. */
+  --lime: oklch(0.917 0.226 129);
+  --street-white: oklch(0.982 0.002 247.8);
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.78 0.155 68 / 55%);
+  --destructive: oklch(0.68 0.208 26);
+  --destructive-foreground: oklch(0.837 0.09 24.2);
+
+  --border: oklch(0.4 0.038 40.7);
+  --input: oklch(0.659 0.042 42.2);
+  --ring: oklch(0.676 0.196 41.9 / 55%);
 
   --success: oklch(0.72 0.15 160);
   --success-foreground: oklch(0.8 0.13 160);
   --info: oklch(0.7 0.13 240);
   --info-foreground: oklch(0.78 0.11 240);
-  --warning: oklch(0.8 0.15 85);
-  --warning-foreground: oklch(0.86 0.13 85);
+  --warning: oklch(0.776 0.165 72.6);
+  --warning-foreground: oklch(0.858 0.117 72.9);
 
   /* Antes solo existia en :root con un gris casi blanco, asi que las guias del
      landing salian brillantes sobre fondo oscuro. */
   --grid-line-color: oklch(1 0 0 / 7%);
 
   /* Materiales translucidos. */
-  --glass: oklch(0.185 0.013 295 / 68%);
+  --glass: oklch(0.241 0.03 267.3 / 68%);
   --glass-border: oklch(1 0 0 / 9%);
-  --elevated: oklch(0.225 0.014 295);
+  --elevated: oklch(0.346 0.029 268.8);
 
-  --sidebar: oklch(0.175 0.013 295);
-  --sidebar-foreground: oklch(0.97 0.004 295);
-  --sidebar-primary: oklch(0.78 0.155 68);
-  --sidebar-primary-foreground: oklch(0.18 0.045 68);
-  --sidebar-accent: oklch(0.265 0.016 295);
-  --sidebar-accent-foreground: oklch(0.97 0.004 295);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.78 0.155 68 / 55%);
+  --sidebar: oklch(0.166 0.031 265.2);
+  --sidebar-foreground: oklch(0.915 0.028 274.6);
+  --sidebar-primary: oklch(0.676 0.196 41.9);
+  --sidebar-primary-foreground: oklch(0.188 0.03 265.9);
+  --sidebar-accent: oklch(0.286 0.029 267.6);
+  --sidebar-accent-foreground: oklch(0.915 0.028 274.6);
+  --sidebar-border: oklch(0.4 0.038 40.7);
+  --sidebar-ring: oklch(0.676 0.196 41.9 / 55%);
 
-  --chart-1: oklch(0.78 0.155 68);
-  --chart-2: oklch(0.68 0.225 349);
-  --chart-3: oklch(0.72 0.15 160);
-  --chart-4: oklch(0.7 0.13 240);
-  --chart-5: oklch(0.8 0.11 30);
+  --chart-1: oklch(0.676 0.196 41.9);
+  --chart-2: oklch(0.776 0.165 72.6);
+  --chart-3: oklch(0.917 0.226 129);
+  --chart-4: oklch(0.68 0.208 26);
+  --chart-5: oklch(0.836 0.095 42.3);
 }
 
 @layer base {
@@ -245,5 +315,58 @@
       scroll-behavior: auto !important;
     }
     /* biome-ignore-end lint/complexity/noImportantStyles: end of the reset. */
+  }
+}
+
+@layer utilities {
+  /* Trama de puntos de Stitch. Usa currentColor, asi que hereda el color del
+     contenedor y sirve igual sobre naranja que sobre navy. El grano de pelicula
+     que la acompana ya lo monta layout.tsx con /grain.jpg al 5%. */
+  /* La trama va en un ::after, no en el elemento.
+
+     Puesta directamente sobre el elemento, el opacity: 0.1 se lleva por delante
+     TODO lo que hay adentro: el titular "Buenos Ratos" quedaba al 10% e
+     ilegible, y las fotos de las tarjetas desaparecian. La maqueta de Stitch
+     tiene el mismo problema; aca se corrige.
+
+     No declara `position` a proposito: si lo hiciera pelearia con las clases
+     `absolute` de Tailwind que ya llevan varios de los usos. Quien la use tiene
+     que estar posicionado. */
+  .halftone-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.1;
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1px);
+    background-size: 4px 4px;
+  }
+
+  /* Grano de pelicula por bloque. layout.tsx ya monta uno global sobre toda la
+     pagina; este es para darselo a una superficie concreta (la barra, el
+     footer) sin depender del de atras. */
+  /* Igual que halftone-overlay: NO declara `position`.
+     Declararlo pisaba el `fixed` de la barra de navegacion, porque las dos
+     clases viven en la misma capa y la ultima gana. La barra terminaba en
+     position: relative, se iba con el scroll y dejaba una franja muerta de
+     80px debajo. Quien use esta clase tiene que estar posicionado. */
+  .texture-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* La regla de elevacion de Stitch: en un sitio oscuro la profundidad se hace
+     con luz, no con sombra. Una sombra sobre #0d1321 no se ve; un glow si. */
+  .glow-primary {
+    box-shadow: 0 0 15px color-mix(in oklch, var(--primary) 40%, transparent);
+  }
+  .glow-lime {
+    box-shadow: 0 0 18px color-mix(in oklch, var(--lime) 45%, transparent);
   }
 }

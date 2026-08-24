@@ -1,23 +1,29 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist, Geist_Mono, Bricolage_Grotesque } from 'next/font/google'
+import { Anybody, Geist_Mono, Montserrat } from 'next/font/google'
 
 import '@/app/_styles/globals.css'
 import { QueryProvider } from '@/app/_providers/query-provider'
 import { ToastProvider } from '@/components/ui/toast'
 import { generateMetadata } from '@/lib/seo'
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+/**
+ * El par de Stitch. Anybody carga solo los pesos gordos porque es cara de
+ * titular y nunca corre texto; Montserrat carga el rango de cuerpo.
+ */
+const anybody = Anybody({
+  variable: '--font-anybody',
   subsets: ['latin'],
+  weight: ['700', '800', '900'],
+})
+
+const montserrat = Montserrat({
+  variable: '--font-montserrat',
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 })
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
-
-const bricolageGrotesque = Bricolage_Grotesque({
-  variable: '--font-bricolage-grotesque',
   subsets: ['latin'],
 })
 
@@ -42,14 +48,14 @@ export const metadata: Metadata = {
  */
 export const viewport: Viewport = {
   colorScheme: 'dark',
-  themeColor: '#0a090f',
+  themeColor: '#0d1321',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bricolageGrotesque.variable} font-sans antialiased`}
+        className={`${montserrat.variable} ${geistMono.variable} ${anybody.variable} font-sans antialiased`}
       >
         <QueryProvider>
           <ToastProvider>{children}</ToastProvider>

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { PledgeDetail } from '@/components/sitios/pledge-badge'
+import { VolverASitios } from '@/components/sitios/volver-a-sitios'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { pledgeLabel } from '@/components/sitios/pledge-badge'
@@ -82,24 +83,23 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const directionsHref = `https://www.openstreetmap.org/?mlat=${venue.lat}&mlon=${venue.lng}#map=18/${venue.lat}/${venue.lng}`
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
-      <Link
-        href="/sitios"
-        className="text-muted-foreground text-sm hover:text-foreground"
-      >
-        Volver a los sitios
-      </Link>
+    <article className="mx-auto w-full max-w-4xl px-margin-mobile py-section-gap lg:px-margin-desktop">
+      <VolverASitios />
 
-      <header className="mt-6 flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="text-muted-foreground text-sm">
-            {TYPE_LABEL[venue.type] ?? venue.type}
-            {venue.neighborhood ? ` en ${venue.neighborhood}` : ''}
-            {`, ${venue.city}`}
-          </p>
-          <h1 className="text-balance font-semibold text-4xl tracking-tight">{venue.name}</h1>
+      <header className="mt-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <Chip>{TYPE_LABEL[venue.type] ?? venue.type}</Chip>
+            {venue.neighborhood ? <Chip>{venue.neighborhood}</Chip> : null}
+            <Chip>{venue.city}</Chip>
+          </div>
+
+          <h1 className="text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-6xl">
+            {venue.name}
+          </h1>
+
           {venue.tagline ? (
-            <p className="text-pretty text-lg text-muted-foreground">{venue.tagline}</p>
+            <p className="text-pretty text-body-lg text-muted-foreground">{venue.tagline}</p>
           ) : null}
         </div>
 
@@ -107,7 +107,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       </header>
 
       {venue.coverImageUrl ? (
-        <div className="mt-8 overflow-hidden rounded-3xl bg-muted">
+        <div className="halftone-overlay relative mt-8 overflow-hidden rounded-xl border-2 border-secondary bg-muted">
           {/* Plain <img>: remote image hosts are
               not configured in next.config yet. */}
           <img src={venue.coverImageUrl} alt="" className="w-full object-cover" />
@@ -115,14 +115,15 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       ) : null}
 
       {venue.description ? (
-        <div className="mt-8 max-w-prose text-pretty leading-relaxed">{venue.description}</div>
+        <div className="mt-8 max-w-prose text-pretty text-body-md leading-relaxed">
+          {venue.description}
+        </div>
       ) : null}
 
-      <div className="mt-10 grid gap-8 border-border border-t pt-8 sm:grid-cols-2">
-        <section className="flex flex-col gap-2">
-          <h2 className="font-semibold">Donde queda</h2>
-          <p className="text-muted-foreground">{venue.addressLine}</p>
-          <p className="text-muted-foreground">
+      <div className="mt-10 grid gap-8 border-secondary border-t-2 pt-8 sm:grid-cols-2">
+        <Bloque titulo="Donde queda">
+          <p className="text-body-md text-muted-foreground">{venue.addressLine}</p>
+          <p className="text-body-md text-muted-foreground">
             {venue.neighborhood ? `${venue.neighborhood}, ` : ''}
             {venue.city}
           </p>
@@ -130,22 +131,20 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             href={directionsHref}
             target="_blank"
             rel="noreferrer noopener"
-            className="self-start text-primary text-sm hover:underline"
+            className="self-start text-body-md text-primary-text hover:underline"
           >
             Como llegar
           </a>
-        </section>
+        </Bloque>
 
         {venue.openingHours ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="font-semibold">Cuando abren</h2>
-            <p className="text-muted-foreground">{venue.openingHours}</p>
-          </section>
+          <Bloque titulo="Cuando abren">
+            <p className="text-body-md text-muted-foreground">{venue.openingHours}</p>
+          </Bloque>
         ) : null}
 
         {contactLinks.length > 0 ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="font-semibold">Contacto</h2>
+          <Bloque titulo="Contacto">
             <ul className="flex flex-col gap-1">
               {contactLinks.map((link) => (
                 <li key={link.href}>
@@ -153,41 +152,61 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
                     href={link.href}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-muted-foreground hover:text-foreground"
+                    className="text-body-md text-muted-foreground transition-colors hover:text-street-white"
                   >
                     {link.label}
                   </a>
                 </li>
               ))}
             </ul>
-          </section>
+          </Bloque>
         ) : null}
 
         {/* How the commitment was checked. The product vouches for this claim
             publicly, so how it was verified belongs on the page, not in a
             database column nobody reads. */}
         {venue.verified ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="font-semibold">Como lo confirmamos</h2>
-            <p className="text-pretty text-muted-foreground">
+          <Bloque titulo="Como lo confirmamos">
+            <p className="text-pretty text-body-md text-muted-foreground">
               {venue.verifiedNote ?? 'Confirmado directamente con el sitio.'}
             </p>
-          </section>
+          </Bloque>
         ) : null}
       </div>
 
-      <div className="mt-10 rounded-3xl border border-border bg-card p-6">
-        <h2 className="font-semibold text-lg">Y esa plata, en que se va</h2>
-        <p className="mt-2 text-pretty text-muted-foreground">
+      <div className="mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8">
+        <h2 className="font-display font-extrabold text-headline-md uppercase">
+          Y esa plata, en que se va
+        </h2>
+        <p className="mt-2 text-pretty text-body-md text-muted-foreground">
           En cemento, bloques y tejas. Publicamos el recibo de cada compra.
         </p>
         <Link
           href="/transparencia"
-          className="mt-4 inline-block rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground text-sm transition-opacity hover:opacity-90"
+          className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90"
         >
           Ver los recibos
         </Link>
       </div>
     </article>
+  )
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-block rounded border border-secondary px-2 py-1 font-display text-label-sm text-muted-foreground">
+      {children}
+    </span>
+  )
+}
+
+function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <h2 className="font-display text-label-lg text-lime uppercase tracking-widest">
+        {titulo}
+      </h2>
+      {children}
+    </section>
   )
 }

@@ -1,5 +1,13 @@
 import { relations } from 'drizzle-orm'
-import { pgTable, text, timestamp, boolean, index, decimal } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  decimal,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 
 import { ID_PREFIX, createId } from '@/lib/utils/id'
 
@@ -241,6 +249,25 @@ export const venue = pgTable(
     pledgeStartsAt: timestamp('pledge_starts_at'),
     pledgeEndsAt: timestamp('pledge_ends_at'),
 
+    /**
+     * What this venue reckons it puts in per person per night, in COP.
+     *
+     * THIS IS AN ESTIMATE AND THE UI MUST NEVER RENDER IT AS ANYTHING ELSE.
+     * It exists because a percentage pledge cannot be turned into a per-person
+     * figure without knowing what that person drank, and until receipts are
+     * per-table there is no honest way to compute it. So the venue declares a
+     * number it is willing to stand behind, and every screen that shows it says
+     * "estimado".
+     *
+     * Nullable on purpose: a venue that has not given one shows nights and
+     * places without a peso figure, which is better than showing a number we
+     * invented for it.
+     */
+    estimatedPerPersonNight: decimal('estimated_per_person_night', {
+      precision: 12,
+      scale: 2,
+    }),
+
     // 'draft' | 'published' | 'paused' | 'archived'
     status: text('status').default('draft').notNull(),
     featured: boolean('featured').default(false).notNull(),
@@ -402,5 +429,144 @@ export const materialPurchaseMediaRelations = relations(materialPurchaseMedia, (
   purchase: one(materialPurchase, {
     fields: [materialPurchaseMedia.purchaseId],
     references: [materialPurchase.id],
+  }),
+}))
+
+/**
+ * A night at a venue that somebody photographed.
+ *
+ * This is the unit a person's history is counted in. Not "a visit" as a free
+ * standing thing: a visit only exists here because somebody claimed a photo
+ * taken that night, which is what keeps the count from being inflatable by
+ * clicking a button.
+ */
+export const partyNight = pgTable(
+  'party_night',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.partyNight)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    /** The calendar night, not the upload time. A party that ends at 4am
+     *  belongs to the night it started. */
+    happenedAt: timestamp('happened_at').notNull(),
+    title: text('title'),
+    // 'draft' | 'published'
+    status: text('status').default('draft').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('party_night_venueId_idx').on(table.venueId),
+    index('party_night_happenedAt_idx').on(table.happenedAt),
+  ]
+)
+
+/**
+ * A photo from that night.
+ *
+ * PRIVACY, WHICH IS THE WHOLE DESIGN HERE. These are pictures of identifiable
+ * people in a bar. Nothing is world-visible by default and there is no column
+ * that can accidentally make it so: `status` starts at 'pending' and only an
+ * operator moves it to 'available', which means "claimable by the people in
+ * it", NOT "published". Whether a photo is ever shown publicly is decided per
+ * person, per photo, in photo_claim.showPublicly. Two separate gates, both of
+ * which have to be open.
+ */
+export const partyPhoto = pgTable(
+  'party_photo',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.partyPhoto)),
+    nightId: text('night_id')
+      .notNull()
+      .references(() => partyNight.id, { onDelete: 'cascade' }),
+    url: text('url').notNull(),
+    /** R2 object key, kept so the file can actually be deleted later. A person
+     *  asking for their photo to be removed has to result in the bytes going
+     *  away, not just a flag flipping. */
+    storageKey: text('storage_key'),
+    caption: text('caption'),
+    // 'pending' | 'available' | 'hidden'
+    status: text('status').default('pending').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('party_photo_nightId_idx').on(table.nightId),
+    index('party_photo_nightId_status_idx').on(table.nightId, table.status),
+  ]
+)
+
+/**
+ * "That one is me."
+ *
+ * Claiming a photo is what creates a person's night. The unique index on
+ * (photo_id, user_id) is the thing that stops one person claiming the same
+ * photo repeatedly to pad their history; nights are then counted as DISTINCT
+ * night_id across a user's claims, so ten photos of one night is still one
+ * night.
+ *
+ * showPublicly defaults to false. Claiming a photo puts it in your own private
+ * history; putting it on a public profile is a second, separate decision.
+ */
+export const photoClaim = pgTable(
+  'photo_claim',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.photoClaim)),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => partyPhoto.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    showPublicly: boolean('show_publicly').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('photo_claim_photoId_userId_key').on(table.photoId, table.userId),
+    index('photo_claim_userId_idx').on(table.userId),
+  ]
+)
+
+export const partyNightRelations = relations(partyNight, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [partyNight.venueId],
+    references: [venue.id],
+  }),
+  photos: many(partyPhoto),
+}))
+
+export const partyPhotoRelations = relations(partyPhoto, ({ one, many }) => ({
+  night: one(partyNight, {
+    fields: [partyPhoto.nightId],
+    references: [partyNight.id],
+  }),
+  claims: many(photoClaim),
+}))
+
+export const photoClaimRelations = relations(photoClaim, ({ one }) => ({
+  photo: one(partyPhoto, {
+    fields: [photoClaim.photoId],
+    references: [partyPhoto.id],
+  }),
+  user: one(user, {
+    fields: [photoClaim.userId],
+    references: [user.id],
   }),
 }))

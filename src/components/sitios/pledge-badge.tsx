@@ -39,7 +39,7 @@ export function PledgeBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 font-medium text-primary',
+        'inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 font-medium text-primary-text',
         size === 'lg' ? 'px-4 py-2 text-base' : 'px-3 py-1 text-sm',
         className
       )}

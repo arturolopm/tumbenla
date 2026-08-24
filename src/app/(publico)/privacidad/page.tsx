@@ -13,10 +13,10 @@ export default function PrivacidadPage() {
   const brand = getBrandConfig()
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
-      <h1 className="text-balance font-semibold text-4xl tracking-tight">Privacidad</h1>
+    <div className="mx-auto w-full max-w-3xl px-margin-mobile py-section-gap lg:px-margin-desktop">
+      <h1 className="text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-5xl">Privacidad</h1>
 
-      <div className="mt-6 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
+      <div className="mt-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
         Esta politica todavia no ha pasado por revision legal. Describe lo que hacemos hoy,
         de forma honesta, pero no reemplaza un documento redactado por un abogado ni sustituye
         lo que exige la Ley 1581 de 2012.
@@ -55,7 +55,7 @@ export default function PrivacidadPage() {
           </p>
           {brand.supportEmail ? (
             <p>
-              <a href={`mailto:${brand.supportEmail}`} className="text-primary hover:underline">
+              <a href={`mailto:${brand.supportEmail}`} className="text-primary-text hover:underline">
                 {brand.supportEmail}
               </a>
             </p>

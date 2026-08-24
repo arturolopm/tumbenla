@@ -1,50 +1,73 @@
+import { HeartIcon, MusicIcon, ZapIcon } from 'lucide-react'
 import Link from 'next/link'
 
-import { getBrandConfig } from '@/config/branding'
+/**
+ * El footer de Stitch: cuatro columnas, borde superior grueso, y la barra de
+ * abajo con los tres iconos sobre trama de puntos.
+ *
+ * Los enlaces sociales de la maqueta apuntaban a "#". Aca solo se renderiza lo
+ * que existe de verdad; un enlace a un Instagram que no esta abierto es una
+ * promesa rota en el primer clic.
+ */
+
+const NOSOTROS = [
+  { href: '/como-funciona', label: 'Sobre la causa' },
+  { href: '/transparencia', label: 'A donde va la plata' },
+  { href: '/terminos', label: 'Terminos' },
+  { href: '/privacidad', label: 'Privacidad' },
+]
 
 export function SiteFooter() {
-  const brand = getBrandConfig()
-
   return (
-    <footer className="border-border border-t">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 sm:px-6">
-        <div className="flex flex-col gap-3">
-          <span className="font-display text-lg tracking-tight">Tumbenla</span>
-          <p className="max-w-md text-pretty text-muted-foreground text-sm">
-            Nos reimos primero. Ayudamos siempre.
+    <footer className="texture-grain relative mt-section-gap w-full border-surface-variant border-t-4 bg-surface-container-lowest py-section-gap">
+      <div className="relative z-10 grid w-full grid-cols-1 gap-gutter px-margin-mobile md:grid-cols-4 md:gap-section-gap lg:px-margin-desktop">
+        <div className="md:col-span-2">
+          <p className="mb-6 font-display font-extrabold text-headline-md text-primary-text uppercase tracking-tighter">
+            Tumbenla
+          </p>
+          <p className="max-w-md text-body-md text-muted-foreground">
+            Nos reimos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista
+            pone material de construccion donde hace falta.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-          <Link href="/sitios" className="text-muted-foreground hover:text-foreground">
-            Sitios
-          </Link>
-          <Link href="/transparencia" className="text-muted-foreground hover:text-foreground">
-            En que se fue la plata
-          </Link>
-          <Link href="/como-funciona" className="text-muted-foreground hover:text-foreground">
-            Como funciona
-          </Link>
-          <Link href="/terminos" className="text-muted-foreground hover:text-foreground">
-            Terminos
-          </Link>
-          <Link href="/privacidad" className="text-muted-foreground hover:text-foreground">
-            Privacidad
-          </Link>
-          {brand.supportEmail ? (
-            <a
-              href={`mailto:${brand.supportEmail}`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {brand.supportEmail}
-            </a>
-          ) : null}
+        <div className="flex flex-col gap-4">
+          <h2 className="font-display text-label-lg text-lime uppercase tracking-widest">
+            Conectate
+          </h2>
+          <a
+            href="mailto:hola@tumbenla.co"
+            className="text-body-md text-muted-foreground transition-colors hover:text-street-white"
+          >
+            hola@tumbenla.co
+          </a>
         </div>
 
-        <p className="text-muted-foreground/70 text-xs">
-          Tumbenla publica los compromisos que los sitios hacen publicos y los recibos de cada
-          compra. No procesamos pagos.
-        </p>
+        <div className="flex flex-col gap-4">
+          <h2 className="font-display text-label-lg text-lime uppercase tracking-widest">
+            Nosotros
+          </h2>
+          {NOSOTROS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-body-md text-muted-foreground transition-colors hover:text-street-white"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="relative z-10 mt-16 flex w-full flex-col items-center justify-between gap-4 border-surface-variant border-t px-margin-mobile pt-8 md:flex-row lg:px-margin-desktop">
+        <span className="text-label-sm text-muted-foreground uppercase">
+          Hecho con orgullo en Colombia © {new Date().getFullYear()}
+        </span>
+        <div className="halftone-overlay relative flex gap-6 rounded-xl p-4">
+          <ZapIcon className="size-5 text-primary-text" />
+          <HeartIcon className="size-5 text-lime" />
+          <MusicIcon className="size-5 text-party" />
+        </div>
       </div>
     </footer>
   )

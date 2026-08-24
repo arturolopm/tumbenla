@@ -13,10 +13,10 @@ export default function TerminosPage() {
   const brand = getBrandConfig()
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6">
-      <h1 className="text-balance font-semibold text-4xl tracking-tight">Terminos</h1>
+    <div className="mx-auto w-full max-w-3xl px-margin-mobile py-section-gap lg:px-margin-desktop">
+      <h1 className="text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-5xl">Terminos</h1>
 
-      <div className="mt-6 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm">
+      <div className="mt-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
         Estos terminos todavia no han pasado por revision legal. Describen lo que hacemos hoy,
         de forma honesta, pero no reemplazan un documento redactado por un abogado.
       </div>
@@ -61,7 +61,7 @@ export default function TerminosPage() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold text-foreground text-xl">Contacto</h2>
             <p>
-              <a href={`mailto:${brand.supportEmail}`} className="text-primary hover:underline">
+              <a href={`mailto:${brand.supportEmail}`} className="text-primary-text hover:underline">
                 {brand.supportEmail}
               </a>
             </p>

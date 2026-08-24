@@ -28,13 +28,20 @@ export interface BrandConfig {
  * accident. Previously this file said #701ffc while the emails said #6f3dfa and
  * neither matched the stylesheet at all.
  *
- * These hex values are the exact sRGB fallbacks Tailwind compiles from the oklch
- * tokens, read back out of the built stylesheet rather than eyeballed:
+ * Los hex son los de Stitch ("Calor de Barrio"), que es de donde salieron los
+ * tokens oklch del stylesheet. Aca el hex es el original y el oklch el derivado,
+ * al reves que antes:
  *
- *   primary   oklch(0.78 0.155 68)   -> #f7a232   amber
- *   accent    oklch(0.68 0.225 349)  -> #f54bae   magenta
- *   surface   oklch(0.145 0.012 295) -> #0a090f   near-black
- *   card      oklch(0.185 0.013 295) -> #131218
+ *   primary   #f56218  naranja de relleno -> oklch(0.676 0.196 41.9)
+ *   accent    #f5a202  ambar de rumba     -> oklch(0.776 0.165 72.6)
+ *   surface   #0d1321  navy profundo      -> oklch(0.188 0.030 265.9)
+ *   card      #191f2e                     -> oklch(0.241 0.030 267.3)
+ *
+ * Los correos siguen en tema claro a proposito: el HTML oscuro en email es un
+ * campo minado de compatibilidad y la gente lee los correos de auth en bandejas
+ * blancas. Estos colores son acentos dentro de esa plantilla clara, y por eso
+ * el naranja de relleno funciona ahi aunque sobre fondo blanco no serviria para
+ * texto pequeno.
  */
 const defaultConfig: BrandConfig = {
   name: 'Tumbenla',
@@ -46,11 +53,11 @@ const defaultConfig: BrandConfig = {
   termsUrl: '/terminos',
   privacyUrl: '/privacidad',
   theme: {
-    primaryColor: '#f7a232',
-    primaryHoverColor: '#f9b45c',
-    accentColor: '#f54bae',
-    accentHoverColor: '#f76fc0',
-    backgroundColor: '#0a090f',
+    primaryColor: '#f56218',
+    primaryHoverColor: '#ff7c3a',
+    accentColor: '#f5a202',
+    accentHoverColor: '#ffc476',
+    backgroundColor: '#0d1321',
   },
 }
 

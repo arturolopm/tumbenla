@@ -14,4 +14,7 @@ export const ID_PREFIX = {
   materialPurchase: 'mpu',
   materialPurchaseItem: 'mpi',
   materialPurchaseMedia: 'mpm',
+  partyNight: 'pnt',
+  partyPhoto: 'pph',
+  photoClaim: 'pcl',
 } as const
