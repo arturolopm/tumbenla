@@ -1,0 +1,84 @@
+name: CI
+
+# El flujo es feature -> preview -> main.
+#
+#   - Todo PR entra a `preview`. Ahi se valida con datos y con gente probando.
+#   - A `main` (produccion) SOLO llega lo que ya paso por `preview`.
+#
+# El segundo job es lo que impide saltarse el paso del medio, porque GitHub no
+# sabe restringir la rama de ORIGEN de un PR: sus reglas solo miran el destino.
+
+on:
+  pull_request:
+    branches: [preview, main]
+
+jobs:
+  # Lo que Vercel no puede avisar a tiempo.
+  #
+  # Un push a una rama con PR abierto dispara un preview deployment, y ese build
+  # corre `bun run migrate` contra la rama `preview` de Neon, que es COMPARTIDA.
+  # O sea que una migracion rota se aplica a la base que estan usando los demas
+  # antes de que nadie mire el resultado. Este job compila primero, contra un
+  # Postgres de usar y tirar.
+  verificar:
+    name: Tipos, lint y build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shipfree
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/shipfree
+      # `next build` corre con NODE_ENV=production, asi que se topa con los dos
+      # guardarrailes que fallan fuerte a proposito: Better-Auth se niega a
+      # arrancar sin secreto, y getBaseUrl() lanza si no puede deducir la URL.
+      # No son secretos: es un Postgres efimero que muere con el job.
+      BETTER_AUTH_SECRET: solo-para-ci-no-es-un-secreto-de-verdad-0000
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.20
+
+      - run: bun install --frozen-lockfile
+
+      - name: Migraciones
+        run: bun run migrate
+
+      - name: Tipos
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      # El que de verdad importa: prerenderiza las paginas de sitios contra la
+      # base, asi que atrapa lo que typecheck y lint no ven.
+      - name: Build
+        run: bun run build
+
+  origen:
+    name: Solo preview entra a main
+    if: github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar la rama de origen
+        if: github.head_ref != 'preview'
+        run: |
+          echo "::error::Este PR va de '${{ github.head_ref }}' a main."
+          echo "::error::A main solo llega lo que ya se valido en preview."
+          echo "::error::Abre el PR contra 'preview' primero."
+          exit 1

@@ -10,6 +10,13 @@ the accumulated technical debt and findings with file paths.
 decision, find a trap, or finish something on the roadmap. It outranks the
 original build plan in `~/.claude/plans/` where the two disagree.
 
+## Flujo de ramas
+
+`local (Docker) -> PR -> preview -> PR -> main (produccion)`
+
+Todo PR va contra `preview`. A `main` solo llega lo que ya se valido alli, y
+`.github/workflows/ci.yml` lo hace cumplir. Detalles y trampas en `PRODUCT.md`.
+
 ## Overview
 
 ShipFree is a production-ready Next.js boilerplate designed to help developers ship startups quickly. It's a free, open-source alternative to ShipFast, built with modern web technologies and best practices.

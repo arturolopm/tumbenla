@@ -241,6 +241,66 @@ es el mismo naranja del relleno.
 
 ---
 
+## Flujo de trabajo
+
+```
+local (Docker)  ->  PR  ->  preview  ->  PR  ->  main (produccion)
+```
+
+1. **Local, con Docker.** `bun run db:up && bun dev`. Nada de apuntar el entorno
+   local a Neon: para eso estan las ramas de preview.
+2. **PR contra `preview`.** El CI compila contra un Postgres efimero antes de
+   que nada toque una base compartida.
+3. **Se valida en preview.** Las migraciones las aplica el propio build
+   (`vercel.json` corre `bun run migrate && bun run build`), no hay paso manual.
+   Aca es donde entran las personas que prueban.
+4. **PR de `preview` a `main`.** Solo eso llega a produccion.
+
+`.github/workflows/ci.yml` lo hace cumplir. El job `origen` existe porque
+**GitHub no sabe restringir la rama de ORIGEN de un PR**: sus reglas de
+proteccion solo miran el destino. Sin ese job, cualquiera abre un PR de una
+rama suelta directo a `main` y se salta la validacion.
+
+### Lo que hay que saber de este flujo
+
+- **La rama `preview` de Neon es COMPARTIDA.** El preview deployment de
+  cualquier PR corre `bun run migrate` contra ella. O sea que una migracion de
+  un PR sin revisar se aplica a la base que estan usando quienes prueban y los
+  demas PRs. Es el precio de no hacer una rama por PR, que chocaria con el tope
+  de 10 ramas del plan Free.
+- **Por eso las migraciones son aditivas, siempre.** Ver el riesgo 1 mas abajo.
+  Aca la regla pesa el doble: no es solo el hueco entre esquema y codigo en el
+  despliegue, es que otras personas estan usando esa base en ese momento.
+- **`preview` se queda vieja con el tiempo.** Se separo de `production` una vez
+  y desde entonces divergen. Cuando estorbe, se borra la rama de Neon y se
+  vuelve a sacar de `production`, y se corre
+  `scripts/vercel-env-push.sh .env.vercel.preview preview` con las cadenas
+  nuevas.
+- **Promover es un PR, no un `git merge` local.** El job `origen` solo corre
+  sobre pull requests; un push directo a `main` se lo salta. Si se quiere
+  cerrar de verdad, hay que proteger `main` en GitHub para que no acepte
+  pushes directos.
+
+### Comandos
+
+```bash
+# empezar algo
+git checkout preview && git pull && git checkout -b feat/lo-que-sea
+
+# a preview
+gh pr create --base preview
+
+# a produccion, ya validado
+git checkout preview && git pull
+gh pr create --base main --head preview --title "Promover a produccion"
+
+# desplegar a mano, si hace falta
+vercel deploy          # preview
+vercel deploy --prod   # produccion
+```
+
+---
+
 ## Despliegue
 
 **Local es Docker. Preview y produccion son Neon.** El cliente de
