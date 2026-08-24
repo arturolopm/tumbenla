@@ -162,7 +162,7 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({ results: (places ?? []).map(toResult) })
   } catch {
     return NextResponse.json(
-      { error: 'No se pudo buscar la direccion. Intenta de nuevo.' },
+      { error: 'No se pudo buscar la dirección. Intenta de nuevo.' },
       { status: 502 }
     )
   }

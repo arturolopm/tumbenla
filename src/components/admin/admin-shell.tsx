@@ -80,7 +80,7 @@ export function AdminShell({
       <SidebarInset>
         <header className="flex h-14 items-center gap-3 border-border border-b px-4">
           <SidebarTrigger />
-          <p className="font-medium text-sm">Operacion</p>
+          <p className="font-medium text-sm">Operación</p>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
       </SidebarInset>

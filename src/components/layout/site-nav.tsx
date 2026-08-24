@@ -19,8 +19,8 @@ import { cn } from '@/lib/utils/css'
  */
 
 const LINKS = [
-  { href: '/sitios', label: 'Mapa Solidario' },
-  { href: '/transparencia', label: 'A donde va la plata' },
+  { href: '/sitios', label: 'Mapa del parche' },
+  { href: '/transparencia', label: 'A dónde va la plata' },
   { href: '/como-funciona', label: 'Nuestra Causa' },
 ]
 

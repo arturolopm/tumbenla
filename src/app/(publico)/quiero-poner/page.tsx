@@ -26,8 +26,8 @@ export default function QuieroPonerPage() {
         </h1>
 
         <p className="max-w-2xl text-pretty text-body-lg text-muted-foreground">
-          Tu decides cuanto pones y sobre que. Llena esto y te escribimos. No hay cuota de
-          entrada, no cobramos comision, y la plata nunca pasa por nosotros como pago.
+          Tú decides cuánto pones y sobre qué. Llena esto y te escribimos. No hay cuota de
+          entrada, no cobramos comisión, y la plata nunca pasa por nosotros como pago.
         </p>
       </header>
 
@@ -37,7 +37,7 @@ export default function QuieroPonerPage() {
 
       <section className="mx-auto mt-16 max-w-5xl rounded-xl border border-border p-8">
         <h2 className="font-display font-extrabold text-headline-md uppercase">
-          Que pasa despues
+          Qué pasa después
         </h2>
         <ol className="mt-4 flex flex-col gap-3 text-body-md text-muted-foreground">
           <li>1. Te escribimos para confirmar el compromiso y los datos del sitio.</li>

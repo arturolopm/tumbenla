@@ -5,9 +5,9 @@ import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { listPublishedVenues, listVenueCities } from '@/lib/venues/queries'
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Mapa Solidario',
+  title: 'Mapa del parche',
   description:
-    'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Busca por ciudad o por barrio.',
+    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Busca por ciudad o por barrio.',
   canonical: '/sitios',
 })
 
@@ -46,7 +46,7 @@ export default async function SitiosPage() {
         <div className="mx-auto w-full max-w-7xl px-margin-mobile pb-20 lg:px-margin-desktop">
           <div className="rounded-xl border border-border border-dashed p-8">
             <p className="font-display font-bold text-headline-md uppercase">
-              Todavia no hay sitios publicados.
+              Todavía no hay sitios publicados.
             </p>
             <p className="mt-1 text-body-md text-muted-foreground">
               Estamos hablando con varios. Vuelve en unos dias.

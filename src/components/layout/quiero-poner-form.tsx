@@ -98,7 +98,7 @@ export function QuieroPonerForm() {
             <input value={ciudad} onChange={(e) => setCiudad(e.target.value)} className={input} />
           </Campo>
 
-          <Campo label="Como te contactamos" requerido>
+          <Campo label="Cómo te contactamos" requerido>
             <input
               value={contacto}
               onChange={(e) => setContacto(e.target.value)}
@@ -109,7 +109,7 @@ export function QuieroPonerForm() {
         </div>
 
         <fieldset className="flex flex-col gap-3">
-          <legend className="mb-1 font-medium text-sm">Cuanto pones</legend>
+          <legend className="mb-1 font-medium text-sm">Cuánto pones</legend>
           <div className="flex flex-wrap gap-2">
             {(
               [
@@ -176,7 +176,7 @@ export function QuieroPonerForm() {
           )}
         </fieldset>
 
-        <Campo label="Algo mas que debamos saber">
+        <Campo label="Algo más que debamos saber">
           <textarea
             value={nota}
             onChange={(e) => setNota(e.target.value)}

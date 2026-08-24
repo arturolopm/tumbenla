@@ -83,7 +83,7 @@ export default async function PurchasePage({
 
       {purchase.items.length > 0 ? (
         <section className="mt-10">
-          <h2 className="font-display font-extrabold text-headline-md uppercase">Que se compro</h2>
+          <h2 className="font-display font-extrabold text-headline-md uppercase">Qué se compró</h2>
           <ul className="mt-4 flex flex-col gap-3">
             {purchase.items.map((item) => (
               <li

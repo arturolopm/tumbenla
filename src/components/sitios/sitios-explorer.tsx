@@ -135,7 +135,7 @@ export function SitiosExplorer({
           <div className="sticky top-0 z-10 flex items-end justify-between gap-3 border-secondary border-b-2 bg-background/90 pb-4 backdrop-blur-md">
             <div className="min-w-0">
               <h2 className="font-display font-bold text-headline-md text-primary-text uppercase">
-                Aliados del Viche
+                Aliados del Combo
               </h2>
               <p className="text-body-md text-muted-foreground" aria-live="polite">
                 {filtered.length === 1
@@ -240,7 +240,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
   return (
     <div className="flex flex-col items-start gap-3 rounded-xl border border-border border-dashed p-6">
       <p className="font-display font-bold text-headline-md uppercase">
-        Por aca no hay nada todavia.
+        Por acá no hay nada todavía.
       </p>
       <p className="text-body-md text-muted-foreground">
         Prueba quitando los filtros, o escribe menos.

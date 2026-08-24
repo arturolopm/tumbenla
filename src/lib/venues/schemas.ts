@@ -63,7 +63,7 @@ const venueBaseSchema = z.object({
   tagline: z.string().trim().max(140).optional().transform((v) => (v ? v : null)),
   description: optionalText,
 
-  addressLine: z.string().trim().min(4, 'La direccion es obligatoria').max(200),
+  addressLine: z.string().trim().min(4, 'La dirección es obligatoria').max(200),
   neighborhood: z.string().trim().max(120).optional().transform((v) => (v ? v : null)),
   city: z.string().trim().min(2, 'La ciudad es obligatoria').max(120),
   department: z.string().trim().min(2, 'El departamento es obligatorio').max(120),

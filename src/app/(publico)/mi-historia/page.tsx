@@ -50,11 +50,11 @@ export default async function MiHistoriaPage() {
       {resumen.nights === 0 ? (
         <div className="mx-auto mt-12 max-w-5xl rounded-xl border border-border border-dashed p-8">
           <p className="font-display font-bold text-headline-md uppercase">
-            Todavia no tienes noches guardadas.
+            Todavía no tienes noches guardadas.
           </p>
           <p className="mt-2 text-body-md text-muted-foreground">
             Cuando salgas a uno de los sitios de la red y subamos las fotos de esa noche,
-            entras aca, buscas las tuyas y las guardas. Cada noche que guardes suma a tu
+            entras acá, buscas las tuyas y las guardas. Cada noche que guardes suma a tu
             historia.
           </p>
           <Link
@@ -85,17 +85,17 @@ export default async function MiHistoriaPage() {
             <p className="mt-4 max-w-prose text-pretty text-body-md text-muted-foreground">
               Es un <strong className="text-street-white">estimado</strong>, no un recibo. Sale
               de multiplicar cada noche que guardaste por lo que ese sitio declara poner por
-              persona. Todavia no medimos lo que consumiste tu.
+              persona. Todavía no medimos lo que consumiste tú.
               {resumen.estimateIsPartial ? (
                 <>
                   {' '}
-                  Ademas se queda corto:{' '}
+                  Además se queda corto:{' '}
                   <strong className="text-street-white">
                     {resumen.nightsWithoutEstimate === 1
                       ? '1 noche fue en un sitio'
                       : `${resumen.nightsWithoutEstimate} noches fueron en sitios`}
                   </strong>{' '}
-                  que todavia no declara cuanto pone por persona, asi que no suma aca.
+                  que todavía no declara cuánto pone por persona, así que no suma acá.
                 </>
               ) : null}
             </p>
@@ -104,7 +104,7 @@ export default async function MiHistoriaPage() {
               href="/transparencia"
               className="mt-6 inline-block font-display text-label-lg text-primary-text uppercase tracking-widest hover:underline"
             >
-              Ver en que se fue la plata →
+              Ver en qué se fue la plata →
             </Link>
           </section>
 

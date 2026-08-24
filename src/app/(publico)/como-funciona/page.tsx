@@ -6,7 +6,7 @@ import { generateMetadata as buildMetadata } from '@/lib/seo'
 export const metadata: Metadata = buildMetadata({
   title: 'Nuestra Causa',
   description:
-    'Como escogemos los sitios, como confirmamos lo que prometen, y como publicamos en que se fue la plata.',
+    'Cómo escogemos los sitios, cómo confirmamos lo que prometen, y cómo publicamos en qué se fue la plata.',
   canonical: '/como-funciona',
 })
 
@@ -35,12 +35,12 @@ export default function NuestraCausaPage() {
             </div>
 
             <h1 className="mb-6 text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-6xl lg:text-display">
-              Del ruido a la <span className="text-destructive">reconstruccion</span>
+              Del ruido a la <span className="text-destructive">reconstrucción</span>
             </h1>
 
             <p className="max-w-2xl text-pretty text-body-lg text-muted-foreground">
-              No somos una institucion, somos el combo. Salir sigue siendo salir; lo nuevo es
-              que ahora la cuenta tambien pone ladrillos. Esta es la radiografia de como
+              No somos una institución, somos el combo. Salir sigue siendo salir; lo nuevo es
+              que ahora la cuenta también pone ladrillos. Esta es la radiografía de cómo
               funciona.
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function NuestraCausaPage() {
               </div>
               <p className="max-w-md text-pretty text-body-lg text-muted-foreground">
                 La rumba, el sudor, la gente que atiende la barra y la que se para a bailar.
-                Es la fuerza humana que ninguna metrica calcula, y es la que de verdad mueve
+                Es la fuerza humana que ninguna métrica calcula, y es la que de verdad mueve
                 esto.
               </p>
             </div>
@@ -111,7 +111,7 @@ export default function NuestraCausaPage() {
                   10%
                 </span>
                 <span className="ml-2 font-display font-extrabold text-headline-md uppercase">
-                  Tecnica
+                  Técnica
                 </span>
               </div>
               <p className="max-w-md text-pretty text-body-lg text-muted-foreground">
@@ -123,9 +123,9 @@ export default function NuestraCausaPage() {
         </div>
 
         <p className="mt-8 text-body-md text-muted-foreground">
-          Eso es caracter, no presupuesto. El reparto de la plata, con facturas, esta en{' '}
+          Eso es carácter, no presupuesto. El reparto de la plata, con facturas, está en{' '}
           <Link href="/transparencia" className="text-primary-text underline underline-offset-2">
-            A donde va la plata
+            A dónde va la plata
           </Link>
           .
         </p>
@@ -134,34 +134,34 @@ export default function NuestraCausaPage() {
       <section className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-12 px-margin-mobile py-section-gap lg:px-margin-desktop">
         <Bloque titulo="Para el que sale">
           <p>
-            Entras a la lista de sitios, escoges uno y vas. Ya esta. No tienes que donar nada
-            aparte ni registrarte: el sitio pone su parte de lo que vendio esa noche.
+            Entras a la lista de sitios, escoges uno y vas. Ya está. No tienes que donar nada
+            aparte ni registrarte: el sitio pone su parte de lo que vendió esa noche.
           </p>
           <p>
-            Cada tarjeta dice exactamente cuanto pone ese sitio. Unos ponen un porcentaje de la
+            Cada tarjeta dice exactamente cuánto pone ese sitio. Unos ponen un porcentaje de la
             noche, otros una plata fija por cada trago o botella.
           </p>
         </Bloque>
 
-        <Bloque titulo="Como confirmamos lo que dicen">
+        <Bloque titulo="Cómo confirmamos lo que dicen">
           <p>
-            Hablamos con cada sitio antes de publicarlo y dejamos escrito como lo confirmamos.
-            Eso aparece en la pagina del sitio.
+            Hablamos con cada sitio antes de publicarlo y dejamos escrito cómo lo confirmamos.
+            Eso aparece en la página del sitio.
           </p>
           <p>
-            Somos honestos con el limite: hoy verificamos el compromiso, no cada peso. La
-            verificacion automatica de cuanto entrego cada sitio es lo siguiente que vamos a
-            construir, y cuando este lista lo vas a ver aca.
+            Somos honestos con el límite: hoy verificamos el compromiso, no cada peso. La
+            verificación automática de cuánto entregó cada sitio es lo siguiente que vamos a
+            construir, y cuando esté lista lo vas a ver acá.
           </p>
         </Bloque>
 
-        <Bloque titulo="Que pasa con la plata">
+        <Bloque titulo="Qué pasa con la plata">
           <p>
-            La plata no pasa por esta pagina. No cobramos, no procesamos pagos y no guardamos
+            La plata no pasa por esta página. No cobramos, no procesamos pagos y no guardamos
             tarjetas. Los sitios entregan su parte y nosotros compramos el material.
           </p>
           <p>
-            Cada compra queda publicada con su fecha, el detalle de lo que se compro y la
+            Cada compra queda publicada con su fecha, el detalle de lo que se compró y la
             factura. Si una compra no tiene respaldo publicado, es porque no la hemos hecho.
           </p>
           <Link href="/transparencia" className="text-primary-text hover:underline">
@@ -179,13 +179,13 @@ export default function NuestraCausaPage() {
             Si tienes un bar o una discoteca
           </h2>
           <p className="mt-3 text-pretty text-body-md text-muted-foreground">
-            Tu decides cuanto pones y sobre que. Puede ser un porcentaje de la noche, o una
-            plata fija por cerveza, por coctel o por botella. Lo unico que pedimos es que sea
+            Tú decides cuánto pones y sobre qué. Puede ser un porcentaje de la noche, o una
+            plata fija por cerveza, por cóctel o por botella. Lo único que pedimos es que sea
             claro y que lo puedas sostener.
           </p>
 
           <ol className="mt-6 flex flex-col gap-3 text-body-md text-muted-foreground">
-            <li>1. Nos escribes y nos cuentas cuanto quieres poner.</li>
+            <li>1. Nos escribes y nos cuentas cuánto quieres poner.</li>
             <li>2. Lo dejamos por escrito y confirmamos los datos del sitio.</li>
             <li>3. Publicamos tu sitio en la lista y en el mapa.</li>
             <li>4. Entregas tu parte, compramos material y publicamos la factura.</li>

@@ -5,7 +5,7 @@ import { generateMetadata as buildMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = buildMetadata({
   title: 'Privacidad',
-  description: 'Que datos recogemos y cuales no.',
+  description: 'Qué datos recogemos y cuáles no.',
   canonical: '/privacidad',
 })
 
@@ -17,7 +17,7 @@ export default function PrivacidadPage() {
       <h1 className="text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-5xl">Privacidad</h1>
 
       <div className="mt-6 rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
-        Esta politica todavia no ha pasado por revision legal. Describe lo que hacemos hoy,
+        Esta política todavía no ha pasado por revisión legal. Describe lo que hacemos hoy,
         de forma honesta, pero no reemplaza un documento redactado por un abogado ni sustituye
         lo que exige la Ley 1581 de 2012.
       </div>
@@ -27,15 +27,15 @@ export default function PrivacidadPage() {
           <h2 className="font-semibold text-foreground text-xl">Para navegar no pedimos nada</h2>
           <p className="max-w-prose text-pretty">
             Ver la lista de sitios, el mapa y las compras no requiere cuenta. No pedimos correo
-            ni telefono para nada de eso.
+            ni teléfono para nada de eso.
           </p>
         </section>
 
         <section className="flex flex-col gap-3">
           <h2 className="font-semibold text-foreground text-xl">Cuentas</h2>
           <p className="max-w-prose text-pretty">
-            Las unicas cuentas que existen son las del equipo que administra el sitio. De esas
-            guardamos correo y nombre, y nada mas.
+            Las únicas cuentas que existen son las del equipo que administra el sitio. De esas
+            guardamos correo y nombre, y nada más.
           </p>
         </section>
 
@@ -51,7 +51,7 @@ export default function PrivacidadPage() {
         <section className="flex flex-col gap-3">
           <h2 className="font-semibold text-foreground text-xl">Si quieres que quitemos algo</h2>
           <p className="max-w-prose text-pretty">
-            Escribenos y lo quitamos. No hace falta explicar por que.
+            Escríbenos y lo quitamos. No hace falta explicar por qué.
           </p>
           {brand.supportEmail ? (
             <p>

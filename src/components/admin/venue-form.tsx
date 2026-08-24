@@ -50,7 +50,7 @@ const UNIT_LABEL: Record<string, string> = {
   botella: 'por botella',
   trago: 'por trago',
   cerveza: 'por cerveza',
-  coctel: 'por coctel',
+  coctel: 'por cóctel',
   entrada: 'por entrada',
 }
 
@@ -135,7 +135,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
           <input name="tagline" defaultValue={venue?.tagline ?? ''} className={inputClass} />
         </Field>
 
-        <Field label="Descripcion">
+        <Field label="Descripción">
           <textarea
             name="description"
             defaultValue={venue?.description ?? ''}
@@ -146,8 +146,8 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
       </Section>
 
       <Section
-        title="Donde queda"
-        hint="Busca la direccion, o pon el pin directo en el mapa si el sitio no aparece."
+        title="Dónde queda"
+        hint="Busca la dirección, o pon el pin directo en el mapa si el sitio no aparece."
       >
         <AddressSearch onPick={handlePick} />
 
@@ -177,7 +177,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Direccion" error={fieldError('addressLine')}>
+          <Field label="Dirección" error={fieldError('addressLine')}>
             <input
               // key: remontar el input es lo que hace que defaultValue tome el
               // valor sugerido. Sin esto habria que volverlo controlado y
@@ -287,7 +287,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Sobre que">
+            <Field label="Sobre qué">
               <select
                 name="pledgeBasis"
                 defaultValue={
@@ -349,7 +349,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
 
       <Section title="Contacto">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Telefono">
+          <Field label="Teléfono">
             <input name="phone" defaultValue={venue?.phone ?? ''} className={inputClass} />
           </Field>
           <Field label="WhatsApp">

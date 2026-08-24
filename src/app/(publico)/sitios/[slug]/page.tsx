@@ -50,7 +50,7 @@ export async function generateMetadata({
 
   return buildMetadata({
     title: `${venue.name}, ${venue.city}`,
-    description: `${venue.name} pone ${pledgeLabel(venue.pledge)} en material de construccion.`,
+    description: `${venue.name} pone ${pledgeLabel(venue.pledge)} en material de construcción.`,
     canonical: `/sitios/${venue.slug}`,
   })
 }
@@ -121,7 +121,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       ) : null}
 
       <div className="mt-10 grid gap-8 border-secondary border-t-2 pt-8 sm:grid-cols-2">
-        <Bloque titulo="Donde queda">
+        <Bloque titulo="Dónde queda">
           <p className="text-body-md text-muted-foreground">{venue.addressLine}</p>
           <p className="text-body-md text-muted-foreground">
             {venue.neighborhood ? `${venue.neighborhood}, ` : ''}
@@ -133,7 +133,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             rel="noreferrer noopener"
             className="self-start text-body-md text-primary-text hover:underline"
           >
-            Como llegar
+            Cómo llegar
           </a>
         </Bloque>
 
@@ -166,7 +166,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             publicly, so how it was verified belongs on the page, not in a
             database column nobody reads. */}
         {venue.verified ? (
-          <Bloque titulo="Como lo confirmamos">
+          <Bloque titulo="Cómo lo confirmamos">
             <p className="text-pretty text-body-md text-muted-foreground">
               {venue.verifiedNote ?? 'Confirmado directamente con el sitio.'}
             </p>
@@ -176,7 +176,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
       <div className="mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8">
         <h2 className="font-display font-extrabold text-headline-md uppercase">
-          Y esa plata, en que se va
+          Y esa plata, en qué se va
         </h2>
         <p className="mt-2 text-pretty text-body-md text-muted-foreground">
           En cemento, bloques y tejas. Publicamos el recibo de cada compra.

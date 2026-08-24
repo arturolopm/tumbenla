@@ -12,8 +12,8 @@ import Link from 'next/link'
 
 const NOSOTROS = [
   { href: '/como-funciona', label: 'Sobre la causa' },
-  { href: '/transparencia', label: 'A donde va la plata' },
-  { href: '/terminos', label: 'Terminos' },
+  { href: '/transparencia', label: 'A dónde va la plata' },
+  { href: '/terminos', label: 'Términos' },
   { href: '/privacidad', label: 'Privacidad' },
 ]
 
@@ -26,14 +26,14 @@ export function SiteFooter() {
             Tumbenla
           </p>
           <p className="max-w-md text-body-md text-muted-foreground">
-            Nos reimos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista
-            pone material de construccion donde hace falta.
+            Nos reímos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista
+            pone material de construcción donde hace falta.
           </p>
         </div>
 
         <div className="flex flex-col gap-4">
           <h2 className="font-display text-label-lg text-lime uppercase tracking-widest">
-            Conectate
+            Conéctate
           </h2>
           <a
             href="mailto:hola@tumbenla.co"

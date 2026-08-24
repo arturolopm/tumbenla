@@ -30,7 +30,7 @@ const requireUser = async () => {
 
 export const claimPhotoAction = async (photoId: string): Promise<FiestaResult> => {
   const user = await requireUser()
-  if (!user) return { ok: false, error: 'Inicia sesion para guardar tus fotos.' }
+  if (!user) return { ok: false, error: 'Inicia sesión para guardar tus fotos.' }
 
   // Solo se pueden reclamar fotos habilitadas. Sin esta comprobacion se podria
   // reclamar una foto 'pending' que nadie ha revisado todavia, o una 'hidden'
@@ -63,7 +63,7 @@ export const claimPhotoAction = async (photoId: string): Promise<FiestaResult> =
 
 export const unclaimPhotoAction = async (photoId: string): Promise<FiestaResult> => {
   const user = await requireUser()
-  if (!user) return { ok: false, error: 'Inicia sesion primero.' }
+  if (!user) return { ok: false, error: 'Inicia sesión primero.' }
 
   try {
     // El userId va en el WHERE, no solo en una comprobacion previa: asi la
@@ -92,7 +92,7 @@ export const setPhotoVisibilityAction = async (
   showPublicly: boolean
 ): Promise<FiestaResult> => {
   const user = await requireUser()
-  if (!user) return { ok: false, error: 'Inicia sesion primero.' }
+  if (!user) return { ok: false, error: 'Inicia sesión primero.' }
 
   try {
     await db

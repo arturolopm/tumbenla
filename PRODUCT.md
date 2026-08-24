@@ -77,6 +77,18 @@ Estan aca para no volver a discutirlas cada dos semanas.
     hover muestra la tarjeta y el pin entero es el enlace.
 15. **`/eventos` no se construye.** No hay tabla de eventos y no se va a inventar
     una para que calce con una maqueta.
+16. **La voz no reparte a la gente entre quien ayuda y quien es ayudado.** Nada
+    de "solidario", "apoya la causa", "ayudamos" ni "damnificados" en el copy.
+    El mapa es "Mapa del parche", no "Mapa Solidario"; el CTA de la portada es
+    "Como me uno", no "Quiero poner" (ese verbo se queda donde de verdad
+    aplica: hablandole al dueno del bar, que es quien pone). El sitio le habla
+    a un combo que sale de rumba, no a un donante que socorre a una victima.
+17. **La copia va con tildes; el codigo, sin ellas.** Todo texto que un usuario
+    lee lleva su acento y su enye. Los comentarios, los nombres de variable y
+    los valores de enum guardados en la base (`coctel`, `terminos`) se quedan en
+    ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
+    (`UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`). Asi un acento
+    nunca llega a una URL, a una consulta ni a una migracion.
 
 ---
 
@@ -152,6 +164,22 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   Playwright contra `localhost`.
 
 ### Trampas que ya mordieron (para no repetirlas)
+
+- **Tailwind v4 escanea TODO el proyecto, y una clase citada en cualquier
+  archivo es una clase que va a generar.** Habia un `-w` sin rastrear en la
+  raiz: el volcado HTML de una pagina ya renderizada, seguramente de un
+  `curl -w` mal escrito. Adentro estaba la clase de fondo de `layout.tsx`, la
+  del grano, pero con las comillas convertidas en entidades HTML (`&#x27;`),
+  porque asi salio del navegador. Tailwind la leyo como una clase mas, genero
+  la regla con la entidad adentro, y Turbopack murio buscando un archivo
+  llamado `&#x27;/grain.jpg&` y senalando `globals.css`, que no tiene nada que
+  ver. Dos vueltas de tuerca: primero, el error solo aparecia despues de tocar
+  cualquier archivo de `src/`, asi que parecia culpa del cambio y no del
+  archivo suelto; segundo, documentar la trampa aca la volvio a disparar,
+  porque este archivo tambien se escanea y la clase de ejemplo era una clase
+  de verdad. Por eso arriba esta contada en palabras y no copiada tal cual.
+  Si el build se cae en una linea de CSS que nadie escribio, mirar
+  `git status --porcelain` antes que el CSS.
 
 - **`??` no atrapa la cadena vacia; para variables de entorno se usa `||`.**
   `DIRECT_DATABASE_URL ?? DATABASE_URL` se rompia cuando la primera estaba

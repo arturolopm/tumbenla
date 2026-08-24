@@ -76,7 +76,7 @@ export const assertAdmin = async (): Promise<AdminCheck> => {
   const session = await auth.api.getSession({ headers: await headers() })
 
   if (!session) {
-    return { ok: false, error: 'No has iniciado sesion.' }
+    return { ok: false, error: 'No has iniciado sesión.' }
   }
 
   if (!session.user.emailVerified) {

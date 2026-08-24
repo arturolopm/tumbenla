@@ -73,21 +73,21 @@ export function AddressSearch({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <label htmlFor={listId} className="font-medium text-sm">
-        Buscar la direccion
+        Buscar la dirección
       </label>
       <input
         id={listId}
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Calle 85 #12-30, Bogota"
+        placeholder="Calle 85 #12-30, Bogotá"
         autoComplete="off"
         className="h-10 rounded-lg border border-input bg-card px-3 text-foreground text-sm placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
 
       <p className="text-muted-foreground text-xs" aria-live="polite">
         {state === 'loading' ? 'Buscando…' : null}
-        {state === 'empty' ? 'No se encontro nada. Prueba con menos detalle.' : null}
+        {state === 'empty' ? 'No se encontró nada. Prueba con menos detalle.' : null}
         {state === 'error' ? 'No se pudo buscar. Ubica el pin a mano en el mapa.' : null}
       </p>
 
