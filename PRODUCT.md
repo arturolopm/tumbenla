@@ -153,6 +153,21 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 
 ### Trampas que ya mordieron (para no repetirlas)
 
+- **`??` no atrapa la cadena vacia; para variables de entorno se usa `||`.**
+  `DIRECT_DATABASE_URL ?? DATABASE_URL` se rompia cuando la primera estaba
+  DEFINIDA pero VACIA: `??` solo mira null y undefined, asi que devolvia `''` y
+  el migrador moria diciendo que faltaban las dos, con `DATABASE_URL` puesta.
+  No es rebuscado: es lo que deja `cp .env.example .env` y lo que deja un campo
+  en blanco en el panel de Vercel. Estaba en `scripts/migrate.ts` y en
+  `drizzle.config.ts`.
+
+- **Vercel arma la lista de variables del proyecto leyendo las claves NO
+  comentadas de `.env.example`.** Por eso ese archivo no es solo documentacion:
+  lo que este descomentado ahi es lo que aparece al importar el repo. Las
+  variables inertes van comentadas (si no, alguien las llena y cree que hacen
+  algo) y las que el despliegue necesita van declaradas aunque en local vayan
+  vacias, como `DIRECT_DATABASE_URL`.
+
 - **Las utilidades propias de CSS no deben declarar `position`.**
   `.texture-grain` declaraba `position: relative` y le gano al `fixed` de la
   barra: la barra se iba con el scroll y dejaba 80px muertos. Misma familia:

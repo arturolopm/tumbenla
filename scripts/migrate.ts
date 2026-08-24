@@ -19,7 +19,17 @@ config()
  * consola: seria un deploy que sale al aire con la base sin migrar. Antes el
  * catch escribia el error y devolvia 0, y el build seguia como si nada.
  */
-const connectionString = process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL
+/**
+ * `||` y no `??` a proposito. `??` solo atrapa null y undefined, asi que una
+ * DIRECT_DATABASE_URL definida pero VACIA se colaba como cadena vacia y el
+ * script moria diciendo que faltaban las dos, con DATABASE_URL ahi puesta.
+ *
+ * No es un caso rebuscado: es lo que deja `cp .env.example .env`, y es lo que
+ * deja un campo en blanco en el panel de Vercel.
+ */
+const limpia = (valor: string | undefined) => valor?.trim() || undefined
+
+const connectionString = limpia(process.env.DIRECT_DATABASE_URL) ?? limpia(process.env.DATABASE_URL)
 
 if (!connectionString) {
   console.error('Falta DIRECT_DATABASE_URL o DATABASE_URL.')
