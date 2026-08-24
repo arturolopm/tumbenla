@@ -1,5 +1,15 @@
 # ShipFree - AI Agent Onboarding Guide
 
+## Product roadmap
+
+`PRODUCT.md` at the repo root is the living product doc: current state, decisions
+already taken (with the reason, so they are not re-litigated), the roadmap, and
+the accumulated technical debt and findings with file paths.
+
+**Read it before proposing product changes**, and update it when you take a
+decision, find a trap, or finish something on the roadmap. It outranks the
+original build plan in `~/.claude/plans/` where the two disagree.
+
 ## Overview
 
 ShipFree is a production-ready Next.js boilerplate designed to help developers ship startups quickly. It's a free, open-source alternative to ShipFast, built with modern web technologies and best practices.
