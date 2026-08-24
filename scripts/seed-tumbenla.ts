@@ -24,6 +24,11 @@ config()
  * Same for the purchases. The amounts are plausible for Colombian construction
  * materials but they are made up, and they are labelled as sample data.
  *
+ * estimatedPerPersonNight es el APORTE por persona por noche, no el consumo:
+ * es la cifra que /mi-historia multiplica por el numero de noches. Se deriva
+ * del compromiso de cada sitio por un consumo tipico, y como todo lo demas
+ * aca, es una estimacion de ejemplo.
+ *
  * Run with: bun run scripts/seed-tumbenla.ts
  */
 
@@ -57,6 +62,9 @@ const venues = [
     pledgeAmount: '1000.00',
     pledgeUnit: 'cerveza',
     pledgeNote: 'Mil pesos por cerveza, todas las noches que abrimos.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 1000 x cerveza, 4 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '4000.00',
     status: 'published',
     featured: true,
     verifiedAt: new Date('2026-08-10'),
@@ -82,6 +90,9 @@ const venues = [
     pledgePercentage: '10.00',
     pledgeBasis: 'ventas_totales',
     pledgeNote: 'El 10% de todo lo que se venda los jueves.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 10% de un consumo tipico de 90.000. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '9000.00',
     status: 'published',
     featured: true,
     verifiedAt: new Date('2026-08-12'),
@@ -105,6 +116,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '2000.00',
     pledgeUnit: 'coctel',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 2000 x coctel, 3 cocteles por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '6000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-14'),
     verifiedNote: 'Confirmado por telefono con la administradora.',
@@ -129,6 +143,9 @@ const venues = [
     pledgePercentage: '5.00',
     pledgeBasis: 'ventas_totales',
     pledgeNote: 'Cinco por ciento de todo, sin dias especiales.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 5% de un consumo tipico de 80.000. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '4000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-13'),
     verifiedNote: 'Confirmado en visita al sitio.',
@@ -152,6 +169,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '3000.00',
     pledgeUnit: 'botella',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 3000 x botella, una botella entre varios. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '3000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-15'),
     verifiedNote: 'Confirmado con el administrador.',
@@ -174,6 +194,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '500.00',
     pledgeUnit: 'cerveza',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 500 x cerveza, 5 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '2500.00',
     status: 'draft',
   },
 ]
