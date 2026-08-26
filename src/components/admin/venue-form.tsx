@@ -14,6 +14,7 @@ import {
 
 import type { GeocodeResult } from '@/app/api/geocode/route'
 import { saveMyVenueAction } from '@/app/actions/mi-sitio'
+import { registrarSitioAction } from '@/app/actions/reclamos'
 import { type ActionState, saveVenueAction } from '@/app/actions/venues'
 import { AddressSearch } from '@/components/mapa/address-search'
 import type { PickedLocation } from '@/components/mapa/location-picker'
@@ -77,14 +78,16 @@ export function VenueForm({
   onSuccessHref,
 }: {
   venue?: VenueAdminRow
-  modo?: 'admin' | 'panel'
+  modo?: 'admin' | 'panel' | 'registro'
   onSuccessHref?: string
 }) {
   const router = useRouter()
-  const [state, formAction, pending] = useActionState(
-    modo === 'panel' ? saveMyVenueAction : saveVenueAction,
-    initialState
-  )
+  const ACCION = {
+    admin: saveVenueAction,
+    panel: saveMyVenueAction,
+    registro: registrarSitioAction,
+  } as const
+  const [state, formAction, pending] = useActionState(ACCION[modo], initialState)
 
   const [pledgeType, setPledgeType] = useState<'percentage' | 'fixed_per_unit'>(
     venue?.pledge.type ?? 'percentage'
@@ -101,6 +104,8 @@ export function VenueForm({
 
   useEffect(() => {
     if (state.status !== 'success') return
+    // 'registro' no llega aca: su accion redirige desde el servidor, porque el
+    // slug del sitio recien creado solo se conoce alli.
     router.push(onSuccessHref ?? '/admin/sitios')
     // El panel se queda en la misma pagina, asi que sin refresh los campos
     // seguirian mostrando lo de antes de guardar.

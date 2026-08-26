@@ -28,6 +28,7 @@ import {
 const NAV = [
   { href: '/admin', label: 'Resumen' },
   { href: '/admin/sitios', label: 'Sitios' },
+  { href: '/admin/solicitudes', label: 'Solicitudes' },
 ]
 
 export function AdminShell({

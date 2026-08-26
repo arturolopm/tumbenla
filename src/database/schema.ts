@@ -683,3 +683,66 @@ export const venueInvitationRelations = relations(venueInvitation, ({ one }) => 
     references: [venue.id],
   }),
 }))
+
+/**
+ * "Este sitio es mio."
+ *
+ * WHY A REQUEST AND NOT A SELF-SERVE CLAIM: the product publicly vouches for
+ * what a venue pledges. If anybody could attach themselves to a venue and start
+ * editing what it promises, the one thing this product sells — that somebody
+ * checked — would be gone. So the request is free, and the approval is not.
+ *
+ * Approving ownership and publishing the venue are two separate acts on
+ * purpose. Approving says "this person really runs this place"; publishing says
+ * "we confirmed what they pledge". A venue stays 'draft' — invisible on the map
+ * — until an operator does the second one.
+ */
+export const venueClaimRequest = pgTable(
+  'venue_claim_request',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueClaimRequest)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** How they say they can prove it. Free text, read by a human. */
+    message: text('message'),
+    /** Optional link to something backing the claim. Not validated, not
+     *  rendered as an image: an operator opens it deliberately or not at all. */
+    evidenceUrl: text('evidence_url'),
+    // 'pending' | 'approved' | 'rejected'
+    status: text('status').default('pending').notNull(),
+    reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at'),
+    reviewNote: text('review_note'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // One request per person per venue: re-asking is editing the same row, not
+    // filling the operator's queue with copies of the same claim.
+    uniqueIndex('venue_claim_request_venueId_userId_key').on(table.venueId, table.userId),
+    index('venue_claim_request_status_idx').on(table.status),
+    index('venue_claim_request_venueId_idx').on(table.venueId),
+  ]
+)
+
+export const venueClaimRequestRelations = relations(venueClaimRequest, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueClaimRequest.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [venueClaimRequest.userId],
+    references: [user.id],
+  }),
+}))
