@@ -1,8 +1,10 @@
 # Tumbenla — producto
 
 Directorio de bares y discotecas que ponen una parte de sus ventas en material
-de construccion. La gente sale como sale siempre; el sitio pone su parte;
-nosotros compramos el material y publicamos la factura.
+de construccion. La gente sale como sale siempre; el sitio pone su parte y nos
+manda el recibo; nosotros lo verificamos, compramos el material y publicamos la
+factura. Son dos eslabones, no uno, y los dos se ven: lo que el sitio dice que
+entrego (verificado por nosotros) y en que lo gastamos.
 
 **La plata no pasa por la app.** No cobramos, no procesamos pagos, no guardamos
 tarjetas. Lo unico que tenemos es la confianza, y por eso casi todas las
@@ -26,11 +28,28 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Panel de admin: sitios, estados, selector de pin, geocoding | Construido |
 | `/quiero-poner` con correo pre-redactado | Construido |
 | Seccion "Le entro" con las dos entradas | Construido |
-| `/mi-historia`: resumen, estimado, galeria | Construido (solo lectura) |
+| `/mi-historia`: resumen, estimado, galeria | Construido |
 | Esquema de fiestas: `party_night`, `party_photo`, `photo_claim` | Construido |
-| Reclamar fotos (galeria de la noche, subida por operador) | **Falta** |
+| Reclamar fotos, punta a punta | Construido |
+| Entrar y salir, y volver a donde estabas | Construido |
+| Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
+| Alta de sitio: registro propio y reclamo con aprobacion | Construido |
+| Aportes del sitio: reporte, recibo y verificacion | Construido |
+| Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | **A medias** |
-| Autenticacion | Del boilerplate, sin revisar a fondo |
+
+---
+
+## Los tres actores
+
+| Actor | Como se decide | Donde vive | Que puede |
+|---|---|---|---|
+| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios y aportes, moderar cualquier foto de la red, comprar material |
+| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | noches y fotos, aprobar lo que sube la gente, reportar lo que entrego. Solo el dueno maneja el equipo |
+| **Rumbero** | cualquier sesion | publico + `/mi-historia` | reclamar sus fotos, subir las suyas, reportar una en la que sale |
+
+Nadie publica su propio sitio y nadie verifica su propio aporte. Esas dos son de
+la plataforma y son lo unico que respalda lo que el mapa afirma.
 
 ---
 
@@ -83,7 +102,38 @@ Estan aca para no volver a discutirlas cada dos semanas.
     "Como me uno", no "Quiero poner" (ese verbo se queda donde de verdad
     aplica: hablandole al dueno del bar, que es quien pone). El sitio le habla
     a un combo que sale de rumba, no a un donante que socorre a una victima.
-17. **La copia va con tildes; el codigo, sin ellas.** Todo texto que un usuario
+17. **El poder de plataforma vive en el ENTORNO; el de sitio, en la BASE.**
+    `ADMIN_EMAILS` se queda igual para nosotros: es el rol mas privilegiado,
+    falla cerrado, y nadie escala hasta el escribiendo una fila. El poder de
+    sitio lo reparten otros usuarios en caliente y por sitio, asi que es un par
+    (persona, sitio) y eso no cabe en una columna de `user`.
+18. **Tablas propias, no el plugin `organization` de better-auth.** Un bar no
+    tiene facturacion, ni sub-equipos, ni cambio de contexto. `auth.ts:200` ya
+    explicaba por que se habia quitado; se queda quitado. El costo aceptado fue
+    escribir nosotros el flujo de invitacion.
+19. **El sitio reporta, nosotros verificamos, nosotros compramos.** Un aporte
+    `submitted` no existe para el publico. Publicar una cifra que nos dieron sin
+    comprobarla seria afirmar bajo nuestro nombre algo que no comprobamos.
+20. **El sitio se reclama, no se auto-publica.** Registrar un sitio nuevo te
+    deja de dueno en el acto —lo escribiste tu, no hay propiedad en disputa—
+    pero nace en `draft`. Reclamar uno que ya existe si pasa por un operador.
+    Publicar es siempre nuestro.
+21. **Una foto que sube un rumbero solo es reclamable cuando el sitio la
+    aprueba.** Es lo que impide subir fotos de un bar donde uno nunca estuvo y
+    reclamarlas para inflarse las noches. El portero es el sitio.
+22. **El estimado se queda simple: una sola accion, "Esa soy yo".** No hay un
+    "me gusta" que tambien sume. Un guardar-porque-me-gusta que contara como
+    visita volveria el aporte estimado inflable a punta de clics. Aplazado junto
+    con la verificacion por recibos de mesa, que ya esta en "Despues".
+23. **La sesion se lee en el CLIENTE en la barra, nunca en
+    `(publico)/layout.tsx`.** Ese layout cubre la portada, `/sitios` y
+    `/transparencia`; leer la sesion alli en el servidor las vuelve dinamicas y
+    se lleva por delante el ISR del que depende que la base duerma. El precio es
+    un parpadeo, y se paga con `isPending` y un hueco del ancho del control.
+24. **Subida firmada DIRECTA a R2, no por la app.** Una noche son decenas de
+    fotos: pasarlas por una funcion las serializa, cobra computo por cada byte y
+    roza el limite de duracion. Exige una politica de CORS en el bucket.
+25. **La copia va con tildes; el codigo, sin ellas.** Todo texto que un usuario
     lee lleva su acento y su enye. Los comentarios, los nombres de variable y
     los valores de enum guardados en la base (`coctel`, `terminos`) se quedan en
     ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
@@ -110,14 +160,21 @@ Estan aca para no volver a discutirlas cada dos semanas.
 
 ### Siguiente
 
-- [ ] **Reclamar fotos, punta a punta.** Es lo que hace que `/mi-historia` deje
-      de estar vacia:
-      - Subida de noches y fotos en el admin (R2 ya esta en `src/lib/storage.ts`)
-      - Galeria de la noche en la pagina del sitio
-      - Boton "esa soy yo" → `claimPhotoAction`
-- [ ] **`estimatedPerPersonNight` en el formulario del admin.** La columna existe
-      y nada la escribe todavia, asi que hoy el estimado de todo el mundo da cero.
-- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed.
+- [ ] **Conectar R2 de verdad.** El codigo esta y las claves ya salen sin
+      comentar en `.env.example`; falta la cuenta de Cloudflare, los buckets, las
+      llaves, y la **politica de CORS del bucket publico** que permita `PUT`
+      desde produccion, preview y `http://localhost:3000`. Sin CORS la subida
+      falla en el navegador con un error que no menciona CORS por ninguna parte.
+      Hasta entonces, firmar una subida responde "El almacenamiento de fotos no
+      esta configurado" y el resto del sitio sigue funcionando.
+- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed, y
+      ahora ademas es el destino al que un operador amarra un aporte verificado.
+- [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
+      que tiene fotos por revisar o un reporte de privacidad abierto: hay que
+      entrar al panel a mirar.
+- [ ] **Avisarle a quien reclama un sitio como quedo su solicitud.** La decision
+      queda escrita en `venue_claim_request.reviewNote` y solo se ve entrando a
+      `/registrar-sitio`.
 
 ### Despues
 
@@ -154,14 +211,59 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 - **`revalidatePath` nunca se probo contra un deploy real.** Es el primero del
   repo (`src/app/actions/venues.ts`). Si falla, el respaldo es el
   `revalidate = 300` que ya tienen las paginas. Verificar temprano.
-- **El flujo de auth es del boilerplate.** Login, registro y verificacion nunca
-  se revisaron con este producto en mente. `/mi-historia` ya depende de ellos.
+- **El flujo de auth ya se reviso**, se paso a espanol y al sistema de diseno, y
+  se le arreglaron el redirector abierto, los enlaces a `/terms` y `/privacy`
+  (que no existen aca), el `pages.error: '/error'` inexistente y la politica de
+  contrasena, que era mas estricta al recuperarla que al registrarse. Lo que
+  sigue **sin verificar contra un despliegue real** es el correo: en local sale
+  por Mailpit, y en produccion Resend solo entrega a la direccion de la cuenta
+  hasta que haya un dominio verificado. **La invitacion al equipo depende de que
+  ese correo llegue**, asi que es lo primero que hay que probar en preview.
 - **`migrate.ts` ya no se traga los fallos.** Salia con codigo 0 aunque la
   migracion reventara, lo que con migraciones en el build habria dejado pasar un
   deploy con la base sin migrar. Verificado en ambos sentidos: falla -> 1,
   exito -> 0. Si alguien toca ese script, esa es la prueba que hay que repetir.
 - **No hay framework de pruebas.** Todo lo que se ha verificado fue a mano o con
-  Playwright contra `localhost`.
+  Playwright contra `localhost`. Los cinco PRs de la multi-tenencia se probaron
+  con tres cuentas y curl contra el servidor local, apuntando sobre todo a lo que
+  NO debe poder hacerse; nada de eso quedo automatizado, asi que **una regresion
+  de permisos hoy no la detecta nada**. Es el mejor candidato para las primeras
+  pruebas que se escriban.
+
+- **El viaje real a R2 nunca se ejecuto.** Firmar, subir, registrar y borrar
+  estan escritos y todo lo que los rodea esta probado, pero sin cuenta ni buckets
+  el ultimo paso responde "El almacenamiento de fotos no esta configurado". La
+  primera subida de verdad es tambien la primera prueba de la politica de CORS.
+
+### La trampa que va a morder (multi-tenencia)
+
+**Toda server action tiene que sacar el `venueId` de la FILA que va a mutar,
+leyendola de la base, y comprobar la membresia contra ESE id. Nunca contra un id
+que venga del formulario.**
+
+Una accion que recibe `venueId` en el `FormData` y lo comprueba tal cual esta
+dejando que quien manda el formulario elija contra que se lo comparan: el
+personal del sitio A edita el sitio B cambiando un input oculto en las
+herramientas del navegador. Para tocar una noche, una foto o un aporte hay que
+leer primero esa fila, sacarle su `venueId`, y comprobar ese.
+
+**Cuando muerde:** al escribir la proxima accion del panel, no antes. No lo
+atrapa ningun tipo de TypeScript, no lo atrapa `bun lint`, y la accion funciona
+perfectamente con la sesion correcta. Solo se nota probandola con la sesion
+equivocada, que es exactamente lo que nadie hace por costumbre.
+
+Los helpers estan en `src/lib/auth/venue-access.ts` y siguen la forma de
+`admin.ts`: `requireVenueAccess` para paginas (no vuelve sin permiso; da 404, no
+403, para que el panel ajeno no anuncie que existe) y `assertVenueAccess` para
+acciones (nunca lanza). El operador de la plataforma pasa por encima de las dos.
+
+De la misma familia: **una invitacion solo la acepta la persona cuyo correo de
+sesion coincide con el correo invitado**. Sin eso el enlace es un pase al
+portador y entra quien lo abra en el grupo de WhatsApp del bar.
+
+Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
+segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
+fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
 
 ### Trampas que ya mordieron (para no repetirlas)
 
@@ -232,11 +334,16 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 
 ### Restos del boilerplate
 
-- **`src/app/(main)/dashboard/`** es del boilerplate y no es parte del producto.
-  Ahora que existe `/mi-historia`, decidir si se borra o se reusa.
 - **Tablas de pagos** (`customer`, `subscription`, `payment`) no las toca ninguna
   consulta de Tumbenla. Se quedan por si algun dia hay cobro, pero hoy son ruido
   en el esquema.
+- **El redirector abierto del login, ya cerrado.** El validador heredado daba
+  por bueno cualquier destino que empezara por `/`, y `//evil.com` empieza por
+  `/` pero el navegador lo resuelve como otro dominio: un enlace que se ve como
+  `tumbenla.co/login?...` terminaba en otro sitio con la sesion recien creada.
+  Vive ahora en `src/lib/auth/redirect.ts`, que rechaza `//` y `/\\`. Cualquier
+  destino nuevo que se lea de una URL tiene que pasar por `esDestinoValido`.
+
 - **`showToast` en `src/lib/utils/toast.ts` es un stub que solo hace
   `console.log`.** Nadie debe usarlo: el real es `toastManager` de
   `src/components/ui/toast.tsx`. Borrar el stub antes de que alguien se lo crea.
@@ -371,8 +478,15 @@ el presupuesto.
 
 De ahi que casi todo el sitio sea estatico o ISR: sin trafico no hay consultas,
 sin consultas la base se duerme. Las rutas que si pegan a la base en cada
-peticion son `/admin/*`, `/mi-historia` y `/api/geocode`, todas de bajo volumen
-por diseno.
+peticion son `/admin/*`, `/panel/*`, `/mi-historia`, `/entrar`,
+`/registrar-sitio`, `/invitacion/[token]`, `/sitios/[slug]/noches/[nightId]`,
+`/api/geocode` y `/api/mi-acceso`, todas de bajo volumen por diseno.
+
+`/sitios/[slug]` sigue siendo ISR aunque ahora liste las noches: esa consulta no
+depende de la sesion. El estado "¿ya reclame esta foto?" si depende de quien
+mira, y por eso vive en la ruta aparte de la noche, que solo abre quien salio
+esa noche. **Si alguna vez se mete ese estado en la pagina del sitio, se pierde
+el ISR de una de las paginas mas visitadas.**
 
 **Pendiente con orden obligatorio:** `revalidate = 300` son exactamente los 5
 minutos del autosuspend, asi que una visita cada cinco minutos mantiene la base
