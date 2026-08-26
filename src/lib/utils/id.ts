@@ -21,4 +21,6 @@ export const ID_PREFIX = {
   venueInvitation: 'vin',
   venueClaimRequest: 'vcr',
   photoReport: 'prp',
+  venueContribution: 'vco',
+  venueContributionMedia: 'vcm',
 } as const

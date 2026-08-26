@@ -819,3 +819,109 @@ export const photoReportRelations = relations(photoReport, ({ one }) => ({
     references: [partyPhoto.id],
   }),
 }))
+
+/**
+ * "En agosto entregué X."
+ *
+ * THE LINK THAT WAS MISSING. Until now the chain on screen jumped straight from
+ * "this bar pledges 10%" to "we bought cement", with nothing in between saying
+ * the bar actually handed anything over. This is that step, and it is reported
+ * by the venue itself.
+ *
+ * WHICH IS EXACTLY WHY IT IS NOT PUBLIC UNTIL WE VERIFY IT. A self-reported
+ * figure published under Tumbenla's name would be the product asserting
+ * something it did not check — and the only thing this product has is that
+ * somebody checked. 'submitted' does not exist for the public; only 'verified'
+ * is ever rendered, and always attributed.
+ */
+export const venueContribution = pgTable(
+  'venue_contribution',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueContribution)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    /** The period the money covers, not when it was handed over. A venue
+     *  reports "August" in September. */
+    periodStart: timestamp('period_start').notNull(),
+    periodEnd: timestamp('period_end').notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    note: text('note'),
+    submittedByUserId: text('submitted_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    // 'submitted' | 'verified' | 'rejected'
+    status: text('status').default('submitted').notNull(),
+    verifiedByUserId: text('verified_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    verifiedAt: timestamp('verified_at'),
+    verifiedNote: text('verified_note'),
+    /**
+     * Which purchase this money paid for. Nullable on purpose: a contribution
+     * can be verified and not yet spent, and pretending otherwise would force
+     * us to invent a purchase to satisfy a foreign key.
+     */
+    purchaseId: text('purchase_id').references(() => materialPurchase.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('venue_contribution_venueId_idx').on(table.venueId),
+    index('venue_contribution_status_idx').on(table.status),
+    index('venue_contribution_purchaseId_idx').on(table.purchaseId),
+  ]
+)
+
+/** The receipt behind a contribution: a transfer screenshot, an invoice, a
+ *  photo of the handover. A child table rather than a CSV in a column, same as
+ *  material_purchase_media. */
+export const venueContributionMedia = pgTable(
+  'venue_contribution_media',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueContributionMedia)),
+    contributionId: text('contribution_id')
+      .notNull()
+      .references(() => venueContribution.id, { onDelete: 'cascade' }),
+    // 'receipt' | 'transfer' | 'photo'
+    kind: text('kind').default('receipt').notNull(),
+    url: text('url').notNull(),
+    storageKey: text('storage_key'),
+    caption: text('caption'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index('venue_contribution_media_contributionId_idx').on(table.contributionId)]
+)
+
+export const venueContributionRelations = relations(venueContribution, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [venueContribution.venueId],
+    references: [venue.id],
+  }),
+  purchase: one(materialPurchase, {
+    fields: [venueContribution.purchaseId],
+    references: [materialPurchase.id],
+  }),
+  media: many(venueContributionMedia),
+}))
+
+export const venueContributionMediaRelations = relations(venueContributionMedia, ({ one }) => ({
+  contribution: one(venueContribution, {
+    fields: [venueContributionMedia.contributionId],
+    references: [venueContribution.id],
+  }),
+}))

@@ -6,7 +6,8 @@ import { PledgeDetail } from '@/components/sitios/pledge-badge'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
 import { listNightsForVenue } from '@/lib/fiestas/queries'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
-import { formatDate } from '@/lib/utils/format'
+import { formatCOP, formatDate } from '@/lib/utils/format'
+import { getVerifiedTotal, listVerifiedContributions } from '@/lib/venues/contributions'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { pledgeLabel } from '@/components/sitios/pledge-badge'
 
@@ -69,6 +70,13 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   // si depende de quien mira, y por eso vive en /sitios/[slug]/noches/[id],
   // que es dinamica y de bajo volumen por diseno.
   const noches = await listNightsForVenue(venue.id)
+
+  // Solo lo VERIFICADO, y el filtro vive dentro de la consulta, no aca. Un
+  // aporte que el sitio reporto y nosotros no hemos confirmado no existe para
+  // el publico: publicarlo seria afirmar bajo nuestro nombre algo que no
+  // comprobamos.
+  const aportes = await listVerifiedContributions(venue.id)
+  const totalAportado = await getVerifiedTotal(venue.id)
 
   const contactLinks = [
     venue.instagram
@@ -182,6 +190,52 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           </Bloque>
         ) : null}
       </div>
+
+      {aportes.length > 0 ? (
+        <section className="mt-10 rounded-xl border border-lime p-8">
+          <h2 className="font-display font-extrabold text-headline-md uppercase">
+            Lo que ya entregó
+          </h2>
+          <p className="mt-2 font-display font-black text-4xl text-lime leading-none tabular-nums">
+            {formatCOP(totalAportado.total, totalAportado.currency)}
+          </p>
+          {/* La atribucion no es cortesia: la cifra la reporta el sitio y la
+              confirmamos nosotros, y decir las dos cosas es la diferencia entre
+              un dato y una afirmacion nuestra sin respaldo. */}
+          <p className="mt-3 max-w-prose text-pretty text-body-md text-muted-foreground">
+            Reportado por el sitio y confirmado por nosotros. Cada entrega va con la fecha en
+            que la confirmamos.
+          </p>
+
+          <ul className="mt-6 flex flex-col gap-2">
+            {aportes.map((aporte) => (
+              <li
+                key={aporte.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 border-border border-t pt-2 text-body-md"
+              >
+                <span className="text-muted-foreground">
+                  {formatDate(aporte.periodStart)} – {formatDate(aporte.periodEnd)}
+                </span>
+                <span className="tabular-nums">
+                  {formatCOP(Number.parseFloat(aporte.amount), aporte.currency)}
+                </span>
+                {aporte.purchaseSlug ? (
+                  <Link
+                    href={`/transparencia/${aporte.purchaseSlug}`}
+                    className="w-full text-primary-text text-sm hover:underline sm:w-auto"
+                  >
+                    Se fue en {aporte.purchaseTitle} →
+                  </Link>
+                ) : (
+                  <span className="w-full text-muted-foreground text-sm sm:w-auto">
+                    Todavía sin gastar
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {noches.length > 0 ? (
         <section className="mt-10">
