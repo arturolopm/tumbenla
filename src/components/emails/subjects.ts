@@ -8,6 +8,9 @@ export type EmailSubjectType =
   | 'reset-password'
   | 'invitation'
   | 'venue-invitation'
+  | 'solicitud-dm'
+  | 'solicitud-aprobada'
+  | 'solicitud-rechazada'
   | 'welcome'
 
 /**
@@ -33,6 +36,12 @@ export function getEmailSubject(type: EmailSubjectType): string {
     // alguien del producto y no a una cuenta de prueba del boilerplate.
     case 'venue-invitation':
       return `Te invitaron a manejar tu sitio en ${brandName}`
+    case 'solicitud-dm':
+      return `Falta un paso para registrar tu sitio en ${brandName}`
+    case 'solicitud-aprobada':
+      return `Tu sitio ya quedó a tu nombre en ${brandName}`
+    case 'solicitud-rechazada':
+      return `Sobre tu solicitud en ${brandName}`
     case 'welcome':
       return `Welcome to ${brandName}`
     default:

@@ -3,7 +3,7 @@ import 'server-only'
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { user, venue, venueClaimRequest, venueMember } from '@/database/schema'
+import { user, venue, venueApplication, venueMember } from '@/database/schema'
 
 /**
  * Buscar un sitio para reclamarlo.
@@ -26,6 +26,8 @@ export const buscarSitiosParaReclamar = async (termino: string) => {
       nombre: venue.name,
       city: venue.city,
       addressLine: venue.addressLine,
+      type: venue.type,
+      instagram: venue.instagram,
       status: venue.status,
       duenos: sql<number>`count(distinct ${venueMember.userId}) filter (where ${venueMember.role} = 'owner')::int`,
     })
@@ -37,49 +39,114 @@ export const buscarSitiosParaReclamar = async (termino: string) => {
     .limit(20)
 }
 
-/** Las solicitudes de una persona, para no dejarla mandando la misma dos veces. */
-export const listMyClaimRequests = async (userId: string) => {
+/** Las solicitudes de una persona, para no dejarla mandando la misma dos veces
+ *  y para que pueda ver en que va la suya. */
+export const listMyApplications = async (userId: string) => {
   return db
     .select({
-      id: venueClaimRequest.id,
-      status: venueClaimRequest.status,
-      reviewNote: venueClaimRequest.reviewNote,
+      id: venueApplication.id,
+      status: venueApplication.status,
+      reviewNote: venueApplication.reviewNote,
+      name: venueApplication.name,
+      instagram: venueApplication.instagram,
+      contactEmail: venueApplication.contactEmail,
+      createdAt: venueApplication.createdAt,
       venueSlug: venue.slug,
-      venueNombre: venue.name,
-      createdAt: venueClaimRequest.createdAt,
     })
-    .from(venueClaimRequest)
-    .innerJoin(venue, eq(venueClaimRequest.venueId, venue.id))
-    .where(eq(venueClaimRequest.userId, userId))
-    .orderBy(desc(venueClaimRequest.createdAt))
+    .from(venueApplication)
+    .leftJoin(venue, eq(venueApplication.venueId, venue.id))
+    .where(eq(venueApplication.userId, userId))
+    .orderBy(desc(venueApplication.createdAt))
 }
 
-/** La cola del operador. Las pendientes primero, y las mas viejas arriba: una
- *  solicitud vieja es alguien esperando hace mas tiempo. */
-export const listClaimRequests = async (status?: string) => {
-  const base = db
+/** La solicitud viva de una persona, si tiene. Es la que la pantalla de
+ *  "que sigue" vuelve a mostrar cuando regresa. */
+export const getLiveApplication = async (userId: string, id?: string) => {
+  const vivas = sql`${venueApplication.status} in ('pending', 'verifying')`
+
+  const [fila] = await db
     .select({
-      id: venueClaimRequest.id,
-      status: venueClaimRequest.status,
-      message: venueClaimRequest.message,
-      evidenceUrl: venueClaimRequest.evidenceUrl,
-      reviewNote: venueClaimRequest.reviewNote,
-      createdAt: venueClaimRequest.createdAt,
-      venueId: venue.id,
+      id: venueApplication.id,
+      status: venueApplication.status,
+      name: venueApplication.name,
+      instagram: venueApplication.instagram,
+      contactEmail: venueApplication.contactEmail,
+      city: venueApplication.city,
+    })
+    .from(venueApplication)
+    .where(
+      id
+        ? and(eq(venueApplication.id, id), eq(venueApplication.userId, userId))
+        : and(eq(venueApplication.userId, userId), vivas)
+    )
+    .orderBy(desc(venueApplication.createdAt))
+    .limit(1)
+
+  return fila ?? null
+}
+
+/**
+ * La cola del operador. Lo mas viejo arriba: una solicitud vieja es alguien
+ * esperando hace mas tiempo.
+ *
+ * Trae el sitio que ya calza, si lo hay, para que aprobar no duplique un bar
+ * que ya esta en el directorio.
+ */
+export const listApplications = async () => {
+  return db
+    .select({
+      id: venueApplication.id,
+      status: venueApplication.status,
+      name: venueApplication.name,
+      type: venueApplication.type,
+      city: venueApplication.city,
+      addressLine: venueApplication.addressLine,
+      neighborhood: venueApplication.neighborhood,
+      instagram: venueApplication.instagram,
+      contactEmail: venueApplication.contactEmail,
+      tiktok: venueApplication.tiktok,
+      whatsapp: venueApplication.whatsapp,
+      phone: venueApplication.phone,
+      website: venueApplication.website,
+      openingHours: venueApplication.openingHours,
+      description: venueApplication.description,
+      pledgeIdea: venueApplication.pledgeIdea,
+      reviewNote: venueApplication.reviewNote,
+      createdAt: venueApplication.createdAt,
+      venueId: venueApplication.venueId,
       venueSlug: venue.slug,
       venueNombre: venue.name,
-      venueCity: venue.city,
-      venueStatus: venue.status,
+      // La cuenta que aplica: quien queda de dueno si se aprueba. Va aparte del
+      // contactEmail a proposito, porque son dos cosas distintas y el operador
+      // tiene que poder compararlas.
       solicitante: user.name,
       solicitanteEmail: user.email,
     })
-    .from(venueClaimRequest)
-    .innerJoin(venue, eq(venueClaimRequest.venueId, venue.id))
-    .innerJoin(user, eq(venueClaimRequest.userId, user.id))
-    .orderBy(asc(venueClaimRequest.createdAt))
+    .from(venueApplication)
+    .innerJoin(user, eq(venueApplication.userId, user.id))
+    .leftJoin(venue, eq(venueApplication.venueId, venue.id))
+    .orderBy(asc(venueApplication.createdAt))
+}
 
-  if (status) return base.where(eq(venueClaimRequest.status, status))
-  return base
+/** Una solicitud, para prellenar el formulario de creacion del sitio. */
+export const getApplication = async (id: string) => {
+  const [fila] = await db
+    .select()
+    .from(venueApplication)
+    .where(eq(venueApplication.id, id))
+    .limit(1)
+
+  return fila ?? null
+}
+
+/** Cuantas esperan respuesta. Va en la barra del panel de operacion. */
+export const countOpenApplications = async () => {
+  const [fila] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(venueApplication)
+    .where(sql`${venueApplication.status} in ('pending', 'verifying')`)
+
+  return fila?.n ?? 0
 }
 
 /** Si el sitio ya tiene dueno. Lo mira el operador antes de aprobar y tambien

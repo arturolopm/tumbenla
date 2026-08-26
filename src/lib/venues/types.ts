@@ -59,6 +59,8 @@ export type Venue = VenueSummary & {
   phone: string | null
   whatsapp: string | null
   instagram: string | null
+  tiktok: string | null
+  email: string | null
   website: string | null
   openingHours: string | null
   logoUrl: string | null

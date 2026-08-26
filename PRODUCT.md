@@ -33,7 +33,8 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Reclamar fotos, punta a punta | Construido |
 | Entrar y salir, y volver a donde estabas | Construido |
 | Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
-| Alta de sitio: registro propio y reclamo con aprobacion | Construido |
+| Alta de sitio: solicitud corta verificada por DM | Construido |
+| Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
 | Aportes del sitio: reporte, recibo y verificacion | Construido |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | **A medias** |
@@ -114,10 +115,24 @@ Estan aca para no volver a discutirlas cada dos semanas.
 19. **El sitio reporta, nosotros verificamos, nosotros compramos.** Un aporte
     `submitted` no existe para el publico. Publicar una cifra que nos dieron sin
     comprobarla seria afirmar bajo nuestro nombre algo que no comprobamos.
-20. **El sitio se reclama, no se auto-publica.** Registrar un sitio nuevo te
-    deja de dueno en el acto —lo escribiste tu, no hay propiedad en disputa—
-    pero nace en `draft`. Reclamar uno que ya existe si pasa por un operador.
-    Publicar es siempre nuestro.
+20. **Una solicitud de alta NO crea el sitio.** *(Reemplaza a la version
+    anterior de esta decision, que daba la propiedad en el acto al registrar.)*
+    El formulario ya no pide ni el compromiso ni las coordenadas, y
+    `venue.pledge_type`, `latitude` y `longitude` son `NOT NULL`: no hay fila
+    que insertar. El sitio nace cuando un operador aprueba y completa lo que
+    falta. De paso tapa un hueco real: con propiedad inmediata, cualquiera
+    apartaba el nombre de un bar ajeno y el buscador le decia al dueno de
+    verdad "ya tiene dueno".
+20b. **El DM verifica la CUENTA; el correo citado verifica a la PERSONA.**
+    Que el mensaje llegue desde el Instagram del bar prueba que quien escribe
+    controla esa cuenta, no que sea quien lleno el formulario. Por eso el DM
+    tiene que citar el `contactEmail` de la solicitud. Hacen falta las dos, o no
+    se aprueba: sin la segunda, quien maneja las redes de un bar podria quedarse
+    con el sitio de otro.
+20c. **El formulario largo de un sitio no se le muestra a nadie de la calle.**
+    Estuvo colgado en `/registrar-sitio/nuevo` y era la peor pantalla del
+    producto. Ademas su buscador de direcciones llama a `/api/geocode`, que
+    exige ser operador y le respondia 404. Vive solo en los dos paneles.
 21. **Una foto que sube un rumbero solo es reclamable cuando el sitio la
     aprueba.** Es lo que impide subir fotos de un bar donde uno nunca estuvo y
     reclamarlas para inflarse las noches. El portero es el sitio.
@@ -139,6 +154,58 @@ Estan aca para no volver a discutirlas cada dos semanas.
     ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
     (`UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`). Asi un acento
     nunca llega a una URL, a una consulta ni a una migracion.
+
+---
+
+## Que se pide para dar de alta un sitio
+
+**Obligatorio.** Es el minimo para poder verificar y despues publicar.
+
+| Campo | Por que es el minimo |
+|---|---|
+| Nombre del sitio | Es lo que buscamos en Instagram para confirmar que existe |
+| Tipo | Un toque, y sin el no se puede pintar la tarjeta del mapa |
+| Ciudad | Solo estamos en Manizales; es la primera pregunta que hay que resolver |
+| Direccion (texto) | Distingue un bar real de un nombre, y de ahi sale el pin despues |
+| **Instagram del sitio** | **Es el instrumento de verificacion.** Sin cuenta oficial no hay DM que comprobar |
+| **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar. Se rellena con el correo de la cuenta |
+
+Quien queda de dueno sale de la SESION, no del correo escrito: hay que entrar
+antes de aplicar. El correo de contacto es el del SITIO y tiene su propia razon
+de ser obligatorio (ver decision 20b), que no es la de identificar al dueno.
+
+**Opcional:** TikTok, WhatsApp, telefono, barrio, sitio web, horario,
+descripcion, y "que tienes en mente para poner" —texto libre, rotulado como
+idea y que no toca ninguna columna `pledge_*`.
+
+**No se pide, lo llena un operador al aprobar:** coordenadas, el compromiso,
+`estimatedPerPersonNight`, `verifiedNote`, portada y logo.
+
+### Casos de borde
+
+| Caso | Que hace el MVP |
+|---|---|
+| No tiene Instagram del bar | No puede mandar la solicitud. La pantalla lo dice y deja el correo para escribirnos: sin cuenta oficial no hay verificacion posible |
+| Solo tiene TikTok | TikTok es opcional y no reemplaza a Instagram en el formulario, pero el operador **si** puede aprobar contra un DM de TikTok y dejarlo en `reviewNote` |
+| El DM lo manda alguien distinto de quien aplico | Por eso el DM cita el correo de la solicitud. Si no coincide, no se aprueba |
+| Dos personas piden el mismo bar | Indice unico PARCIAL sobre `lower(instagram)` con `status in ('pending','verifying')`: una sola solicitud viva a la vez, y aun asi se puede volver a aplicar tras un rechazo |
+| El bar ya esta en el directorio | El buscador lo encuentra y la solicitud llega con `venueId`; aprobar solo asigna dueno |
+| El sitio ya tiene dueno | El buscador lo marca y no ofrece pedirlo |
+| El DM nunca llega | Se queda en `verifying`. Sin caducidad: la cola es corta y una solicitud vieja es alguien esperando |
+| Se equivoco en los datos | Vuelve a mandar el formulario y se actualiza mientras siga viva |
+| La ciudad no es Manizales | Se acepta y se guarda; es la lista de espera para abrir ciudad |
+| Lo aprobamos y nunca vuelve | El sitio queda con dueno ausente. La plataforma **si** puede quitar al ultimo dueno para reasignarlo; un dueno no |
+
+### Lo que se sacrifica por simplicidad
+
+| Hoy | Cuando duele | Hacia donde va |
+|---|---|---|
+| Verificacion manual por DM | Pasadas ~10 solicitudes por semana, o al abrir la segunda ciudad | Login de Instagram/Meta Business, o un codigo pegado en la bio |
+| La identidad se amarra con el correo citado en el DM | Cuando un sitio tenga varias personas manejando redes | Verificacion de dominio del correo, o registro mercantil (NIT) |
+| Un solo dueno al aprobar | Cuando haya dos socios de igual a igual | Ya resuelto: el dueno puede nombrar mas duenos en su panel |
+| El operador escribe pin y compromiso a mano | Con muchos sitios por semana | Que el sitio proponga y el operador solo apruebe |
+| Sin caducidad de solicitudes | Cuando la cola no quepa en una pantalla | Caducar `verifying` a los 30 dias con aviso |
+| Sin auditoria mas alla de `reviewedBy` | Con mas operadores | Bitacora aparte |
 
 ---
 
@@ -172,9 +239,8 @@ Estan aca para no volver a discutirlas cada dos semanas.
 - [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
       que tiene fotos por revisar o un reporte de privacidad abierto: hay que
       entrar al panel a mirar.
-- [ ] **Avisarle a quien reclama un sitio como quedo su solicitud.** La decision
-      queda escrita en `venue_claim_request.reviewNote` y solo se ve entrando a
-      `/registrar-sitio`.
+- [ ] **Avisarle al operador cuando llega una solicitud.** Hoy el conteo sale en
+      la barra de `/admin`, pero hay que entrar a verlo: no llega ningun correo.
 
 ### Despues
 
@@ -264,6 +330,17 @@ portador y entra quien lo abra en el grupo de WhatsApp del bar.
 Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
 segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
 fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
+
+### `/api/geocode` esta cerrado A PROPOSITO
+
+Exige `assertAdmin()` y responde 404 a cualquier otro. No es un descuido y no
+hay que "arreglarlo": Nominatim tiene terminos de uso de bajo volumen (riesgo 5)
+y abrirlo lo expondria a trafico anonimo.
+
+**Por eso el alta de un sitio pide la direccion en TEXTO** y el pin lo pone un
+operador. Si algun dia una pantalla publica necesita autocompletar direcciones,
+la respuesta no es quitarle el gate a esa ruta: es un proxy propio con su
+limite, o los tiles/geocoder que ya se contemplan mover a R2.
 
 ### Trampas que ya mordieron (para no repetirlas)
 

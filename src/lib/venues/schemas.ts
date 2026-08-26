@@ -73,6 +73,8 @@ const venueBaseSchema = z.object({
   phone: z.string().trim().max(40).optional().transform((v) => (v ? v : null)),
   whatsapp: z.string().trim().max(40).optional().transform((v) => (v ? v : null)),
   instagram: z.string().trim().max(120).optional().transform((v) => (v ? v : null)),
+  tiktok: z.string().trim().max(120).optional().transform((v) => (v ? v : null)),
+  email: z.string().trim().max(200).optional().transform((v) => (v ? v : null)),
   website: z.string().trim().max(300).optional().transform((v) => (v ? v : null)),
   openingHours: z.string().trim().max(200).optional().transform((v) => (v ? v : null)),
 

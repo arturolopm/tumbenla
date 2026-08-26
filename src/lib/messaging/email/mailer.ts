@@ -37,7 +37,12 @@ import type {
   EmailProviderName,
 } from './types'
 
-import { getEmailSubject, renderVenueInvitationEmail } from '@/components/emails'
+import {
+  getEmailSubject,
+  renderSolicitudDecisionEmail,
+  renderSolicitudDmEmail,
+  renderVenueInvitationEmail,
+} from '@/components/emails'
 import { getFromEmailAddress } from './utils'
 import {
   getProvider,
@@ -289,5 +294,63 @@ export async function sendVenueInvitationEmail(params: {
 
   if (!result.success) {
     throw new Error(result.message || 'No se pudo enviar la invitacion')
+  }
+}
+
+/**
+ * "Escribenos por DM desde la cuenta del sitio."
+ *
+ * LANZA SI NO SALIO, por lo mismo que la invitacion: sendEmail devuelve un
+ * resultado y su respaldo silencioso es el proveedor `log`, asi que sin
+ * RESEND_API_KEY el correo se escribe en los logs y nadie recibe nada. Quien
+ * llama necesita distinguir "quedo marcada" de "ademas le llego".
+ */
+export async function sendApplicationDmRequestEmail(params: {
+  to: string
+  venueName: string
+  instagram: string
+}): Promise<void> {
+  const html = await renderSolicitudDmEmail({
+    venueName: params.venueName,
+    instagram: params.instagram,
+    contactEmail: params.to,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject('solicitud-dm'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la instruccion de verificacion')
+  }
+}
+
+/** Como quedo la solicitud. */
+export async function sendApplicationDecisionEmail(params: {
+  to: string
+  venueName: string
+  aprobada: boolean
+  nota?: string
+}): Promise<void> {
+  const html = await renderSolicitudDecisionEmail({
+    venueName: params.venueName,
+    aprobada: params.aprobada,
+    nota: params.nota,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject(params.aprobada ? 'solicitud-aprobada' : 'solicitud-rechazada'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la decision')
   }
 }

@@ -21,8 +21,7 @@ import type {
  * Queries return DTOs, never raw rows.
  */
 
-const toNumber = (value: string | null): number | null =>
-  value === null ? null : Number(value)
+const toNumber = (value: string | null): number | null => (value === null ? null : Number(value))
 
 export const toPledge = (row: VenueRow): Pledge => {
   if (row.pledgeType === 'percentage') {
@@ -67,6 +66,8 @@ export const toVenue = (row: VenueRow): Venue => ({
   phone: row.phone,
   whatsapp: row.whatsapp,
   instagram: row.instagram,
+  tiktok: row.tiktok,
+  email: row.email,
   website: row.website,
   openingHours: row.openingHours,
   logoUrl: row.logoUrl,

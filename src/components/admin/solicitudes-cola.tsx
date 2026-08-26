@@ -4,140 +4,223 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
-import { type ReclamoState, resolverSolicitudAction } from '@/app/actions/reclamos'
+import {
+  type DecisionState,
+  pedirVerificacionAction,
+  rechazarSolicitudAction,
+} from '@/app/actions/reclamos'
 import { toastManager } from '@/components/ui/toast'
+import { urlInstagram } from '@/config/contacto'
 import { formatDate } from '@/lib/utils/format'
 
-type Solicitud = {
+export type Solicitud = {
   id: string
-  venueId: string
   status: string
-  message: string | null
-  evidenceUrl: string | null
+  name: string
+  type: string
+  city: string
+  addressLine: string
+  neighborhood: string | null
+  instagram: string
+  contactEmail: string
+  tiktok: string | null
+  whatsapp: string | null
+  phone: string | null
+  website: string | null
+  openingHours: string | null
+  description: string | null
+  pledgeIdea: string | null
   reviewNote: string | null
   createdAt: string
-  venueSlug: string
-  venueNombre: string
-  venueCity: string
-  venueStatus: string
+  venueId: string | null
+  venueSlug: string | null
+  venueNombre: string | null
   solicitante: string
   solicitanteEmail: string
 }
 
 export function SolicitudesCola({
-  pendientes,
+  abiertas,
   resueltas,
 }: {
-  pendientes: Solicitud[]
+  abiertas: Solicitud[]
   resueltas: Solicitud[]
 }) {
   const router = useRouter()
   const [notas, setNotas] = useState<Record<string, string>>({})
   const [pendiente, startTransition] = useTransition()
 
-  const resolver = (id: string, decision: 'approved' | 'rejected') => {
+  const correr = (accion: () => Promise<DecisionState>) => {
     startTransition(async () => {
-      const r: ReclamoState = await resolverSolicitudAction(id, decision, notas[id])
+      const r = await accion()
       if (r.status === 'success') {
         toastManager.add({ title: r.mensaje, type: 'success' })
         router.refresh()
-        return
-      }
-      if (r.status === 'error') {
+      } else if (r.status === 'error') {
         toastManager.add({ title: 'No se pudo', description: r.error, type: 'error' })
       }
     })
   }
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className='flex flex-col gap-10'>
       <section>
-        <h2 className="font-display font-bold text-headline-md uppercase">
-          Pendientes ({pendientes.length})
+        <h2 className='font-display font-bold text-headline-md uppercase'>
+          Sin resolver ({abiertas.length})
         </h2>
 
-        {pendientes.length === 0 ? (
-          <p className="mt-3 text-body-md text-muted-foreground">Nada por revisar.</p>
+        {abiertas.length === 0 ? (
+          <p className='mt-3 text-body-md text-muted-foreground'>Nada por revisar.</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-3">
-            {pendientes.map((s) => (
-              <li key={s.id} className="rounded-xl border border-border bg-card p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-display font-bold uppercase">{s.venueNombre}</p>
-                    <p className="text-muted-foreground text-sm">
-                      {s.venueCity} · sitio en {s.venueStatus === 'published' ? 'publicado' : s.venueStatus}
+          <ul className='mt-3 flex flex-col gap-3'>
+            {abiertas.map((s) => (
+              <li key={s.id} className='rounded-xl border border-border bg-card p-5'>
+                <div className='flex flex-wrap items-start justify-between gap-3'>
+                  <div className='min-w-0'>
+                    <p className='font-display font-bold text-headline-md uppercase'>{s.name}</p>
+                    <p className='text-muted-foreground text-sm'>
+                      {s.addressLine}
+                      {s.neighborhood ? `, ${s.neighborhood}` : ''}, {s.city} · {s.type}
                     </p>
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    {formatDate(new Date(s.createdAt))}
-                  </p>
+                  <div className='text-right'>
+                    <span
+                      className={
+                        s.status === 'verifying'
+                          ? 'text-primary-text text-xs uppercase'
+                          : 'text-muted-foreground text-xs uppercase'
+                      }
+                    >
+                      {s.status === 'verifying' ? 'Esperando su DM' : 'Sin mirar'}
+                    </span>
+                    <p className='text-muted-foreground text-xs'>
+                      {formatDate(new Date(s.createdAt))}
+                    </p>
+                  </div>
                 </div>
 
-                <p className="mt-3 text-body-md">
-                  <span className="text-muted-foreground">Lo pide </span>
+                {/* LA COMPARACION QUE DECIDE. El DM tiene que llegar de la
+                    cuenta de la izquierda y citar el correo de la derecha. Van
+                    juntos y grandes porque son el trabajo del operador; todo lo
+                    demas de esta tarjeta es contexto. */}
+                <div className='mt-4 grid gap-3 rounded-lg border border-primary bg-primary/5 p-4 sm:grid-cols-2'>
+                  <div>
+                    <p className='text-muted-foreground text-xs uppercase'>
+                      El DM tiene que venir de
+                    </p>
+                    <a
+                      href={urlInstagram(s.instagram)}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='font-display font-bold text-lg text-primary-text hover:underline'
+                    >
+                      @{s.instagram}
+                    </a>
+                    {s.tiktok ? (
+                      <p className='text-muted-foreground text-xs'>TikTok: @{s.tiktok}</p>
+                    ) : null}
+                  </div>
+                  <div>
+                    <p className='text-muted-foreground text-xs uppercase'>
+                      Y tiene que citar este correo
+                    </p>
+                    <p className='break-all font-display font-bold text-lg'>{s.contactEmail}</p>
+                  </div>
+                </div>
+
+                <div className='mt-3 text-body-md'>
+                  <span className='text-muted-foreground'>Queda de dueño: </span>
                   {s.solicitante}{' '}
                   <a
                     href={`mailto:${s.solicitanteEmail}`}
-                    className="text-primary-text hover:underline"
+                    className='text-primary-text hover:underline'
                   >
                     {s.solicitanteEmail}
                   </a>
-                </p>
+                  {s.solicitanteEmail !== s.contactEmail ? (
+                    // No es un error, y por eso es un aviso y no un bloqueo: es
+                    // normal aplicar con el correo personal y poner el del bar
+                    // como contacto. Pero el DM cita el de contacto, asi que el
+                    // operador tiene que verlo antes de comparar.
+                    <span className='ml-2 text-muted-foreground text-xs'>
+                      (distinto del correo de contacto)
+                    </span>
+                  ) : null}
+                </div>
 
-                {s.message ? (
-                  <p className="mt-2 whitespace-pre-wrap rounded-lg border border-border p-3 text-body-md">
-                    {s.message}
-                  </p>
-                ) : null}
-
-                {/* Enlace crudo, sin previsualizar: lo escribio un desconocido y
-                    renderizarlo como imagen seria cargar lo que el diga. */}
-                {s.evidenceUrl ? (
-                  <p className="mt-2 break-all text-sm">
-                    <span className="text-muted-foreground">Enlace: </span>
-                    <a
-                      href={s.evidenceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="text-primary-text hover:underline"
+                {s.venueId ? (
+                  <p className='mt-2 text-body-md'>
+                    <span className='text-muted-foreground'>Pide un sitio que ya tenemos: </span>
+                    <Link
+                      href={`/admin/sitios/${s.venueId}`}
+                      className='text-primary-text hover:underline'
                     >
-                      {s.evidenceUrl}
-                    </a>
+                      {s.venueNombre}
+                    </Link>
                   </p>
                 ) : null}
 
-                <textarea
-                  value={notas[s.id] ?? ''}
-                  onChange={(e) => setNotas((n) => ({ ...n, [s.id]: e.target.value }))}
-                  rows={2}
-                  placeholder="Nota de la decisión (la ve quien lo pidió)"
-                  className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-body-md focus:border-primary focus:outline-none"
-                />
+                {s.description ? (
+                  <p className='mt-3 whitespace-pre-wrap rounded-lg border border-border p-3 text-body-md'>
+                    {s.description}
+                  </p>
+                ) : null}
 
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={pendiente}
-                    onClick={() => resolver(s.id, 'approved')}
-                    className="rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase disabled:opacity-50"
+                {s.pledgeIdea ? (
+                  <div className='mt-2 rounded-lg border border-border p-3'>
+                    <p className='text-muted-foreground text-xs uppercase'>
+                      Lo que tiene en mente — es una idea, no un compromiso
+                    </p>
+                    <p className='mt-1 whitespace-pre-wrap text-body-md'>{s.pledgeIdea}</p>
+                  </div>
+                ) : null}
+
+                {(s.whatsapp || s.phone || s.website || s.openingHours) && (
+                  <p className='mt-2 text-muted-foreground text-sm'>
+                    {[s.whatsapp && `WhatsApp ${s.whatsapp}`, s.phone, s.website, s.openingHours]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                )}
+
+                <div className='mt-4 flex flex-wrap items-center gap-2'>
+                  {s.status === 'pending' ? (
+                    <button
+                      type='button'
+                      disabled={pendiente}
+                      onClick={() => correr(() => pedirVerificacionAction(s.id))}
+                      className='rounded-lg border border-primary px-4 py-2 font-display text-label-lg text-primary-text uppercase transition-colors hover:bg-primary/10 disabled:opacity-50'
+                    >
+                      Pedirle el DM
+                    </button>
+                  ) : null}
+
+                  {/* Aprobar no es un boton que resuelva solo: lleva al
+                      formulario del sitio, donde el operador pone el pin y el
+                      compromiso. Guardar ahi es lo que crea el sitio y asigna
+                      al dueno, en un solo acto. */}
+                  <Link
+                    href={`/admin/sitios/nuevo?solicitud=${s.id}`}
+                    className='rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase'
                   >
-                    Aprobar
-                  </button>
+                    Aprobar y crear el sitio
+                  </Link>
+
                   <button
-                    type="button"
+                    type='button'
                     disabled={pendiente}
-                    onClick={() => resolver(s.id, 'rejected')}
-                    className="rounded-lg border border-border px-4 py-2 font-display text-label-lg uppercase text-muted-foreground transition-colors hover:border-destructive hover:text-destructive-foreground disabled:opacity-50"
+                    onClick={() => correr(() => rechazarSolicitudAction(s.id, notas[s.id]))}
+                    className='rounded-lg border border-border px-4 py-2 font-display text-label-lg text-muted-foreground uppercase transition-colors hover:border-destructive hover:text-destructive-foreground disabled:opacity-50'
                   >
                     Rechazar
                   </button>
-                  <Link
-                    href={`/admin/sitios/${s.venueId}`}
-                    className="self-center px-2 text-primary-text text-sm hover:underline"
-                  >
-                    Ver el sitio
-                  </Link>
+
+                  <input
+                    value={notas[s.id] ?? ''}
+                    onChange={(e) => setNotas((n) => ({ ...n, [s.id]: e.target.value }))}
+                    placeholder='Nota del rechazo (la recibe por correo)'
+                    className='min-w-56 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-body-md focus:border-primary focus:outline-none'
+                  />
                 </div>
               </li>
             ))}
@@ -147,20 +230,18 @@ export function SolicitudesCola({
 
       {resueltas.length > 0 ? (
         <section>
-          <h2 className="font-display font-bold text-headline-md uppercase">Ya resueltas</h2>
-          <ul className="mt-3 flex flex-col gap-2">
+          <h2 className='font-display font-bold text-headline-md uppercase'>Ya resueltas</h2>
+          <ul className='mt-3 flex flex-col gap-2'>
             {resueltas.map((s) => (
               <li
                 key={s.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border border-dashed p-4"
+                className='flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border border-dashed p-4'
               >
-                <span className="min-w-0">
-                  <span className="font-medium">{s.venueNombre}</span>{' '}
-                  <span className="text-muted-foreground text-sm">
-                    · {s.solicitanteEmail}
-                  </span>
+                <span className='min-w-0'>
+                  <span className='font-medium'>{s.name}</span>{' '}
+                  <span className='text-muted-foreground text-sm'>· @{s.instagram}</span>
                 </span>
-                <span className="text-muted-foreground text-xs uppercase">
+                <span className='text-muted-foreground text-xs uppercase'>
                   {s.status === 'approved' ? 'Aprobada' : 'Rechazada'}
                 </span>
               </li>

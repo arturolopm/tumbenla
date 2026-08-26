@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
   decimal,
@@ -219,6 +219,10 @@ export const venue = pgTable(
     phone: text('phone'),
     whatsapp: text('whatsapp'),
     instagram: text('instagram'),
+    tiktok: text('tiktok'),
+    /** El correo del SITIO, no el de quien lo administra. Sale de la solicitud
+     *  de alta, donde es obligatorio. */
+    email: text('email'),
     website: text('website'),
     // Free text for now: 'Jue a Sab, 8:00 p.m. a 3:00 a.m.'
     openingHours: text('opening_hours'),
@@ -708,36 +712,69 @@ export const venueInvitationRelations = relations(venueInvitation, ({ one }) => 
 }))
 
 /**
- * "Este sitio es mio."
+ * "Este sitio es mio, y aqui esta como comprobarlo."
  *
- * WHY A REQUEST AND NOT A SELF-SERVE CLAIM: the product publicly vouches for
- * what a venue pledges. If anybody could attach themselves to a venue and start
- * editing what it promises, the one thing this product sells — that somebody
- * checked — would be gone. So the request is free, and the approval is not.
+ * WHY AN APPLICATION AND NOT A VENUE ROW. Registering used to create the venue
+ * on the spot and hand ownership over immediately. It cannot any more, and that
+ * is the point: the form no longer asks for the pledge or for coordinates —
+ * those get agreed in conversation — and venue.pledge_type, latitude and
+ * longitude are all NOT NULL. There is nothing to insert yet. The venue is born
+ * when an operator approves.
  *
- * Approving ownership and publishing the venue are two separate acts on
- * purpose. Approving says "this person really runs this place"; publishing says
- * "we confirmed what they pledge". A venue stays 'draft' — invisible on the map
- * — until an operator does the second one.
+ * It also closed a real hole: instant ownership let anybody register a bar they
+ * do not own, and from then on the search told the actual owner "ya tiene
+ * dueño".
+ *
+ * WHY venueId IS NULLABLE. It merges the two paths that used to be separate
+ * screens. Claiming a venue we already loaded and proposing one we do not have
+ * are the SAME application, with or without a venueId. One queue.
+ *
+ * HOW IT IS VERIFIED, which is why these two columns are the NOT NULL ones: we
+ * ask for a DM from the venue's official Instagram. That DM proves whoever sent
+ * it controls the account — it does NOT prove they are the person who filled
+ * the form. So the DM has to quote contactEmail and the operator checks it
+ * matches. Two different things, both required.
  */
-export const venueClaimRequest = pgTable(
-  'venue_claim_request',
+export const venueApplication = pgTable(
+  'venue_application',
   {
     id: text('id')
       .primaryKey()
-      .$defaultFn(() => createId(ID_PREFIX.venueClaimRequest)),
-    venueId: text('venue_id')
-      .notNull()
-      .references(() => venue.id, { onDelete: 'cascade' }),
+      .$defaultFn(() => createId(ID_PREFIX.venueApplication)),
+    /** Quien aplica, y quien queda de dueno si se aprueba. Sale de la sesion,
+     *  nunca de un campo del formulario. */
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
-    /** How they say they can prove it. Free text, read by a human. */
-    message: text('message'),
-    /** Optional link to something backing the claim. Not validated, not
-     *  rendered as an image: an operator opens it deliberately or not at all. */
-    evidenceUrl: text('evidence_url'),
-    // 'pending' | 'approved' | 'rejected'
+    /** Solo cuando reclama un sitio que ya existe. Null = propone uno nuevo. */
+    venueId: text('venue_id').references(() => venue.id, { onDelete: 'cascade' }),
+
+    // La propuesta. Lo obligatorio es el minimo para poder verificar.
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    city: text('city').notNull(),
+    addressLine: text('address_line').notNull(),
+    /** El instrumento de verificacion: sin cuenta oficial no hay DM que
+     *  comprobar, y sin eso este MVP no sabe quien es quien. */
+    instagram: text('instagram').notNull(),
+    /** El correo del SITIO, y lo que el DM tiene que citar. */
+    contactEmail: text('contact_email').notNull(),
+
+    tiktok: text('tiktok'),
+    whatsapp: text('whatsapp'),
+    phone: text('phone'),
+    neighborhood: text('neighborhood'),
+    website: text('website'),
+    openingHours: text('opening_hours'),
+    description: text('description'),
+    /** "Que tienes en mente para poner". TEXTO LIBRE, y no toca ninguna columna
+     *  pledge_*: es una idea para llegar a la conversacion con contexto, no un
+     *  compromiso. El compromiso lo escribe un operador cuando ya lo confirmo. */
+    pledgeIdea: text('pledge_idea'),
+
+    // 'pending' | 'verifying' | 'approved' | 'rejected'
+    // 'verifying' separa "no la he mirado" de "esta esperando su DM", que para
+    // quien atiende la cola son dos cosas distintas.
     status: text('status').default('pending').notNull(),
     reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
       onDelete: 'set null',
@@ -751,21 +788,31 @@ export const venueClaimRequest = pgTable(
       .notNull(),
   },
   (table) => [
-    // One request per person per venue: re-asking is editing the same row, not
-    // filling the operator's queue with copies of the same claim.
-    uniqueIndex('venue_claim_request_venueId_userId_key').on(table.venueId, table.userId),
-    index('venue_claim_request_status_idx').on(table.status),
-    index('venue_claim_request_venueId_idx').on(table.venueId),
+    /**
+     * Una sola solicitud VIVA por cuenta de Instagram.
+     *
+     * Parcial a proposito. Un unique a secas impediria volver a aplicar despues
+     * de un rechazo, que es justo lo que si queremos permitir; y sin ningun
+     * unique, dos personas podrian tener a la vez una solicitud abierta por el
+     * mismo bar. El handle es el ancla porque es unico en el mundo, a
+     * diferencia del nombre de un bar.
+     */
+    uniqueIndex('venue_application_instagram_vivas_key')
+      .on(sql`lower(${table.instagram})`)
+      .where(sql`${table.status} in ('pending', 'verifying')`),
+    index('venue_application_status_idx').on(table.status),
+    index('venue_application_userId_idx').on(table.userId),
+    index('venue_application_venueId_idx').on(table.venueId),
   ]
 )
 
-export const venueClaimRequestRelations = relations(venueClaimRequest, ({ one }) => ({
+export const venueApplicationRelations = relations(venueApplication, ({ one }) => ({
   venue: one(venue, {
-    fields: [venueClaimRequest.venueId],
+    fields: [venueApplication.venueId],
     references: [venue.id],
   }),
   user: one(user, {
-    fields: [venueClaimRequest.userId],
+    fields: [venueApplication.userId],
     references: [user.id],
   }),
 }))

@@ -215,7 +215,8 @@ export const cambiarRolAction = async (
   const acceso = await assertVenueAccess(fila.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
-  if (fila.role === 'owner' && role !== 'owner') {
+  // Misma excepcion que al sacar del equipo: ver la nota alla.
+  if (fila.role === 'owner' && role !== 'owner' && !acceso.acceso.esPlataforma) {
     if (!(await quedaOtroDueno(fila.venueId, fila.userId))) {
       return {
         status: 'error',
@@ -255,7 +256,15 @@ export const sacarDelEquipoAction = async (memberId: string): Promise<EquipoStat
   const acceso = await assertVenueAccess(fila.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
-  if (fila.role === 'owner' && !(await quedaOtroDueno(fila.venueId, fila.userId))) {
+  // LA PLATAFORMA SI PUEDE, y es la unica excepcion. Sin ella, un sitio cuyo
+  // dueno desaparece —cambio de correo, vendio el bar, se fue— queda congelado
+  // para siempre: no queda quien invite a nadie mas, y esta misma regla impide
+  // reemplazarlo. Es exactamente el caso en que hace falta un operador.
+  if (
+    fila.role === 'owner' &&
+    !acceso.acceso.esPlataforma &&
+    !(await quedaOtroDueno(fila.venueId, fila.userId))
+  ) {
     return {
       status: 'error',
       error: 'Es el único dueño. El sitio no puede quedarse sin dueño.',

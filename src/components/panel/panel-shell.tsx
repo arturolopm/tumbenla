@@ -18,6 +18,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { MenuCuenta } from '@/components/layout/menu-cuenta'
 
 /**
  * El panel de un sitio, para su dueno y su personal.
@@ -27,12 +28,22 @@ import {
  * administra un sitio. Compartirlos obligaria a que cada item del menu supiera
  * cual de los dos paneles lo esta pintando, que es como se termina con un
  * enlace de operacion visible para el mesero de un bar.
+ *
+ * MenuCuenta va en la cabecera, y no solo en la barra publica: es el conmutador
+ * de sombreros. La misma persona puede salir de rumba Y tener un bar —lo
+ * personal cuelga de photo_claim, lo laboral de venue_member, sobre la MISMA
+ * cuenta— y hasta ahora quien entraba al panel se quedaba sin ninguna de las
+ * dos salidas, ni a /mi-historia ni a Salir, porque SiteNav solo se pinta en
+ * (publico).
  */
 
 type Sitio = { slug: string; nombre: string; role: string }
 
 const items = (slug: string, esDueno: boolean) => [
   { href: `/panel/${slug}`, label: 'Resumen', exacto: true },
+  { href: `/panel/${slug}/noches`, label: 'Las noches' },
+  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
+  { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
   { href: `/panel/${slug}/noches`, label: 'Las noches' },
   { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
   { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
@@ -127,6 +138,9 @@ export function PanelShell({
               Estás entrando como operación
             </span>
           ) : null}
+          <div className="ml-auto">
+            <MenuCuenta />
+          </div>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
       </SidebarInset>

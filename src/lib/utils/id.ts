@@ -19,7 +19,7 @@ export const ID_PREFIX = {
   photoClaim: 'pcl',
   venueMember: 'vmb',
   venueInvitation: 'vin',
-  venueClaimRequest: 'vcr',
+  venueApplication: 'vap',
   photoReport: 'prp',
   venueContribution: 'vco',
   venueContributionMedia: 'vcm',
