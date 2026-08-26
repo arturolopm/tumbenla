@@ -7,6 +7,7 @@ import { useState } from 'react'
 
 import { useSession } from '@/lib/auth/auth-client'
 import { cn } from '@/lib/utils/css'
+import { MenuCuenta } from './menu-cuenta'
 
 /**
  * La barra de Stitch: fija, translucida con grano, y con un borde inferior
@@ -14,8 +15,9 @@ import { cn } from '@/lib/utils/css'
  * que es el unico lugar del sitio donde la lima aparece fuera del mapa.
  *
  * La pantalla de Stitch tenia un cuarto item, "Eventos", y un avatar de perfil.
- * Ninguno de los dos existe: no hay tabla de eventos ni cuentas publicas. El
- * cuarto slot lo ocupa Transparencia, que si tiene datos detras.
+ * "Eventos" sigue sin existir: no hay tabla de eventos. El cuarto slot lo ocupa
+ * Transparencia, que si tiene datos detras. El control de cuenta si existe ya,
+ * en MenuCuenta, porque el producto tiene tres tipos de persona con sesion.
  */
 
 const LINKS = [
@@ -62,6 +64,7 @@ export function SiteNav() {
               active={isActive('/mi-historia')}
             />
           ) : null}
+          <MenuCuenta />
         </nav>
 
         <button
@@ -95,6 +98,7 @@ export function SiteNav() {
               onClick={() => setOpen(false)}
             />
           ) : null}
+          <MenuCuenta variant="movil" />
         </div>
       ) : null}
     </header>

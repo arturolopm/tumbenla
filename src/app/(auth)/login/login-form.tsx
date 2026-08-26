@@ -18,6 +18,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
+import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/redirect'
 import { cn, getBaseUrl } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
@@ -26,13 +27,13 @@ const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []
 
   if (!emailValue || !emailValue.trim()) {
-    errors.push('Email is required.')
+    errors.push('Escribe tu correo.')
     return errors
   }
 
   const validation = quickValidateEmail(emailValue.trim().toLowerCase())
   if (!validation.isValid) {
-    errors.push(validation.reason || 'Please enter a valid email address.')
+    errors.push(validation.reason || 'Ese correo no parece valido.')
   }
 
   return errors
@@ -41,30 +42,12 @@ const validateEmailField = (emailValue: string): string[] => {
 const PASSWORD_VALIDATIONS = {
   required: {
     test: (value: string) => Boolean(value && typeof value === 'string'),
-    message: 'Password is required.',
+    message: 'Escribe tu contraseña.',
   },
   notEmpty: {
     test: (value: string) => value.trim().length > 0,
-    message: 'Password cannot be empty.',
+    message: 'La contraseña no puede ir vacia.',
   },
-}
-
-const validateCallbackUrl = (url: string): boolean => {
-  try {
-    if (url.startsWith('/')) {
-      return true
-    }
-
-    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : ''
-    if (url.startsWith(currentOrigin)) {
-      return true
-    }
-
-    return false
-  } catch (error) {
-    console.error('Error validating callback URL:', { error, url })
-    return false
-  }
 }
 
 const validatePassword = (passwordValue: string): string[] => {
@@ -106,7 +89,7 @@ export default function LoginPage({
   const [showValidationError, setShowValidationError] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
 
-  const [callbackUrl, setCallbackUrl] = useState('/dashboard')
+  const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
 
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
@@ -128,16 +111,7 @@ export default function LoginPage({
       return
     }
 
-    const callback = searchParams.get('callbackUrl')
-    if (!callback) {
-      return
-    }
-
-    if (validateCallbackUrl(callback)) {
-      setCallbackUrl(callback)
-    } else {
-      console.warn('Invalid callback URL detected and blocked:', { url: callback })
-    }
+    setCallbackUrl(leerDestino(searchParams))
   }, [searchParams])
 
   useEffect(() => {
@@ -193,7 +167,7 @@ export default function LoginPage({
     }
 
     try {
-      const safeCallbackUrl = validateCallbackUrl(callbackUrl) ? callbackUrl : '/dashboard'
+      const safeCallbackUrl = esDestinoValido(callbackUrl) ? callbackUrl : DESTINO_POR_DEFECTO
 
       const result = await client.signIn.email(
         {
@@ -213,45 +187,50 @@ export default function LoginPage({
               if (typeof window !== 'undefined') {
                 sessionStorage.setItem('verificationEmail', email)
               }
-              router.push('/verify?fromSignup=false')
+              // El destino viaja hasta la verificacion. Sin esto, quien llega
+              // por un enlace de invitacion y todavia no ha verificado el
+              // correo termina en el despachador y pierde la invitacion.
+              router.push(
+                `/verify?fromSignup=false&redirectAfter=${encodeURIComponent(safeCallbackUrl)}`
+              )
               setIsLoading(false)
               return
             }
 
-            const errorMessage: string[] = ['Invalid email or password']
+            const errorMessage: string[] = ['Correo o contraseña incorrectos']
             if (
               ctx.error.code?.includes('BAD_REQUEST') ||
               ctx.error.message?.includes('Email and password sign in is not enabled')
             ) {
-              errorMessage.push('Email sign in is currently disabled.')
+              errorMessage.push('Entrar con correo esta desactivado ahora mismo.')
             } else if (
               ctx.error.code?.includes('INVALID_CREDENTIALS') ||
               ctx.error.message?.includes('invalid password')
             ) {
-              errorMessage.push('Invalid email or password. Please try again.')
+              errorMessage.push('Correo o contraseña incorrectos. Intenta de nuevo.')
             } else if (
               ctx.error.code?.includes('USER_NOT_FOUND') ||
               ctx.error.message?.includes('not found')
             ) {
-              errorMessage.push('No account found with this email. Please sign up first.')
+              errorMessage.push('No hay ninguna cuenta con ese correo. Crea una primero.')
             } else if (ctx.error.code?.includes('MISSING_CREDENTIALS')) {
-              errorMessage.push('Please enter both email and password.')
+              errorMessage.push('Faltan el correo o la contraseña.')
             } else if (ctx.error.code?.includes('EMAIL_PASSWORD_DISABLED')) {
-              errorMessage.push('Email and password login is disabled.')
+              errorMessage.push('Entrar con correo y contraseña esta desactivado.')
             } else if (ctx.error.code?.includes('FAILED_TO_CREATE_SESSION')) {
-              errorMessage.push('Failed to create session. Please try again later.')
+              errorMessage.push('No se pudo abrir la sesion. Intenta mas tarde.')
             } else if (ctx.error.code?.includes('too many attempts')) {
               errorMessage.push(
-                'Too many login attempts. Please try again later or reset your password.'
+                'Demasiados intentos. Espera un rato o cambia tu contraseña.'
               )
             } else if (ctx.error.code?.includes('account locked')) {
               errorMessage.push(
-                'Your account has been locked for security. Please reset your password.'
+                'Tu cuenta quedo bloqueada por seguridad. Cambia tu contraseña.'
               )
             } else if (ctx.error.code?.includes('network')) {
-              errorMessage.push('Network error. Please check your connection and try again.')
+              errorMessage.push('Falló la conexion. Revisa tu internet e intenta de nuevo.')
             } else if (ctx.error.message?.includes('rate limit')) {
-              errorMessage.push('Too many requests. Please wait a moment before trying again.')
+              errorMessage.push('Demasiadas peticiones. Espera un momento.')
             }
 
             setPasswordErrors(errorMessage)
@@ -269,7 +248,7 @@ export default function LoginPage({
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('verificationEmail', email)
         }
-        router.push('/verify')
+        router.push(`/verify?redirectAfter=${encodeURIComponent(callbackUrl)}`)
         return
       }
 
@@ -283,7 +262,7 @@ export default function LoginPage({
     if (!forgotPasswordEmail) {
       setResetStatus({
         type: 'error',
-        message: 'Please enter your email address',
+        message: 'Escribe tu correo',
       })
       return
     }
@@ -292,7 +271,7 @@ export default function LoginPage({
     if (!emailValidation.isValid) {
       setResetStatus({
         type: 'error',
-        message: 'Please enter a valid email address',
+        message: 'Ese correo no parece valido',
       })
       return
     }
@@ -314,20 +293,20 @@ export default function LoginPage({
 
       if (!response.ok) {
         const errorData = await response.json()
-        let errorMessage = errorData.message || 'Failed to request password reset'
+        let errorMessage = errorData.message || 'No se pudo pedir el cambio de contraseña'
 
         if (
           errorMessage.includes('Invalid body parameters') ||
           errorMessage.includes('invalid email')
         ) {
-          errorMessage = 'Please enter a valid email address'
+          errorMessage = 'Ese correo no parece valido'
         } else if (errorMessage.includes('Email is required')) {
-          errorMessage = 'Please enter your email address'
+          errorMessage = 'Escribe tu correo'
         } else if (
           errorMessage.includes('user not found') ||
           errorMessage.includes('User not found')
         ) {
-          errorMessage = 'No account found with this email address'
+          errorMessage = 'No hay ninguna cuenta con ese correo'
         }
 
         throw new Error(errorMessage)
@@ -335,7 +314,7 @@ export default function LoginPage({
 
       setResetStatus({
         type: 'success',
-        message: 'Password reset link sent to your email',
+        message: 'Te mandamos un enlace para cambiarla.',
       })
 
       setTimeout(() => {
@@ -346,33 +325,41 @@ export default function LoginPage({
       console.error('Error requesting password reset:', { error })
       setResetStatus({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Failed to request password reset',
+        message:
+          error instanceof Error ? error.message : 'No se pudo pedir el cambio de contraseña.',
       })
     } finally {
       setIsSubmittingReset(false)
     }
   }
 
-  const hasSocial = githubAvailable || googleAvailable
+  // Los cuatro, no solo dos: con solo Microsoft configurado el divisor
+  // desaparecia y los botones sociales igual se pintaban debajo.
+  const hasSocial =
+    githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
   const showDivider = hasSocial
 
   return (
     <>
-      <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>Sign in</h1>
-        <p className='font-[380] text-[16px] text-muted-foreground'>Enter your details</p>
+      <div className='space-y-2 text-center'>
+        <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
+          Entra
+        </h1>
+        <p className='text-body-md text-muted-foreground'>
+          Para ver tus noches y lo que pusieron.
+        </p>
       </div>
 
       <form onSubmit={onSubmit} className={`mt-8 space-y-8`}>
         <div className='space-y-6'>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <Label htmlFor='email'>Email</Label>
+              <Label htmlFor='email'>Correo</Label>
             </div>
             <Input
               id='email'
               name='email'
-              placeholder='Enter your email'
+              placeholder='tu@correo.com'
               required
               autoCapitalize='none'
               size={'lg'}
@@ -381,14 +368,14 @@ export default function LoginPage({
               value={email}
               onChange={handleEmailChange}
               className={cn(
-                'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                 showEmailValidationError &&
                   emailErrors.length > 0 &&
-                  'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                  'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
             {showEmailValidationError && emailErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-red-400 text-xs'>
+              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                 {emailErrors.map((error, index) => (
                   <p key={index}>{error}</p>
                 ))}
@@ -397,13 +384,13 @@ export default function LoginPage({
           </div>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <Label htmlFor='password'>Password</Label>
+              <Label htmlFor='password'>Contraseña</Label>
               <button
                 type='button'
                 onClick={() => setForgotPasswordOpen(true)}
                 className='font-medium text-muted-foreground text-xs transition hover:text-foreground'
               >
-                Forgot password?
+                ¿Olvidaste la contraseña?
               </button>
             </div>
             <div className='relative'>
@@ -415,28 +402,28 @@ export default function LoginPage({
                 autoCapitalize='none'
                 autoComplete='current-password'
                 autoCorrect='off'
-                placeholder='Enter your password'
+                placeholder='Tu contraseña'
                 value={password}
                 size={'lg'}
                 onChange={handlePasswordChange}
                 className={cn(
-                  'pr-10 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                  'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                   showValidationError &&
                     passwordErrors.length > 0 &&
-                    'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                    'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
               <button
                 type='button'
                 onClick={() => setShowPassword(!showPassword)}
-                className='-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 transition hover:text-gray-700'
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className='-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground transition-colors hover:text-primary-text'
+                aria-label={showPassword ? 'Ocultar la contraseña' : 'Ver la contraseña'}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             {showValidationError && passwordErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-red-400 text-xs'>
+              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                 {passwordErrors.map((error, index) => (
                   <p key={index}>{error}</p>
                 ))}
@@ -450,11 +437,11 @@ export default function LoginPage({
           size='lg'
           onMouseEnter={() => setIsButtonHovered(true)}
           onMouseLeave={() => setIsButtonHovered(false)}
-          className='group inline-flex w-full items-center justify-center gap-2 rounded-[10px] py-[6px] pr-[10px] pl-[12px] text-[15px] text-white shadow-[inset_0_2px_4px_0_#9B77FF] transition-all'
+          className='group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
           disabled={isLoading}
         >
           <span className='flex items-center gap-1'>
-            {isLoading ? 'Signing in...' : 'Sign in'}
+            {isLoading ? 'Entrando…' : 'Entrar'}
             <span className='inline-flex transition-transform duration-200 group-hover:translate-x-0.5'>
               {isButtonHovered ? (
                 <ArrowRight className='h-4 w-4' aria-hidden='true' />
@@ -470,10 +457,10 @@ export default function LoginPage({
       {showDivider && (
         <div className='relative my-6 font-light'>
           <div className='absolute inset-0 flex items-center'>
-            <div className='w-full border-t border-gray-200' />
+            <div className='w-full border-border border-t' />
           </div>
           <div className='relative flex justify-center text-sm'>
-            <span className='bg-background px-4 font-[340] text-muted-foreground'>Or continue with</span>
+            <span className='bg-background px-4 text-muted-foreground'>o entra con</span>
           </div>
         </div>
       )}
@@ -492,67 +479,67 @@ export default function LoginPage({
       )}
 
       <div className='pt-6 text-center text-[14px] font-light'>
-        <span className='font-normal'>Don't have an account? </span>
+        <span>¿Todavia no tienes cuenta? </span>
         <Link
-          href={`/register?callbackUrl=${callbackUrl}`}
-          className='font-medium text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          href={`/register?redirectAfter=${encodeURIComponent(callbackUrl)}`}
+          className='font-display text-primary-text uppercase underline-offset-4 hover:underline'
         >
-          Sign up
+          Crea una
         </Link>
       </div>
 
       <div className='absolute inset-x-0 bottom-0 px-8 pb-8 text-center text-[13px] font-[340] leading-relaxed text-muted-foreground sm:px-8 md:px-[44px]'>
-        By signing in, you agree to our{' '}
+        Al entrar aceptas los{' '}
         <Link
-          href='/terms'
+          href='/terminos'
           target='_blank'
           rel='noopener noreferrer'
-          className='text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          className='text-primary-text underline-offset-4 transition hover:underline'
         >
-          Terms of Service
+          términos
         </Link>{' '}
-        and{' '}
+        y la{' '}
         <Link
-          href='/privacy'
+          href='/privacidad'
           target='_blank'
           rel='noopener noreferrer'
-          className='text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          className='text-primary-text underline-offset-4 transition hover:underline'
         >
-          Privacy Policy
+          política de privacidad
         </Link>
       </div>
 
       <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
         <DialogPopup>
           <DialogHeader>
-            <DialogTitle className='text-xl font-semibold tracking-tight text-foreground'>
-              Reset Password
+            <DialogTitle className='font-display font-bold text-headline-md uppercase'>
+              Recuperar la contraseña
             </DialogTitle>
-            <DialogDescription className='text-sm text-muted-foreground'>
-              Enter your email address and we'll send you a link to reset your password if your
-              account exists.
+            <DialogDescription className='text-body-md text-muted-foreground'>
+              Escribe tu correo. Si hay una cuenta con ese correo, te llega un enlace para
+              ponerle una contraseña nueva.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className='space-y-4'>
             <div className='space-y-2'>
               <div className='flex items-center justify-between'>
-                <Label htmlFor='reset-email'>Email</Label>
+                <Label htmlFor='reset-email'>Correo</Label>
               </div>
               <Input
                 id='reset-email'
                 value={forgotPasswordEmail}
                 onChange={(event) => setForgotPasswordEmail(event.target.value)}
-                placeholder='Enter your email'
+                placeholder='tu@correo.com'
                 size={'lg'}
                 type='email'
                 className={cn(
-                  'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                  'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                   resetStatus.type === 'error' &&
-                    'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                    'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
               {resetStatus.type === 'error' && (
-                <div className='mt-1 space-y-1 text-xs text-red-400'>
+                <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                   <p>{resetStatus.message}</p>
                 </div>
               )}
@@ -569,11 +556,11 @@ export default function LoginPage({
               onClick={handleForgotPassword}
               onMouseEnter={() => setIsResetButtonHovered(true)}
               onMouseLeave={() => setIsResetButtonHovered(false)}
-              className='group inline-flex items-center justify-center gap-2 rounded-[10px] border border-blue-400 bg-blue-400 px-4 py-2 text-[15px] text-white shadow-[inset_0_2px_4px_0_#9B77FF] transition-all'
+              className='group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
               disabled={isSubmittingReset}
             >
               <span className='flex items-center gap-1'>
-                {isSubmittingReset ? 'Sending...' : 'Send Reset Link'}
+                {isSubmittingReset ? 'Mandando…' : 'Mandar el enlace'}
                 <span className='inline-flex transition-transform duration-200 group-hover:translate-x-0.5'>
                   {isResetButtonHovered ? (
                     <ArrowRight className='h-4 w-4' aria-hidden='true' />

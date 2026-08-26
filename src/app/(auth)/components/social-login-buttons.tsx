@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { GitHubIcon, GoogleIcon, MicrosoftIcon, FacebookIcon } from './icons'
 import { Button } from '@/components/ui/button'
 import { client } from '@/lib/auth/auth-client'
+import { DESTINO_POR_DEFECTO } from '@/lib/auth/redirect'
 
 interface SocialLoginButtonsProps {
   githubAvailable: boolean
@@ -20,7 +21,7 @@ export function SocialLoginButtons({
   googleAvailable,
   microsoftAvailable,
   facebookAvailable,
-  callbackURL = '/dashboard',
+  callbackURL = DESTINO_POR_DEFECTO,
   children,
 }: SocialLoginButtonsProps) {
   const [isGithubLoading, setIsGithubLoading] = useState(false)

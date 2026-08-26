@@ -206,7 +206,10 @@ export const auth = betterAuth({
   pages: {
     signIn: '/login',
     signUp: '/register',
-    error: '/error',
+    // No hay ruta /error en este proyecto; el 404 de la app es mejor destino
+    // que una ruta inexistente, que en Next devuelve el not-found igual pero
+    // sin que nadie lo haya decidido.
+    error: '/',
     verify: '/verify',
   },
 })

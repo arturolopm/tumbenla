@@ -9,20 +9,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
+import { DESTINO_POR_DEFECTO, leerDestino } from '@/lib/auth/redirect'
 import { cn } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 
 const getSignUpErrorMessage = (error: { message?: string; code?: string } | null | undefined) => {
   if (!error) {
-    return 'Could not create your account. Please try again.'
+    return 'No se pudo crear tu cuenta. Intenta de nuevo.'
   }
 
   if (isDuplicateEmailError(error)) {
-    return 'An account with this email already exists. Sign in instead, or use a different email.'
+    return 'Ya hay una cuenta con ese correo. Entra con ella, o usa otro correo.'
   }
 
-  return error.message || 'Could not create your account. Please try again.'
+  return error.message || 'No se pudo crear tu cuenta. Intenta de nuevo.'
 }
 
 function isDuplicateEmailError(error: { message?: string; code?: string } | null | undefined) {
@@ -72,13 +73,13 @@ const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []
 
   if (!emailValue || !emailValue.trim()) {
-    errors.push('Email is required.')
+    errors.push('Escribe tu correo.')
     return errors
   }
 
   const validation = quickValidateEmail(emailValue.trim().toLowerCase())
   if (!validation.isValid) {
-    errors.push(validation.reason || 'Please enter a valid email address.')
+    errors.push(validation.reason || 'Ese correo no parece valido.')
   }
 
   return errors
@@ -87,7 +88,7 @@ const validateEmailField = (emailValue: string): string[] => {
 const PASSWORD_VALIDATIONS = {
   minLength: {
     test: (value: string) => value.length >= 8,
-    message: 'Password must be at least 8 characters long.',
+    message: 'La contraseña necesita al menos 8 caracteres.',
   },
 }
 
@@ -134,19 +135,11 @@ export default function RegisterForm({
   const [showEmailValidationError, setShowEmailValidationError] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  const [callbackUrl, setCallbackUrl] = useState('/dashboard')
+  const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
 
   useEffect(() => {
     setMounted(true)
-
-    if (!searchParams) {
-      return
-    }
-
-    const callback = searchParams.get('callbackUrl')
-    if (callback?.startsWith('/')) {
-      setCallbackUrl(callback)
-    }
+    setCallbackUrl(leerDestino(searchParams))
   }, [searchParams])
 
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,7 +150,7 @@ export default function RegisterForm({
     const errors: string[] = []
 
     if (!trimmed) {
-      errors.push('Name is required.')
+      errors.push('Escribe tu nombre.')
     }
 
     setNameErrors(errors)
@@ -195,7 +188,7 @@ export default function RegisterForm({
 
     const nameValidationErrors: string[] = []
     if (!nameValue) {
-      nameValidationErrors.push('Name is required.')
+      nameValidationErrors.push('Escribe tu nombre.')
     }
     setNameErrors(nameValidationErrors)
     setShowNameValidationError(nameValidationErrors.length > 0)
@@ -227,7 +220,7 @@ export default function RegisterForm({
       }
 
       if (prep === 'failed') {
-        setSubmitError('Could not prepare signup. Please try again.')
+        setSubmitError('No se pudo empezar el registro. Intenta de nuevo.')
         setIsLoading(false)
         return
       }
@@ -251,7 +244,9 @@ export default function RegisterForm({
         sessionStorage.setItem('verificationEmail', emailValue)
       }
 
-      router.push('/verify?fromSignup=true')
+      router.push(
+        `/verify?fromSignup=true&redirectAfter=${encodeURIComponent(callbackUrl)}`
+      )
     } catch (error) {
       console.error('Signup error:', error)
       setSubmitError('Could not create your account. Please try again.')
@@ -265,35 +260,39 @@ export default function RegisterForm({
 
   return (
     <>
-      <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>Create an account</h1>
-        <p className='font-[380] text-[16px] text-muted-foreground'>Enter your details</p>
+      <div className='space-y-2 text-center'>
+        <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
+          Crea tu cuenta
+        </h1>
+        <p className='text-body-md text-muted-foreground'>
+          Para guardar tus noches y ver lo que pusieron.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className='mt-8 space-y-8'>
         <div className='space-y-6'>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <Label htmlFor='name'>Full name</Label>
+              <Label htmlFor='name'>Nombre</Label>
             </div>
             <Input
               id='name'
               name='name'
-              placeholder='Enter your name'
+              placeholder='Como te dicen'
               autoCapitalize='words'
               autoComplete='name'
               value={name}
               onChange={handleNameChange}
               size='lg'
               className={cn(
-                'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                 showNameValidationError &&
                   nameErrors.length > 0 &&
-                  'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                  'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
             {showNameValidationError && nameErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-xs text-red-400'>
+              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                 {nameErrors.map((error, index) => (
                   <p key={index}>{error}</p>
                 ))}
@@ -303,12 +302,12 @@ export default function RegisterForm({
 
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <Label htmlFor='email'>Email</Label>
+              <Label htmlFor='email'>Correo</Label>
             </div>
             <Input
               id='email'
               name='email'
-              placeholder='Enter your email'
+              placeholder='tu@correo.com'
               required
               autoCapitalize='none'
               autoComplete='email'
@@ -317,14 +316,14 @@ export default function RegisterForm({
               onChange={handleEmailChange}
               size='lg'
               className={cn(
-                'transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                 showEmailValidationError &&
                   emailErrors.length > 0 &&
-                  'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                  'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
             {showEmailValidationError && emailErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-xs text-red-400'>
+              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                 {emailErrors.map((error, index) => (
                   <p key={index}>{error}</p>
                 ))}
@@ -334,7 +333,7 @@ export default function RegisterForm({
 
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-              <Label htmlFor='password'>Password</Label>
+              <Label htmlFor='password'>Contraseña</Label>
             </div>
             <div className='relative'>
               <Input
@@ -345,28 +344,28 @@ export default function RegisterForm({
                 autoCapitalize='none'
                 autoComplete='new-password'
                 autoCorrect='off'
-                placeholder='Enter your password'
+                placeholder='Al menos 8 caracteres'
                 value={password}
                 size='lg'
                 onChange={handlePasswordChange}
                 className={cn(
-                  'pr-10 transition-colors focus:border-gray-400 focus:ring-2 focus:ring-gray-100',
+                  'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                   showValidationError &&
                     passwordErrors.length > 0 &&
-                    'border-red-500 focus:border-red-500 focus:ring-red-100 focus-visible:ring-red-500'
+                    'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
               <button
                 type='button'
                 onClick={() => setShowPassword(!showPassword)}
-                className='-translate-y-1/2 absolute top-1/2 right-3 text-gray-500 transition hover:text-gray-700'
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className='-translate-y-1/2 absolute top-1/2 right-3 text-muted-foreground transition-colors hover:text-primary-text'
+                aria-label={showPassword ? 'Ocultar la contraseña' : 'Ver la contraseña'}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
             {showValidationError && passwordErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-xs text-red-400'>
+              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
                 {passwordErrors.map((error, index) => (
                   <p key={index}>{error}</p>
                 ))}
@@ -376,11 +375,11 @@ export default function RegisterForm({
         </div>
 
         {submitError ? (
-          <p className='text-center text-sm text-red-400' role='alert'>
+          <p className='text-center text-body-sm text-destructive-foreground' role='alert'>
             {submitError}{' '}
-            {submitError.includes('already exists') ? (
+            {submitError.includes('Ya hay una cuenta') ? (
               <Link href='/login' className='underline underline-offset-2'>
-                Sign in
+                Entrar
               </Link>
             ) : null}
           </p>
@@ -391,11 +390,11 @@ export default function RegisterForm({
           size='lg'
           onMouseEnter={() => setIsButtonHovered(true)}
           onMouseLeave={() => setIsButtonHovered(false)}
-          className='group inline-flex w-full items-center justify-center gap-2 rounded-[10px] py-[6px] pr-[10px] pl-[12px] text-[15px] text-white shadow-[inset_0_2px_4px_0_#9B77FF] transition-all'
+          className='group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
           disabled={isLoading}
         >
           <span className='flex items-center gap-1'>
-            {isLoading ? 'Creating account...' : 'Create account'}
+            {isLoading ? 'Creando…' : 'Crear cuenta'}
             <span className='inline-flex transition-transform duration-200 group-hover:translate-x-0.5'>
               {isButtonHovered ? (
                 <ArrowRight className='h-4 w-4' aria-hidden='true' />
@@ -410,10 +409,10 @@ export default function RegisterForm({
       {showDivider && (
         <div className='relative my-6 font-light'>
           <div className='absolute inset-0 flex items-center'>
-            <div className='w-full border-t border-gray-200' />
+            <div className='w-full border-border border-t' />
           </div>
           <div className='relative flex justify-center text-sm'>
-            <span className='bg-background px-4 font-[340] text-muted-foreground'>Or continue with</span>
+            <span className='bg-background px-4 text-muted-foreground'>o entra con</span>
           </div>
         </div>
       )}
@@ -432,33 +431,33 @@ export default function RegisterForm({
       )}
 
       <div className='pt-6 text-center text-[14px] font-light'>
-        <span className='font-normal'>Already have an account? </span>
+        <span>¿Ya tienes cuenta? </span>
         <Link
-          href={`/login?callbackUrl=${callbackUrl}`}
-          className='font-medium text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          href={`/login?redirectAfter=${encodeURIComponent(callbackUrl)}`}
+          className='font-display text-primary-text uppercase underline-offset-4 hover:underline'
         >
-          Sign in
+          Entra
         </Link>
       </div>
 
       <div className='absolute inset-x-0 bottom-0 px-8 pb-8 text-center text-[13px] font-[340] leading-relaxed text-muted-foreground sm:px-8 md:px-[44px]'>
-        By creating an account, you agree to our{' '}
+        Al crear la cuenta aceptas los{' '}
         <Link
-          href='/terms'
+          href='/terminos'
           target='_blank'
           rel='noopener noreferrer'
-          className='text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          className='text-primary-text underline-offset-4 transition hover:underline'
         >
-          Terms of Service
+          términos
         </Link>{' '}
-        and{' '}
+        y la{' '}
         <Link
-          href='/privacy'
+          href='/privacidad'
           target='_blank'
           rel='noopener noreferrer'
-          className='text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+          className='text-primary-text underline-offset-4 transition hover:underline'
         >
-          Privacy Policy
+          política de privacidad
         </Link>
       </div>
     </>
