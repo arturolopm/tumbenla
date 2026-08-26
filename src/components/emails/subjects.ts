@@ -7,6 +7,7 @@ export type EmailSubjectType =
   | 'forget-password'
   | 'reset-password'
   | 'invitation'
+  | 'venue-invitation'
   | 'welcome'
 
 /**
@@ -28,6 +29,10 @@ export function getEmailSubject(type: EmailSubjectType): string {
       return `Reset your ${brandName} password`
     case 'invitation':
       return `You've been invited to join a team on ${brandName}`
+    // El unico asunto en espanol: es el unico de esta lista que le llega a
+    // alguien del producto y no a una cuenta de prueba del boilerplate.
+    case 'venue-invitation':
+      return `Te invitaron a manejar tu sitio en ${brandName}`
     case 'welcome':
       return `Welcome to ${brandName}`
     default:

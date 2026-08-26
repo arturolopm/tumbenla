@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { isAdminEmail } from '@/lib/auth/admin'
 import { auth } from '@/lib/auth/auth'
+import { listMyVenues } from '@/lib/auth/venue-access'
 
 /**
  * El despachador por rol. No pinta nada: lee la sesion y redirige.
@@ -33,6 +34,10 @@ export default async function EntrarPage() {
     redirect('/admin')
   }
 
-  // La etapa 2 mete aca el caso del panel de sitio, consultando venue_member.
+  // Quien trabaja en un sitio entra a su panel. Con varios, /panel pregunta
+  // cual; con uno solo, /panel redirige de una.
+  const sitios = await listMyVenues(session.user.id)
+  if (sitios.length > 0) redirect('/panel')
+
   redirect('/mi-historia')
 }

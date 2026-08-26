@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { isAdminEmail } from '@/lib/auth/admin'
 import { auth } from '@/lib/auth/auth'
+import { listMyVenues } from '@/lib/auth/venue-access'
 
 /**
  * Que puede ver esta persona en el menu de la barra.
@@ -33,11 +34,12 @@ export const GET = async () => {
     )
   }
 
+  const sitios = await listMyVenues(session.user.id)
+
   return NextResponse.json(
     {
       admin: isAdminEmail(session.user.email, session.user.emailVerified),
-      // La etapa 2 lo llena con listMyVenues(session.user.id).
-      sitios: [],
+      sitios: sitios.map((sitio) => ({ slug: sitio.slug, nombre: sitio.nombre })),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

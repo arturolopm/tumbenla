@@ -1,5 +1,6 @@
 import { render } from '@react-email/components'
 import { OTPVerificationEmail, ResetPasswordEmail, WelcomeEmail } from '@/components/emails/auth'
+import { VenueInvitationEmail } from '@/components/emails/venues'
 
 export type { EmailSubjectType } from './subjects'
 export { getEmailSubject } from './subjects'
@@ -21,4 +22,12 @@ export async function renderPasswordResetEmail(
 
 export async function renderWelcomeEmail(userName?: string): Promise<string> {
   return await render(WelcomeEmail({ userName }))
+}
+
+export async function renderVenueInvitationEmail(params: {
+  venueName: string
+  role: 'owner' | 'staff'
+  token: string
+}): Promise<string> {
+  return await render(VenueInvitationEmail(params))
 }

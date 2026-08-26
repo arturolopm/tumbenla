@@ -570,3 +570,116 @@ export const photoClaimRelations = relations(photoClaim, ({ one }) => ({
     references: [user.id],
   }),
 }))
+
+/**
+ * Who works at a venue.
+ *
+ * WHY A TABLE AND NOT A ROLE COLUMN ON user: authorization here is not a
+ * property of a person, it is a property of a pair. The same person can be the
+ * owner of one bar and a waiter at another, and a column cannot say that.
+ *
+ * WHY NOT ADMIN_EMAILS: that env allowlist stays, and it stays exactly as it is,
+ * for OUR operators. It is the most privileged role in the product, it fails
+ * closed, and nobody escalates into it by writing a row. Venue-scoped power is
+ * the opposite case — it is granted by other users, at runtime, per venue — so
+ * it belongs in the database.
+ */
+export const venueMember = pgTable(
+  'venue_member',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueMember)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // 'owner' | 'staff'. Only an owner manages the team; both do the day to day.
+    role: text('role').default('staff').notNull(),
+    /** Who let them in. Kept for the audit trail, not for permissions. Nullable
+     *  because the first owner is let in by an operator, not by a member. */
+    invitedByUserId: text('invited_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // One row per pair: a person has one role at a venue, not a pile of them.
+    uniqueIndex('venue_member_venueId_userId_key').on(table.venueId, table.userId),
+    // "Which venues are mine" runs on every load of the panel.
+    index('venue_member_userId_idx').on(table.userId),
+    index('venue_member_venueId_idx').on(table.venueId),
+  ]
+)
+
+/**
+ * An invitation to join a venue's team.
+ *
+ * ONLY THE HASH OF THE TOKEN IS STORED. The clear token exists in the email and
+ * nowhere else. A read-only leak of this table — a backup, a log, a support
+ * query — must not hand over the ability to join somebody's venue, and storing
+ * the token itself would do exactly that.
+ *
+ * The email is not decoration either: accepting checks that the session's email
+ * matches this one. Without that check, an invite link forwarded to a group
+ * chat lets whoever opens it first into the panel.
+ */
+export const venueInvitation = pgTable(
+  'venue_invitation',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueInvitation)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    /** Always stored lowercased, because it is compared against the session
+     *  email and 'Ana@bar.co' and 'ana@bar.co' are the same person. */
+    email: text('email').notNull(),
+    // 'owner' | 'staff'
+    role: text('role').default('staff').notNull(),
+    /** SHA-256 of the token. See the note above. */
+    tokenHash: text('token_hash').notNull(),
+    invitedByUserId: text('invited_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    expiresAt: timestamp('expires_at').notNull(),
+    acceptedAt: timestamp('accepted_at'),
+    revokedAt: timestamp('revoked_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // The lookup on accept is by hash, and it has to be a single indexed read.
+    uniqueIndex('venue_invitation_tokenHash_key').on(table.tokenHash),
+    index('venue_invitation_venueId_idx').on(table.venueId),
+    index('venue_invitation_email_idx').on(table.email),
+  ]
+)
+
+export const venueMemberRelations = relations(venueMember, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueMember.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [venueMember.userId],
+    references: [user.id],
+  }),
+}))
+
+export const venueInvitationRelations = relations(venueInvitation, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueInvitation.venueId],
+    references: [venue.id],
+  }),
+}))

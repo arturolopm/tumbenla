@@ -13,6 +13,7 @@ import {
 } from 'react'
 
 import type { GeocodeResult } from '@/app/api/geocode/route'
+import { saveMyVenueAction } from '@/app/actions/mi-sitio'
 import { type ActionState, saveVenueAction } from '@/app/actions/venues'
 import { AddressSearch } from '@/components/mapa/address-search'
 import type { PickedLocation } from '@/components/mapa/location-picker'
@@ -62,9 +63,28 @@ const BASIS_LABEL: Record<string, string> = {
 
 const initialState: ActionState = { status: 'idle' }
 
-export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
+/**
+ * El mismo formulario para los dos paneles, con dos diferencias que importan.
+ *
+ * `modo='panel'` esconde el selector de Estado, porque publicar es de la
+ * plataforma. ESCONDERLO NO ES LA PROTECCION: la proteccion es que
+ * saveMyVenueAction lee el status de la base y sobrescribe lo que llegue. Esto
+ * es solo no ofrecer un control que no se puede usar.
+ */
+export function VenueForm({
+  venue,
+  modo = 'admin',
+  onSuccessHref,
+}: {
+  venue?: VenueAdminRow
+  modo?: 'admin' | 'panel'
+  onSuccessHref?: string
+}) {
   const router = useRouter()
-  const [state, formAction, pending] = useActionState(saveVenueAction, initialState)
+  const [state, formAction, pending] = useActionState(
+    modo === 'panel' ? saveMyVenueAction : saveVenueAction,
+    initialState
+  )
 
   const [pledgeType, setPledgeType] = useState<'percentage' | 'fixed_per_unit'>(
     venue?.pledge.type ?? 'percentage'
@@ -80,8 +100,12 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
   const [applied, setApplied] = useState(0)
 
   useEffect(() => {
-    if (state.status === 'success') router.push('/admin/sitios')
-  }, [state, router])
+    if (state.status !== 'success') return
+    router.push(onSuccessHref ?? '/admin/sitios')
+    // El panel se queda en la misma pagina, asi que sin refresh los campos
+    // seguirian mostrando lo de antes de guardar.
+    router.refresh()
+  }, [state, router, onSuccessHref])
 
   const fieldError = (name: string) =>
     state.status === 'error' ? state.fieldErrors?.[name]?.[0] : undefined
@@ -120,15 +144,21 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
             </select>
           </Field>
 
-          <Field label="Estado" error={fieldError('status')}>
-            <select name="status" defaultValue={venue?.status ?? 'draft'} className={inputClass}>
-              {VENUE_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABEL[status]}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {modo === 'admin' ? (
+            <Field label="Estado" error={fieldError('status')}>
+              <select
+                name="status"
+                defaultValue={venue?.status ?? 'draft'}
+                className={inputClass}
+              >
+                {VENUE_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
         </div>
 
         <Field label="Frase corta" hint="Sale debajo del nombre en la tarjeta.">

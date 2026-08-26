@@ -37,6 +37,7 @@ import type {
   EmailProviderName,
 } from './types'
 
+import { getEmailSubject, renderVenueInvitationEmail } from '@/components/emails'
 import { getFromEmailAddress } from './utils'
 import {
   getProvider,
@@ -252,4 +253,41 @@ export async function sendBatchEmails(options: BatchEmailOptions): Promise<Batch
  */
 export function getActiveProviderName(): EmailProviderName {
   return getConfiguredProvider().name
+}
+
+/**
+ * La invitacion a manejar un sitio.
+ *
+ * Vive aca y no en la accion para que la accion no tenga que saber de plantillas
+ * ni de asuntos, igual que el resto de los correos del repo.
+ *
+ * LANZA SI NO SE PUDO MANDAR. sendEmail devuelve un resultado en vez de lanzar,
+ * y su respaldo silencioso es el proveedor `log`: sin RESEND_API_KEY el correo
+ * se escribe en los logs, el despliegue se ve sano y nadie recibe nada. La
+ * accion que invita necesita distinguir "quedo invitada" de "ademas le llego",
+ * asi que aca ese resultado se convierte en excepcion.
+ */
+export async function sendVenueInvitationEmail(params: {
+  to: string
+  venueName: string
+  role: 'owner' | 'staff'
+  token: string
+}): Promise<void> {
+  const html = await renderVenueInvitationEmail({
+    venueName: params.venueName,
+    role: params.role,
+    token: params.token,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject('venue-invitation'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la invitacion')
+  }
 }
