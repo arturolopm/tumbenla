@@ -89,6 +89,10 @@ const toColumns = (input: VenueInput, slug: string) => ({
   coverImageUrl: input.coverImageUrl,
   logoUrl: input.logoUrl,
 
+  // postgres-js quiere decimal como string. Ver la nota en schema.ts.
+  estimatedPerPersonNight:
+    input.estimatedPerPersonNight === null ? null : input.estimatedPerPersonNight.toFixed(2),
+
   verifiedNote: input.verifiedNote,
   status: input.status,
 

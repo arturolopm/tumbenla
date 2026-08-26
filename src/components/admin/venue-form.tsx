@@ -380,6 +380,27 @@ export function VenueForm({
             className={cn(inputClass, 'h-auto py-2')}
           />
         </Field>
+
+        {/* Va aca abajo y no junto al compromiso a proposito: son dos cosas
+            distintas y confundirlas es el riesgo de toda esta pantalla. El
+            compromiso es lo que el sitio se obliga a poner; esto es una
+            estimacion de lo que sale por cada persona en una noche, y en
+            /mi-historia se rotula "estimado" en todas partes. */}
+        <Field
+          label="Aporte estimado por persona, por noche"
+          hint="Opcional. En pesos. Es un ESTIMADO que declara el sitio, no un recibo: se multiplica por cada noche que alguien guarde. Déjalo vacío si no hay una cifra que el sitio respalde; vacío muestra las noches sin pesos, que es mejor que un número inventado."
+          error={fieldError('estimatedPerPersonNight')}
+        >
+          <input
+            name="estimatedPerPersonNight"
+            type="number"
+            step="100"
+            min="0"
+            placeholder="Sin cifra"
+            defaultValue={venue?.estimatedPerPersonNight ?? ''}
+            className={inputClass}
+          />
+        </Field>
       </Section>
 
       <Section title="Contacto">

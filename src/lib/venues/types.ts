@@ -63,6 +63,8 @@ export type Venue = VenueSummary & {
   openingHours: string | null
   logoUrl: string | null
   verifiedNote: string | null
+  /** Numero o null. Nunca 0: ver el porque en schemas.ts. */
+  estimatedPerPersonNight: number | null
   pledgeStartsAt: Date | null
   pledgeEndsAt: Date | null
 }

@@ -495,6 +495,29 @@ export const partyPhoto = pgTable(
     caption: text('caption'),
     // 'pending' | 'available' | 'hidden'
     status: text('status').default('pending').notNull(),
+
+    /** Who uploaded it. Nullable because the account can be deleted and the
+     *  photo may still be claimed by other people in it. */
+    uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * 'venue' | 'guest' | 'platform'. WHO uploaded it, which is not the same as
+     * who may enable it.
+     *
+     * A 'guest' photo is forced to 'pending' no matter what the client sends,
+     * and only the venue moves it to 'available'. That is what stops somebody
+     * uploading photos of a bar they never set foot in and claiming them to pad
+     * their nights: the venue is the gate. Default 'venue' so the rows that
+     * existed before this column keep their meaning.
+     */
+    source: text('source').default('venue').notNull(),
+    /** Who enabled or hid it, and when. The moderation trail for a photo of
+     *  identifiable people is not optional. */
+    reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -744,5 +767,55 @@ export const venueClaimRequestRelations = relations(venueClaimRequest, ({ one })
   user: one(user, {
     fields: [venueClaimRequest.userId],
     references: [user.id],
+  }),
+}))
+
+/**
+ * "En esa foto salgo yo y no quiero."
+ *
+ * WHY A TABLE AND NOT AN EMAIL. Once guests can upload, a photo can contain
+ * somebody who never uploaded it, never claimed it, and never agreed to it.
+ * That person needs a way out, and a privacy request cannot depend on whether
+ * anyone happens to read an inbox. A row can be listed, counted and chased; an
+ * email can be missed.
+ *
+ * Deliberately thin: who, which photo, why, and whether it was dealt with.
+ */
+export const photoReport = pgTable(
+  'photo_report',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.photoReport)),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => partyPhoto.id, { onDelete: 'cascade' }),
+    /** Nullable: the account may go away, the request still has to be honoured. */
+    reportedByUserId: text('reported_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reason: text('reason'),
+    // 'open' | 'resolved'
+    status: text('status').default('open').notNull(),
+    resolvedByUserId: text('resolved_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    resolvedAt: timestamp('resolved_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('photo_report_photoId_idx').on(table.photoId),
+    index('photo_report_status_idx').on(table.status),
+  ]
+)
+
+export const photoReportRelations = relations(photoReport, ({ one }) => ({
+  photo: one(partyPhoto, {
+    fields: [photoReport.photoId],
+    references: [partyPhoto.id],
   }),
 }))

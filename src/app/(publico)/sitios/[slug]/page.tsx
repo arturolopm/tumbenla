@@ -4,7 +4,9 @@ import { notFound } from 'next/navigation'
 
 import { PledgeDetail } from '@/components/sitios/pledge-badge'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
+import { listNightsForVenue } from '@/lib/fiestas/queries'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
+import { formatDate } from '@/lib/utils/format'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { pledgeLabel } from '@/components/sitios/pledge-badge'
 
@@ -60,6 +62,13 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const venue = await getVenueBySlug(slug)
 
   if (!venue) notFound()
+
+  // Esta consulta NO depende de la sesion —solo de noches publicadas y fotos
+  // habilitadas— asi que la pagina sigue siendo estatica y conserva su ISR, del
+  // que depende que la base de Neon duerma. El estado "¿ya reclame esta foto?"
+  // si depende de quien mira, y por eso vive en /sitios/[slug]/noches/[id],
+  // que es dinamica y de bajo volumen por diseno.
+  const noches = await listNightsForVenue(venue.id)
 
   const contactLinks = [
     venue.instagram
@@ -173,6 +182,41 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           </Bloque>
         ) : null}
       </div>
+
+      {noches.length > 0 ? (
+        <section className="mt-10">
+          <h2 className="font-display font-extrabold text-headline-md uppercase">
+            Las noches
+          </h2>
+          <p className="mt-2 max-w-prose text-pretty text-body-md text-muted-foreground">
+            Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en
+            tu historia.
+          </p>
+
+          <ul className="mt-6 flex flex-col gap-2">
+            {noches.map((noche) => (
+              <li key={noche.id}>
+                <Link
+                  href={`/sitios/${venue.slug}/noches/${noche.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-display font-bold uppercase">
+                      {noche.title || formatDate(noche.happenedAt)}
+                    </span>
+                    <span className="block text-muted-foreground text-sm">
+                      {formatDate(noche.happenedAt)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-muted-foreground text-sm">
+                    {noche.photoCount} {noche.photoCount === 1 ? 'foto' : 'fotos'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8">
         <h2 className="font-display font-extrabold text-headline-md uppercase">

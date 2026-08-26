@@ -33,6 +33,8 @@ type Sitio = { slug: string; nombre: string; role: string }
 
 const items = (slug: string, esDueno: boolean) => [
   { href: `/panel/${slug}`, label: 'Resumen', exacto: true },
+  { href: `/panel/${slug}/noches`, label: 'Las noches' },
+  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
   { href: `/panel/${slug}/sitio`, label: 'El sitio' },
   ...(esDueno ? [{ href: `/panel/${slug}/equipo`, label: 'Equipo' }] : []),
 ]

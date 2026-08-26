@@ -70,6 +70,8 @@ export const toVenue = (row: VenueRow): Venue => ({
   website: row.website,
   openingHours: row.openingHours,
   logoUrl: row.logoUrl,
+  estimatedPerPersonNight:
+    row.estimatedPerPersonNight === null ? null : Number(row.estimatedPerPersonNight),
   verifiedNote: row.verifiedNote,
   pledgeStartsAt: row.pledgeStartsAt,
   pledgeEndsAt: row.pledgeEndsAt,

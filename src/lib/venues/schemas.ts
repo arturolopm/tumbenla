@@ -79,6 +79,19 @@ const venueBaseSchema = z.object({
   coverImageUrl: z.string().trim().max(600).optional().transform((v) => (v ? v : null)),
   logoUrl: z.string().trim().max(600).optional().transform((v) => (v ? v : null)),
 
+  /**
+   * El aporte estimado por persona por noche.
+   *
+   * NULLABLE Y NUNCA CERO. Un sitio que no ha dado la cifra muestra sus noches
+   * sin pesos, que es mejor que mostrar un numero que nos inventamos; y cero no
+   * es "no se", cero es "no pongo nada", que de este sitio seria falso. El
+   * vacio del formulario tiene que llegar como null, no como 0.
+   */
+  estimatedPerPersonNight: z
+    .union([z.literal(''), z.coerce.number().gt(0, 'Tiene que ser mayor que cero')])
+    .optional()
+    .transform((v) => (v === '' || v === undefined ? null : v)),
+
   verifiedNote: optionalText,
   status: z.enum(VENUE_STATUSES).default('draft'),
 })
