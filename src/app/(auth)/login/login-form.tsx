@@ -22,6 +22,7 @@ import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/re
 import { cn, getBaseUrl } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
+import { mensajeDeError } from '../fallo-de-red'
 
 const validateEmailField = (emailValue: string): string[] => {
   const errors: string[] = []
@@ -252,7 +253,12 @@ export default function LoginPage({
         return
       }
 
+      // NO se traga el error. Aca cae lo que nunca llego al servidor —el fetch
+      // rechazado— y antes solo se registraba en la consola: el formulario se
+      // desbloqueaba sin decir nada y parecia que el boton no servia.
       console.error('Uncaught login error:', err)
+      setPasswordErrors([mensajeDeError(err, 'No se pudo entrar. Intenta de nuevo.')])
+      setShowValidationError(true)
     } finally {
       setIsLoading(false)
     }

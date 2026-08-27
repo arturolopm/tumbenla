@@ -13,6 +13,7 @@ import { DESTINO_POR_DEFECTO, leerDestino } from '@/lib/auth/redirect'
 import { cn } from '@/lib/utils'
 import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
+import { mensajeDeError } from '../fallo-de-red'
 
 const getSignUpErrorMessage = (error: { message?: string; code?: string } | null | undefined) => {
   if (!error) {
@@ -249,7 +250,11 @@ export default function RegisterForm({
       )
     } catch (error) {
       console.error('Signup error:', error)
-      setSubmitError('Could not create your account. Please try again.')
+      // Estaba en ingles en una app que es toda en espanol, y decia lo mismo
+      // tanto si el servidor rechazo el registro como si la peticion nunca
+      // salio del navegador. Son dos problemas distintos y solo uno se
+      // arregla reintentando.
+      setSubmitError(mensajeDeError(error, 'No se pudo crear tu cuenta. Intenta de nuevo.'))
     } finally {
       setIsLoading(false)
     }

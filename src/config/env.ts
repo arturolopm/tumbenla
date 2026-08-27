@@ -99,6 +99,14 @@ export const env = createEnv({
     // Creem ships separate test/production API keys; set this to use test-api.creem.io
     CREEM_TEST_MODE: z.string().optional(),
 
+    // Variables de sistema de Vercel SIN el prefijo publico. Se leen en tiempo
+    // de ejecucion, no se incrustan en el bundle, y describen ESTE despliegue:
+    // son las direcciones por las que Vercel sirve esta misma app ademas de la
+    // canonica. `auth.ts` las necesita para que el chequeo de origen no rechace
+    // una peticion que la propia app se hizo a si misma.
+    VERCEL_URL: z.string().optional(),
+    VERCEL_BRANCH_URL: z.string().optional(),
+
     // Optional: OAuth
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -217,6 +225,8 @@ export const env = createEnv({
     CREEM_API_KEY: process.env.CREEM_API_KEY,
     CREEM_WEBHOOK_SECRET: process.env.CREEM_WEBHOOK_SECRET,
     CREEM_TEST_MODE: process.env.CREEM_TEST_MODE,
+    VERCEL_URL: process.env.VERCEL_URL,
+    VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_VERCEL_ENV: process.env.NEXT_PUBLIC_VERCEL_ENV,
     NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL:
