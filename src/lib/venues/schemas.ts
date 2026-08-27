@@ -73,11 +73,26 @@ const venueBaseSchema = z.object({
   phone: z.string().trim().max(40).optional().transform((v) => (v ? v : null)),
   whatsapp: z.string().trim().max(40).optional().transform((v) => (v ? v : null)),
   instagram: z.string().trim().max(120).optional().transform((v) => (v ? v : null)),
+  tiktok: z.string().trim().max(120).optional().transform((v) => (v ? v : null)),
+  email: z.string().trim().max(200).optional().transform((v) => (v ? v : null)),
   website: z.string().trim().max(300).optional().transform((v) => (v ? v : null)),
   openingHours: z.string().trim().max(200).optional().transform((v) => (v ? v : null)),
 
   coverImageUrl: z.string().trim().max(600).optional().transform((v) => (v ? v : null)),
   logoUrl: z.string().trim().max(600).optional().transform((v) => (v ? v : null)),
+
+  /**
+   * El aporte estimado por persona por noche.
+   *
+   * NULLABLE Y NUNCA CERO. Un sitio que no ha dado la cifra muestra sus noches
+   * sin pesos, que es mejor que mostrar un numero que nos inventamos; y cero no
+   * es "no se", cero es "no pongo nada", que de este sitio seria falso. El
+   * vacio del formulario tiene que llegar como null, no como 0.
+   */
+  estimatedPerPersonNight: z
+    .union([z.literal(''), z.coerce.number().gt(0, 'Tiene que ser mayor que cero')])
+    .optional()
+    .transform((v) => (v === '' || v === undefined ? null : v)),
 
   verifiedNote: optionalText,
   status: z.enum(VENUE_STATUSES).default('draft'),

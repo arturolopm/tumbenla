@@ -27,7 +27,7 @@ import { PLEDGE_UNITS } from '@/lib/venues/types'
  * ese usuario se queda mirando un boton que no hace nada.
  */
 
-const DESTINO = 'hola@tumbenla.co'
+const DESTINO = 'hola@tumbenla.com'
 
 type Forma = 'percentage' | 'fixed_per_unit'
 

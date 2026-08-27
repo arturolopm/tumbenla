@@ -1,4 +1,4 @@
-import { relations } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
   decimal,
@@ -219,6 +219,10 @@ export const venue = pgTable(
     phone: text('phone'),
     whatsapp: text('whatsapp'),
     instagram: text('instagram'),
+    tiktok: text('tiktok'),
+    /** El correo del SITIO, no el de quien lo administra. Sale de la solicitud
+     *  de alta, donde es obligatorio. */
+    email: text('email'),
     website: text('website'),
     // Free text for now: 'Jue a Sab, 8:00 p.m. a 3:00 a.m.'
     openingHours: text('opening_hours'),
@@ -495,6 +499,29 @@ export const partyPhoto = pgTable(
     caption: text('caption'),
     // 'pending' | 'available' | 'hidden'
     status: text('status').default('pending').notNull(),
+
+    /** Who uploaded it. Nullable because the account can be deleted and the
+     *  photo may still be claimed by other people in it. */
+    uploadedByUserId: text('uploaded_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    /**
+     * 'venue' | 'guest' | 'platform'. WHO uploaded it, which is not the same as
+     * who may enable it.
+     *
+     * A 'guest' photo is forced to 'pending' no matter what the client sends,
+     * and only the venue moves it to 'available'. That is what stops somebody
+     * uploading photos of a bar they never set foot in and claiming them to pad
+     * their nights: the venue is the gate. Default 'venue' so the rows that
+     * existed before this column keep their meaning.
+     */
+    source: text('source').default('venue').notNull(),
+    /** Who enabled or hid it, and when. The moderation trail for a photo of
+     *  identifiable people is not optional. */
+    reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -568,5 +595,380 @@ export const photoClaimRelations = relations(photoClaim, ({ one }) => ({
   user: one(user, {
     fields: [photoClaim.userId],
     references: [user.id],
+  }),
+}))
+
+/**
+ * Who works at a venue.
+ *
+ * WHY A TABLE AND NOT A ROLE COLUMN ON user: authorization here is not a
+ * property of a person, it is a property of a pair. The same person can be the
+ * owner of one bar and a waiter at another, and a column cannot say that.
+ *
+ * WHY NOT ADMIN_EMAILS: that env allowlist stays, and it stays exactly as it is,
+ * for OUR operators. It is the most privileged role in the product, it fails
+ * closed, and nobody escalates into it by writing a row. Venue-scoped power is
+ * the opposite case — it is granted by other users, at runtime, per venue — so
+ * it belongs in the database.
+ */
+export const venueMember = pgTable(
+  'venue_member',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueMember)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // 'owner' | 'staff'. Only an owner manages the team; both do the day to day.
+    role: text('role').default('staff').notNull(),
+    /** Who let them in. Kept for the audit trail, not for permissions. Nullable
+     *  because the first owner is let in by an operator, not by a member. */
+    invitedByUserId: text('invited_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // One row per pair: a person has one role at a venue, not a pile of them.
+    uniqueIndex('venue_member_venueId_userId_key').on(table.venueId, table.userId),
+    // "Which venues are mine" runs on every load of the panel.
+    index('venue_member_userId_idx').on(table.userId),
+    index('venue_member_venueId_idx').on(table.venueId),
+  ]
+)
+
+/**
+ * An invitation to join a venue's team.
+ *
+ * ONLY THE HASH OF THE TOKEN IS STORED. The clear token exists in the email and
+ * nowhere else. A read-only leak of this table — a backup, a log, a support
+ * query — must not hand over the ability to join somebody's venue, and storing
+ * the token itself would do exactly that.
+ *
+ * The email is not decoration either: accepting checks that the session's email
+ * matches this one. Without that check, an invite link forwarded to a group
+ * chat lets whoever opens it first into the panel.
+ */
+export const venueInvitation = pgTable(
+  'venue_invitation',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueInvitation)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    /** Always stored lowercased, because it is compared against the session
+     *  email and 'Ana@bar.co' and 'ana@bar.co' are the same person. */
+    email: text('email').notNull(),
+    // 'owner' | 'staff'
+    role: text('role').default('staff').notNull(),
+    /** SHA-256 of the token. See the note above. */
+    tokenHash: text('token_hash').notNull(),
+    invitedByUserId: text('invited_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    expiresAt: timestamp('expires_at').notNull(),
+    acceptedAt: timestamp('accepted_at'),
+    revokedAt: timestamp('revoked_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // The lookup on accept is by hash, and it has to be a single indexed read.
+    uniqueIndex('venue_invitation_tokenHash_key').on(table.tokenHash),
+    index('venue_invitation_venueId_idx').on(table.venueId),
+    index('venue_invitation_email_idx').on(table.email),
+  ]
+)
+
+export const venueMemberRelations = relations(venueMember, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueMember.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [venueMember.userId],
+    references: [user.id],
+  }),
+}))
+
+export const venueInvitationRelations = relations(venueInvitation, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueInvitation.venueId],
+    references: [venue.id],
+  }),
+}))
+
+/**
+ * "Este sitio es mio, y aqui esta como comprobarlo."
+ *
+ * WHY AN APPLICATION AND NOT A VENUE ROW. Registering used to create the venue
+ * on the spot and hand ownership over immediately. It cannot any more, and that
+ * is the point: the form no longer asks for the pledge or for coordinates —
+ * those get agreed in conversation — and venue.pledge_type, latitude and
+ * longitude are all NOT NULL. There is nothing to insert yet. The venue is born
+ * when an operator approves.
+ *
+ * It also closed a real hole: instant ownership let anybody register a bar they
+ * do not own, and from then on the search told the actual owner "ya tiene
+ * dueño".
+ *
+ * WHY venueId IS NULLABLE. It merges the two paths that used to be separate
+ * screens. Claiming a venue we already loaded and proposing one we do not have
+ * are the SAME application, with or without a venueId. One queue.
+ *
+ * HOW IT IS VERIFIED, which is why these two columns are the NOT NULL ones: we
+ * ask for a DM from the venue's official Instagram. That DM proves whoever sent
+ * it controls the account — it does NOT prove they are the person who filled
+ * the form. So the DM has to quote contactEmail and the operator checks it
+ * matches. Two different things, both required.
+ */
+export const venueApplication = pgTable(
+  'venue_application',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueApplication)),
+    /** Quien aplica, y quien queda de dueno si se aprueba. Sale de la sesion,
+     *  nunca de un campo del formulario. */
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** Solo cuando reclama un sitio que ya existe. Null = propone uno nuevo. */
+    venueId: text('venue_id').references(() => venue.id, { onDelete: 'cascade' }),
+
+    // La propuesta. Lo obligatorio es el minimo para poder verificar.
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    city: text('city').notNull(),
+    addressLine: text('address_line').notNull(),
+    /** El instrumento de verificacion: sin cuenta oficial no hay DM que
+     *  comprobar, y sin eso este MVP no sabe quien es quien. */
+    instagram: text('instagram').notNull(),
+    /** El correo del SITIO, y lo que el DM tiene que citar. */
+    contactEmail: text('contact_email').notNull(),
+
+    tiktok: text('tiktok'),
+    whatsapp: text('whatsapp'),
+    phone: text('phone'),
+    neighborhood: text('neighborhood'),
+    website: text('website'),
+    openingHours: text('opening_hours'),
+    description: text('description'),
+    /** "Que tienes en mente para poner". TEXTO LIBRE, y no toca ninguna columna
+     *  pledge_*: es una idea para llegar a la conversacion con contexto, no un
+     *  compromiso. El compromiso lo escribe un operador cuando ya lo confirmo. */
+    pledgeIdea: text('pledge_idea'),
+
+    // 'pending' | 'verifying' | 'approved' | 'rejected'
+    // 'verifying' separa "no la he mirado" de "esta esperando su DM", que para
+    // quien atiende la cola son dos cosas distintas.
+    status: text('status').default('pending').notNull(),
+    reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at'),
+    reviewNote: text('review_note'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    /**
+     * Una sola solicitud VIVA por cuenta de Instagram.
+     *
+     * Parcial a proposito. Un unique a secas impediria volver a aplicar despues
+     * de un rechazo, que es justo lo que si queremos permitir; y sin ningun
+     * unique, dos personas podrian tener a la vez una solicitud abierta por el
+     * mismo bar. El handle es el ancla porque es unico en el mundo, a
+     * diferencia del nombre de un bar.
+     */
+    uniqueIndex('venue_application_instagram_vivas_key')
+      .on(sql`lower(${table.instagram})`)
+      .where(sql`${table.status} in ('pending', 'verifying')`),
+    index('venue_application_status_idx').on(table.status),
+    index('venue_application_userId_idx').on(table.userId),
+    index('venue_application_venueId_idx').on(table.venueId),
+  ]
+)
+
+export const venueApplicationRelations = relations(venueApplication, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueApplication.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [venueApplication.userId],
+    references: [user.id],
+  }),
+}))
+
+/**
+ * "En esa foto salgo yo y no quiero."
+ *
+ * WHY A TABLE AND NOT AN EMAIL. Once guests can upload, a photo can contain
+ * somebody who never uploaded it, never claimed it, and never agreed to it.
+ * That person needs a way out, and a privacy request cannot depend on whether
+ * anyone happens to read an inbox. A row can be listed, counted and chased; an
+ * email can be missed.
+ *
+ * Deliberately thin: who, which photo, why, and whether it was dealt with.
+ */
+export const photoReport = pgTable(
+  'photo_report',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.photoReport)),
+    photoId: text('photo_id')
+      .notNull()
+      .references(() => partyPhoto.id, { onDelete: 'cascade' }),
+    /** Nullable: the account may go away, the request still has to be honoured. */
+    reportedByUserId: text('reported_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reason: text('reason'),
+    // 'open' | 'resolved'
+    status: text('status').default('open').notNull(),
+    resolvedByUserId: text('resolved_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    resolvedAt: timestamp('resolved_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('photo_report_photoId_idx').on(table.photoId),
+    index('photo_report_status_idx').on(table.status),
+  ]
+)
+
+export const photoReportRelations = relations(photoReport, ({ one }) => ({
+  photo: one(partyPhoto, {
+    fields: [photoReport.photoId],
+    references: [partyPhoto.id],
+  }),
+}))
+
+/**
+ * "En agosto entregué X."
+ *
+ * THE LINK THAT WAS MISSING. Until now the chain on screen jumped straight from
+ * "this bar pledges 10%" to "we bought cement", with nothing in between saying
+ * the bar actually handed anything over. This is that step, and it is reported
+ * by the venue itself.
+ *
+ * WHICH IS EXACTLY WHY IT IS NOT PUBLIC UNTIL WE VERIFY IT. A self-reported
+ * figure published under Tumbenla's name would be the product asserting
+ * something it did not check — and the only thing this product has is that
+ * somebody checked. 'submitted' does not exist for the public; only 'verified'
+ * is ever rendered, and always attributed.
+ */
+export const venueContribution = pgTable(
+  'venue_contribution',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueContribution)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    /** The period the money covers, not when it was handed over. A venue
+     *  reports "August" in September. */
+    periodStart: timestamp('period_start').notNull(),
+    periodEnd: timestamp('period_end').notNull(),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    note: text('note'),
+    submittedByUserId: text('submitted_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    // 'submitted' | 'verified' | 'rejected'
+    status: text('status').default('submitted').notNull(),
+    verifiedByUserId: text('verified_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    verifiedAt: timestamp('verified_at'),
+    verifiedNote: text('verified_note'),
+    /**
+     * Which purchase this money paid for. Nullable on purpose: a contribution
+     * can be verified and not yet spent, and pretending otherwise would force
+     * us to invent a purchase to satisfy a foreign key.
+     */
+    purchaseId: text('purchase_id').references(() => materialPurchase.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('venue_contribution_venueId_idx').on(table.venueId),
+    index('venue_contribution_status_idx').on(table.status),
+    index('venue_contribution_purchaseId_idx').on(table.purchaseId),
+  ]
+)
+
+/** The receipt behind a contribution: a transfer screenshot, an invoice, a
+ *  photo of the handover. A child table rather than a CSV in a column, same as
+ *  material_purchase_media. */
+export const venueContributionMedia = pgTable(
+  'venue_contribution_media',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueContributionMedia)),
+    contributionId: text('contribution_id')
+      .notNull()
+      .references(() => venueContribution.id, { onDelete: 'cascade' }),
+    // 'receipt' | 'transfer' | 'photo'
+    kind: text('kind').default('receipt').notNull(),
+    url: text('url').notNull(),
+    storageKey: text('storage_key'),
+    caption: text('caption'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [index('venue_contribution_media_contributionId_idx').on(table.contributionId)]
+)
+
+export const venueContributionRelations = relations(venueContribution, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [venueContribution.venueId],
+    references: [venue.id],
+  }),
+  purchase: one(materialPurchase, {
+    fields: [venueContribution.purchaseId],
+    references: [materialPurchase.id],
+  }),
+  media: many(venueContributionMedia),
+}))
+
+export const venueContributionMediaRelations = relations(venueContributionMedia, ({ one }) => ({
+  contribution: one(venueContribution, {
+    fields: [venueContributionMedia.contributionId],
+    references: [venueContribution.id],
   }),
 }))

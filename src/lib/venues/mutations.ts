@@ -83,11 +83,17 @@ const toColumns = (input: VenueInput, slug: string) => ({
   phone: input.phone,
   whatsapp: input.whatsapp,
   instagram: input.instagram,
+  tiktok: input.tiktok,
+  email: input.email,
   website: input.website,
   openingHours: input.openingHours,
 
   coverImageUrl: input.coverImageUrl,
   logoUrl: input.logoUrl,
+
+  // postgres-js quiere decimal como string. Ver la nota en schema.ts.
+  estimatedPerPersonNight:
+    input.estimatedPerPersonNight === null ? null : input.estimatedPerPersonNight.toFixed(2),
 
   verifiedNote: input.verifiedNote,
   status: input.status,
@@ -125,7 +131,9 @@ export const updateVenue = async (id: string, input: VenueInput): Promise<VenueA
       // publishedAt records when a venue first went public. Editing a live
       // venue must not move it, or a date-sorted list reshuffles on every save.
       publishedAt:
-        input.status === 'published' ? (current?.publishedAt ?? new Date()) : (current?.publishedAt ?? null),
+        input.status === 'published'
+          ? (current?.publishedAt ?? new Date())
+          : (current?.publishedAt ?? null),
       updatedAt: new Date(),
     })
     .where(eq(venue.id, id))

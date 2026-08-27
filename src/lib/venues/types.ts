@@ -59,10 +59,14 @@ export type Venue = VenueSummary & {
   phone: string | null
   whatsapp: string | null
   instagram: string | null
+  tiktok: string | null
+  email: string | null
   website: string | null
   openingHours: string | null
   logoUrl: string | null
   verifiedNote: string | null
+  /** Numero o null. Nunca 0: ver el porque en schemas.ts. */
+  estimatedPerPersonNight: number | null
   pledgeStartsAt: Date | null
   pledgeEndsAt: Date | null
 }

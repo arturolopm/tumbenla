@@ -20,7 +20,7 @@ export const env = createEnv({
     // app at boot. isTruthy() below does the coercion.
     BILLING_ENABLED: z.string().optional(),
 
-    // Apex domain for sharing the session cookie across subdomains, e.g. '.tumbenla.co'.
+    // Apex domain for sharing the session cookie across subdomains, e.g. '.tumbenla.com'.
     // Left unset, cross-subdomain cookies stay off, which is correct for a single host.
     COOKIE_DOMAIN: z.string().optional(),
 
@@ -61,6 +61,16 @@ export const env = createEnv({
     SMTP_PASS: z.string().optional(),
     SMTP_SECURE: z.string().optional(),
     DEFAULT_FROM_EMAIL: z.string().optional(),
+    /**
+     * A donde van las respuestas.
+     *
+     * Es OTRA direccion que DEFAULT_FROM_EMAIL y tiene que serlo: se envia
+     * desde el subdominio verificado en Resend (send.tumbenla.com), que no
+     * recibe nada, y se responde al buzon real del dominio principal. Sin esto,
+     * el correo de rechazo de una solicitud dice "respondenos a este correo" y
+     * la respuesta cae en un buzon que no existe.
+     */
+    DEFAULT_REPLY_TO: z.string().optional(),
     DEFAULT_FROM_NAME: z.string().optional(),
 
     // Optional: Payment provider selection
@@ -181,6 +191,7 @@ export const env = createEnv({
     SMTP_PASS: process.env.SMTP_PASS,
     SMTP_SECURE: process.env.SMTP_SECURE,
     DEFAULT_FROM_EMAIL: process.env.DEFAULT_FROM_EMAIL,
+    DEFAULT_REPLY_TO: process.env.DEFAULT_REPLY_TO,
     DEFAULT_FROM_NAME: process.env.DEFAULT_FROM_NAME,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,

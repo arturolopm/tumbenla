@@ -39,9 +39,6 @@ export const client = createAuthClient({
 
       console.error('Auth error:', message, context.error)
     },
-    onSuccess(data) {
-      console.log('Auth action successful:', data)
-    },
   },
 })
 

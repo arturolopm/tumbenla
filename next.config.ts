@@ -1,7 +1,40 @@
 import { withSentryConfig } from '@sentry/nextjs'
 import type { NextConfig } from 'next'
 
+/**
+ * El host de R2, sacado de la variable en tiempo de BUILD.
+ *
+ * remotePatterns no admite comodines de host, y la URL del bucket cambia entre
+ * local, preview y produccion, asi que se deriva en vez de escribirse. Y como
+ * se resuelve al construir, cambiar el bucket obliga a REDESPLEGAR: ponerlo en
+ * el panel de Vercel y esperar no basta.
+ *
+ * Sin la variable no se agrega ningun patron y next/image rechaza las remotas,
+ * que es lo correcto: mejor una imagen rota en desarrollo que un optimizador
+ * abierto a cualquier host.
+ */
+const r2Patterns = (() => {
+  const raw = process.env.R2_BUCKET_URL
+  if (!raw) return []
+  try {
+    const url = new URL(raw)
+    return [
+      {
+        protocol: url.protocol.replace(':', '') as 'http' | 'https',
+        hostname: url.hostname,
+        pathname: '/**',
+      },
+    ]
+  } catch {
+    console.warn('R2_BUCKET_URL no es una URL valida; next/image no la va a servir')
+    return []
+  }
+})()
+
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: r2Patterns,
+  },
   // Enable standalone output for Docker optimization
   // This reduces the Docker image size by including only necessary files
   // output: 'standalone',

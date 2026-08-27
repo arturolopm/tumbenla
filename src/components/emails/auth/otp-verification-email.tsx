@@ -13,13 +13,13 @@ interface OTPVerificationEmailProps {
 const getSubjectByType = (type: string, brandName: string) => {
   switch (type) {
     case 'sign-in':
-      return `Sign in to ${brandName}`
+      return `Tu código para entrar a ${brandName}`
     case 'email-verification':
-      return `Verify your email for ${brandName}`
+      return `Tu código de ${brandName}`
     case 'forget-password':
-      return `Reset your ${brandName} password`
+      return `Cambia tu contraseña de ${brandName}`
     default:
-      return `Verification code for ${brandName}`
+      return `Tu código de ${brandName}`
   }
 }
 
@@ -31,20 +31,20 @@ export function OTPVerificationEmail({
 
   return (
     <EmailLayout preview={getSubjectByType(type, brand.name)}>
-      <Text style={baseStyles.paragraph}>Your verification code:</Text>
+      <Text style={baseStyles.paragraph}>Tu código:</Text>
 
       <Section style={baseStyles.codeContainer}>
         <Text style={baseStyles.code}>{otp}</Text>
       </Section>
 
-      <Text style={baseStyles.paragraph}>This code will expire in 15 minutes.</Text>
+      <Text style={baseStyles.paragraph}>Sirve por 15 minutos.</Text>
 
       {/* Divider */}
       <div style={baseStyles.divider} />
 
       <Text style={{ ...baseStyles.footerText, textAlign: 'left' }}>
-        Do not share this code with anyone. If you didn't request this code, you can safely ignore
-        this email.
+        No le compartas este código a nadie. Si no lo pediste, ignora este correo: sin el
+        código no pasa nada.
       </Text>
     </EmailLayout>
   )
