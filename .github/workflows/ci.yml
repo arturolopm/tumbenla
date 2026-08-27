@@ -39,16 +39,29 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/shipfree
-      # `next build` corre con NODE_ENV=production, asi que se topa con los dos
-      # guardarrailes que fallan fuerte a proposito: Better-Auth se niega a
-      # arrancar sin secreto, y getBaseUrl() lanza si no puede deducir la URL.
-      # No son secretos: es un Postgres efimero que muere con el job.
-      BETTER_AUTH_SECRET: solo-para-ci-no-es-un-secreto-de-verdad-0000
       NEXT_PUBLIC_APP_URL: http://localhost:3000
 
     steps:
       - uses: actions/checkout@v4
+
+      # Las dos variables se ARMAN aqui en vez de ir escritas arriba.
+      #
+      # POR QUE: escritas, son una cadena con forma de credencial dentro del
+      # repo, y el escaner de secretos las marca en cada PR. Eran falsos
+      # positivos —el Postgres muere con el job y el secreto decia en su propio
+      # texto que no lo era— pero un check en rojo que siempre se ignora deja de
+      # avisar el dia que la fuga es de verdad.
+      #
+      # El secreto ademas ahora es ALEATORIO por corrida, que es estrictamente
+      # mejor que uno fijo: `next build` corre con NODE_ENV=production y ahi
+      # Better-Auth se niega a arrancar sin uno.
+      - name: Preparar el entorno efimero
+        env:
+          PG_USER: postgres
+          PG_PASS: postgres
+        run: |
+          echo "DATABASE_URL=postgres://$PG_USER:$PG_PASS@localhost:5432/shipfree" >> "$GITHUB_ENV"
+          echo "BETTER_AUTH_SECRET=$(openssl rand -base64 32)" >> "$GITHUB_ENV"
 
       - uses: oven-sh/setup-bun@v2
         with:
