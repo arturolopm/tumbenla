@@ -363,6 +363,33 @@ limite, o los tiles/geocoder que ya se contemplan mover a R2.
 
 ### Trampas que ya mordieron (para no repetirlas)
 
+- **Un despliegue de Vercel se sirve por VARIAS direcciones a la vez, y la
+  sesion tiene que salir hacia la que el navegador esta usando.** El cliente de
+  Better-Auth apuntaba a `getBaseUrl()`, la URL canonica, incrustada en el
+  bundle durante el build. Abrir la app por la URL del despliegue suelto
+  (`tumbenla-7590aq1ux-...`, la que da el panel de Vercel) mandaba el fetch de
+  la sesion hacia la URL de la rama: peticion entre origenes, preflight sin
+  `Access-Control-Allow-Origin`, cortada por el navegador antes de salir. Lo
+  unico que quedaba era `TypeError: Failed to fetch`, que no dice nada. Y
+  detras habia un segundo muro: `trustedOrigins` tenia solo la canonica, asi
+  que el chequeo de origen habria devuelto 403 a la peticion que la propia app
+  se hace a si misma. Regla: **el navegador llama a `window.location.origin`;
+  la canonica es para los enlaces de los correos, que se abren desde afuera.**
+  Y `trustedOrigins` lleva las direcciones de este despliegue leidas en tiempo
+  de ejecucion (`VERCEL_URL`, `VERCEL_BRANCH_URL`), nunca un comodin
+  `*.vercel.app` — eso confiaria en cualquier sitio alojado en Vercel, que es
+  justo lo que el chequeo existe para impedir.
+
+- **Un `catch` que solo hace `console.error` es un boton roto.** Entrar fallaba
+  sin pintar nada: el `finally` devolvia el boton a su estado normal y no
+  aparecia ningun mensaje. Los manejadores de error de Better-Auth solo corren
+  cuando **hubo respuesta**; si la peticion nunca sale, la excepcion cae en el
+  `catch` del formulario, y ahi es donde hay que mostrarla. Peor estaban los
+  cuatro botones sociales: armaban un `errorMessage` completo y lo dejaban
+  morir sin usarlo. `src/app/(auth)/fallo-de-red.ts` reconoce el caso —el texto
+  cambia segun el navegador— y da un mensaje que no promete cual fue el motivo,
+  porque el navegador lo oculta a proposito, pero que **se ve**.
+
 - **Tailwind v4 escanea TODO el proyecto, y una clase citada en cualquier
   archivo es una clase que va a generar.** Habia un `-w` sin rastrear en la
   raiz: el volcado HTML de una pagina ya renderizada, seguramente de un
