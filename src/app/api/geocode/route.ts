@@ -26,7 +26,7 @@ import { COLOMBIA_BOUNDS } from '@/lib/venues/schemas'
  * cache de 24 horas.
  */
 
-const CONTACT = 'https://tumbenla.co'
+const CONTACT = 'https://tumbenla.com'
 const USER_AGENT = `Tumbenla/1.0 (${CONTACT})`
 const MIN_INTERVAL_MS = 1100
 
@@ -162,7 +162,7 @@ export const GET = async (request: NextRequest) => {
     return NextResponse.json({ results: (places ?? []).map(toResult) })
   } catch {
     return NextResponse.json(
-      { error: 'No se pudo buscar la direccion. Intenta de nuevo.' },
+      { error: 'No se pudo buscar la dirección. Intenta de nuevo.' },
       { status: 502 }
     )
   }

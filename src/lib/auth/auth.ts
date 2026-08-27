@@ -17,9 +17,40 @@ import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messag
 import { getActiveProviderName } from '@/lib/messaging/email/mailer'
 import { isEmailVerificationEnabled } from '@/config/feature-flags'
 
+/**
+ * Todas las direcciones por las que ESTE despliegue responde.
+ *
+ * `getBaseUrl()` devuelve una sola, la canonica, y con eso basta para escribir
+ * un enlace dentro de un correo. Pero Vercel sirve el mismo despliegue por
+ * varias a la vez —la del dominio propio, la de la rama y la del despliegue
+ * suelto, `proyecto-7590aq1ux-...`— y el chequeo de origen de Better-Auth
+ * compara contra la direccion por la que el navegador abrio la pagina, no
+ * contra la canonica. Con una sola en la lista, entrar desde cualquier otra
+ * devuelve 403 "Invalid origin".
+ *
+ * Las variables sin prefijo publico las pone Vercel en tiempo de ejecucion y
+ * describen este mismo despliegue, asi que confiar en ellas no le abre la
+ * puerta a nadie mas. A proposito NO se usa un comodin tipo `*.vercel.app`:
+ * eso confiaria en cualquier sitio alojado en Vercel, que es justo lo que el
+ * chequeo de origen existe para impedir.
+ */
+const origenesPropios = (): string[] => {
+  const candidatos = [
+    getBaseUrl(),
+    env.VERCEL_URL?.trim(),
+    env.VERCEL_BRANCH_URL?.trim(),
+  ].filter((valor): valor is string => Boolean(valor))
+
+  return [
+    ...new Set(
+      candidatos.map((valor) => (valor.startsWith('http') ? valor : `https://${valor}`))
+    ),
+  ]
+}
+
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
-  trustedOrigins: [getBaseUrl()],
+  trustedOrigins: origenesPropios(),
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
@@ -206,7 +237,10 @@ export const auth = betterAuth({
   pages: {
     signIn: '/login',
     signUp: '/register',
-    error: '/error',
+    // No hay ruta /error en este proyecto; el 404 de la app es mejor destino
+    // que una ruta inexistente, que en Next devuelve el not-found igual pero
+    // sin que nadie lo haya decidido.
+    error: '/',
     verify: '/verify',
   },
 })

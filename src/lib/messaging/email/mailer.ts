@@ -37,7 +37,13 @@ import type {
   EmailProviderName,
 } from './types'
 
-import { getFromEmailAddress } from './utils'
+import {
+  getEmailSubject,
+  renderSolicitudDecisionEmail,
+  renderSolicitudDmEmail,
+  renderVenueInvitationEmail,
+} from '@/components/emails'
+import { getFromEmailAddress, getReplyToAddress } from './utils'
 import {
   getProvider,
   getFirstAvailableProvider,
@@ -120,6 +126,11 @@ async function processEmailData(options: EmailOptions): Promise<ProcessedEmailDa
 
   const senderEmail = from || getFromEmailAddress()
 
+  // El Reply-To por defecto se aplica ACA y no en cada llamada: son ocho sitios
+  // que mandan correo y basta olvidarlo en uno para que esa respuesta se
+  // pierda. Quien pase un replyTo explicito manda sobre el.
+  const replyToFinal = replyTo || getReplyToAddress()
+
   let headers: Record<string, string> = {}
 
   // Add unsubscribe headers for marketing emails
@@ -141,7 +152,7 @@ async function processEmailData(options: EmailOptions): Promise<ProcessedEmailDa
     senderEmail,
     headers,
     attachments,
-    replyTo,
+    replyTo: replyToFinal,
   }
 }
 
@@ -252,4 +263,99 @@ export async function sendBatchEmails(options: BatchEmailOptions): Promise<Batch
  */
 export function getActiveProviderName(): EmailProviderName {
   return getConfiguredProvider().name
+}
+
+/**
+ * La invitacion a manejar un sitio.
+ *
+ * Vive aca y no en la accion para que la accion no tenga que saber de plantillas
+ * ni de asuntos, igual que el resto de los correos del repo.
+ *
+ * LANZA SI NO SE PUDO MANDAR. sendEmail devuelve un resultado en vez de lanzar,
+ * y su respaldo silencioso es el proveedor `log`: sin RESEND_API_KEY el correo
+ * se escribe en los logs, el despliegue se ve sano y nadie recibe nada. La
+ * accion que invita necesita distinguir "quedo invitada" de "ademas le llego",
+ * asi que aca ese resultado se convierte en excepcion.
+ */
+export async function sendVenueInvitationEmail(params: {
+  to: string
+  venueName: string
+  role: 'owner' | 'staff'
+  token: string
+}): Promise<void> {
+  const html = await renderVenueInvitationEmail({
+    venueName: params.venueName,
+    role: params.role,
+    token: params.token,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject('venue-invitation'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la invitacion')
+  }
+}
+
+/**
+ * "Escribenos por DM desde la cuenta del sitio."
+ *
+ * LANZA SI NO SALIO, por lo mismo que la invitacion: sendEmail devuelve un
+ * resultado y su respaldo silencioso es el proveedor `log`, asi que sin
+ * RESEND_API_KEY el correo se escribe en los logs y nadie recibe nada. Quien
+ * llama necesita distinguir "quedo marcada" de "ademas le llego".
+ */
+export async function sendApplicationDmRequestEmail(params: {
+  to: string
+  venueName: string
+  instagram: string
+}): Promise<void> {
+  const html = await renderSolicitudDmEmail({
+    venueName: params.venueName,
+    instagram: params.instagram,
+    contactEmail: params.to,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject('solicitud-dm'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la instruccion de verificacion')
+  }
+}
+
+/** Como quedo la solicitud. */
+export async function sendApplicationDecisionEmail(params: {
+  to: string
+  venueName: string
+  aprobada: boolean
+  nota?: string
+}): Promise<void> {
+  const html = await renderSolicitudDecisionEmail({
+    venueName: params.venueName,
+    aprobada: params.aprobada,
+    nota: params.nota,
+  })
+
+  const result = await sendEmail({
+    to: params.to,
+    subject: getEmailSubject(params.aprobada ? 'solicitud-aprobada' : 'solicitud-rechazada'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
+
+  if (!result.success) {
+    throw new Error(result.message || 'No se pudo enviar la decision')
+  }
 }

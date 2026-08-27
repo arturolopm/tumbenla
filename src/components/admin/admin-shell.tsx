@@ -18,6 +18,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { MenuCuenta } from '@/components/layout/menu-cuenta'
 
 /**
  * Reusa src/components/ui/sidebar.tsx, que eran 21.8 KB ya construidos y sin
@@ -28,13 +29,19 @@ import {
 const NAV = [
   { href: '/admin', label: 'Resumen' },
   { href: '/admin/sitios', label: 'Sitios' },
+  { href: '/admin/solicitudes', label: 'Solicitudes' },
+  { href: '/admin/aportes', label: 'Aportes' },
 ]
 
 export function AdminShell({
   email,
+  solicitudesAbiertas = 0,
   children,
 }: {
   email: string
+  /** Cuantas solicitudes esperan respuesta. Va en el menu porque una solicitud
+   *  sin mirar es alguien esperando, y no hay ninguna otra senal de que exista. */
+  solicitudesAbiertas?: number
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -61,7 +68,16 @@ export function AdminShell({
                           ? pathname === '/admin'
                           : pathname.startsWith(item.href)
                       }
-                      render={<Link href={item.href}>{item.label}</Link>}
+                      render={
+                        <Link href={item.href}>
+                          {item.label}
+                          {item.href === '/admin/solicitudes' && solicitudesAbiertas > 0 ? (
+                            <span className="ml-auto rounded-full bg-primary px-2 text-primary-foreground text-xs">
+                              {solicitudesAbiertas}
+                            </span>
+                          ) : null}
+                        </Link>
+                      }
                     />
                   </SidebarMenuItem>
                 ))}
@@ -80,7 +96,10 @@ export function AdminShell({
       <SidebarInset>
         <header className="flex h-14 items-center gap-3 border-border border-b px-4">
           <SidebarTrigger />
-          <p className="font-medium text-sm">Operacion</p>
+          <p className="font-medium text-sm">Operación</p>
+          <div className="ml-auto">
+            <MenuCuenta />
+          </div>
         </header>
         <div className="p-4 sm:p-6">{children}</div>
       </SidebarInset>

@@ -13,22 +13,23 @@ export function ResetPasswordEmail({ username = '', resetLink = '' }: ResetPassw
   const brand = getBrandConfig()
 
   return (
-    <EmailLayout preview={`Reset your ${brand.name} password`}>
-      <Text style={baseStyles.paragraph}>Hello {username},</Text>
+    <EmailLayout preview={`Cambia tu contraseña de ${brand.name}`}>
+      <Text style={baseStyles.paragraph}>Hola {username},</Text>
       <Text style={baseStyles.paragraph}>
-        A password reset was requested for your {brand.name} account. Click below to set a new
-        password.
+        Alguien pidió cambiar la contraseña de tu cuenta de {brand.name}. Si fuiste tú, entra
+        acá y pon una nueva.
       </Text>
 
       <Link href={resetLink} style={{ textDecoration: 'none' }}>
-        <Text style={baseStyles.button}>Reset Password</Text>
+        <Text style={baseStyles.button}>Cambiar la contraseña</Text>
       </Link>
 
       {/* Divider */}
       <div style={baseStyles.divider} />
 
       <Text style={{ ...baseStyles.footerText, textAlign: 'left' }}>
-        If you didn't request this, you can ignore this email. Link expires in 24 hours.
+        Si no fuiste tú, ignora este correo: tu contraseña sigue igual. El enlace vence en 24
+        horas.
       </Text>
     </EmailLayout>
   )

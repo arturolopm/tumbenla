@@ -27,7 +27,7 @@ export default async function EditarSitioPage({
               </Link>
             </>
           ) : (
-            'Todavia no esta publicado.'
+            'Todavía no está publicado.'
           )}
         </p>
       </div>

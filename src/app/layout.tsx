@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   ...generateMetadata({
     title: 'Tumbenla',
     description:
-      'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Mira cuales son, donde quedan, y en que se fue la plata.',
+      'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Mira cuáles son, dónde quedan, y en qué se fue la plata.',
     isRootLayout: true,
   }),
   icons: {

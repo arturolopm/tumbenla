@@ -10,16 +10,26 @@ import { cn } from '@/lib/utils/css'
  * 10%, and styling one louder than the other would quietly rank them.
  */
 
+/**
+ * The stored unit is an ASCII enum value ('coctel'); what a reader sees is
+ * Spanish with its accent. Kept apart so the DB value never has to carry one.
+ */
+const UNIT_LABEL: Record<string, string> = {
+  coctel: 'cóctel',
+}
+
+const unitLabel = (unit: string): string => UNIT_LABEL[unit] ?? unit
+
 export const pledgeLabel = (pledge: Pledge): string =>
   pledge.type === 'percentage'
     ? `${formatPercent(pledge.percentage)} de sus ventas`
-    : `${formatCOP(pledge.amount, pledge.currency)} por ${pledge.unit}`
+    : `${formatCOP(pledge.amount, pledge.currency)} por ${unitLabel(pledge.unit)}`
 
 /** Short enough for a map pin tooltip. */
 export const pledgeShortLabel = (pledge: Pledge): string =>
   pledge.type === 'percentage'
     ? formatPercent(pledge.percentage)
-    : `${formatCOP(pledge.amount, pledge.currency)}/${pledge.unit}`
+    : `${formatCOP(pledge.amount, pledge.currency)}/${unitLabel(pledge.unit)}`
 
 const BASIS_LABEL: Record<string, string> = {
   ventas_totales: 'sobre todo lo que venden',

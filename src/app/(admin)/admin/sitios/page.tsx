@@ -32,7 +32,7 @@ export default async function AdminSitiosPage() {
 
       {venues.length === 0 ? (
         <div className="rounded-xl border border-border border-dashed p-8">
-          <p className="font-medium">Todavia no hay sitios.</p>
+          <p className="font-medium">Todavía no hay sitios.</p>
           <p className="mt-1 text-muted-foreground text-sm">
             Agrega el primero y aparecera en el mapa publico.
           </p>

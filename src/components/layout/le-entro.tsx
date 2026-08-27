@@ -38,14 +38,14 @@ export function LeEntro() {
             <h3 className="font-display font-bold text-headline-md uppercase">Salgo de rumba</h3>
             <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
               Sales a los sitios de la red como sales siempre. Guardas las fotos de tus noches,
-              y ves cuanto pusieron esas noches en material. Sin donar aparte y sin cuotas.
+              y ves cuánto pusieron esas noches en material. Sin donar aparte y sin cuotas.
             </p>
 
             <Link
               href="/sitios"
               className="mt-8 inline-block self-start rounded-xl bg-lime px-5 py-3 font-display text-background text-label-lg uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-street-white"
             >
-              Ver donde salir
+              Ver dónde salir
             </Link>
           </article>
 
@@ -56,7 +56,7 @@ export function LeEntro() {
 
             <h3 className="font-display font-bold text-headline-md uppercase">Tengo un sitio</h3>
             <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
-              Tu decides cuanto pones y sobre que: un porcentaje de la noche, o una plata fija
+              Tú decides cuánto pones y sobre qué: un porcentaje de la noche, o una plata fija
               por trago. Lo dejamos por escrito, publicamos tu sitio en el mapa, y cada compra
               queda con su factura.
             </p>

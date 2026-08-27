@@ -17,4 +17,10 @@ export const ID_PREFIX = {
   partyNight: 'pnt',
   partyPhoto: 'pph',
   photoClaim: 'pcl',
+  venueMember: 'vmb',
+  venueInvitation: 'vin',
+  venueApplication: 'vap',
+  photoReport: 'prp',
+  venueContribution: 'vco',
+  venueContributionMedia: 'vcm',
 } as const

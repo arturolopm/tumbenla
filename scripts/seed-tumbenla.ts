@@ -24,6 +24,11 @@ config()
  * Same for the purchases. The amounts are plausible for Colombian construction
  * materials but they are made up, and they are labelled as sample data.
  *
+ * estimatedPerPersonNight es el APORTE por persona por noche, no el consumo:
+ * es la cifra que /mi-historia multiplica por el numero de noches. Se deriva
+ * del compromiso de cada sitio por un consumo tipico, y como todo lo demas
+ * aca, es una estimacion de ejemplo.
+ *
  * Run with: bun run scripts/seed-tumbenla.ts
  */
 
@@ -44,7 +49,7 @@ const venues = [
     type: 'bar',
     tagline: 'Cerveza fria y salsa hasta que cierre.',
     description:
-      'Un bar de barrio en Palogrande que lleva ocho anos con la misma rockola y la misma gente. Ponen mil pesos de cada cerveza.',
+      'Un bar de barrio en Palogrande que lleva ocho años con la misma rockola y la misma gente. Ponen mil pesos de cada cerveza.',
     addressLine: 'Carrera 23 # 64-18',
     neighborhood: 'Palogrande',
     city: 'Manizales',
@@ -57,10 +62,13 @@ const venues = [
     pledgeAmount: '1000.00',
     pledgeUnit: 'cerveza',
     pledgeNote: 'Mil pesos por cerveza, todas las noches que abrimos.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 1000 x cerveza, 4 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '4000.00',
     status: 'published',
     featured: true,
     verifiedAt: new Date('2026-08-10'),
-    verifiedNote: 'Confirmado por escrito con el dueno, con foto del aviso en la barra.',
+    verifiedNote: 'Confirmado por escrito con el dueño, con foto del aviso en la barra.',
     publishedAt: new Date('2026-08-11'),
   },
   {
@@ -69,7 +77,7 @@ const venues = [
     type: 'discoteca',
     tagline: 'Reggaeton, perreo y el 10% de la noche del jueves.',
     description:
-      'Discoteca grande en la zona del Cable. Los jueves completos van para material de construccion.',
+      'Discoteca grande en la zona del Cable. Los jueves completos van para material de construcción.',
     addressLine: 'Carrera 23 # 71-40',
     neighborhood: 'El Cable',
     city: 'Manizales',
@@ -82,6 +90,9 @@ const venues = [
     pledgePercentage: '10.00',
     pledgeBasis: 'ventas_totales',
     pledgeNote: 'El 10% de todo lo que se venda los jueves.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 10% de un consumo tipico de 90.000. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '9000.00',
     status: 'published',
     featured: true,
     verifiedAt: new Date('2026-08-12'),
@@ -92,8 +103,8 @@ const venues = [
     slug: 'terraza-chipre',
     name: 'Terraza Chipre',
     type: 'terraza',
-    tagline: 'Cocteles con el mejor atardecer de Colombia.',
-    description: 'Terraza en Chipre, mirando al occidente. Dos mil pesos de cada coctel.',
+    tagline: 'Cócteles con el mejor atardecer de Colombia.',
+    description: 'Terraza en Chipre, mirando al occidente. Dos mil pesos de cada cóctel.',
     addressLine: 'Calle 20 # 1-25, piso 3',
     neighborhood: 'Chipre',
     city: 'Manizales',
@@ -105,6 +116,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '2000.00',
     pledgeUnit: 'coctel',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 2000 x coctel, 3 cocteles por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '6000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-14'),
     verifiedNote: 'Confirmado por telefono con la administradora.',
@@ -114,7 +128,7 @@ const venues = [
     slug: 'salon-milan',
     name: 'Salon Milan',
     type: 'club',
-    tagline: 'El 5% de todo, todos los dias.',
+    tagline: 'El 5% de todo, todos los días.',
     description:
       'Club en Milan. No escogieron una noche: ponen el 5% de todas las ventas, siempre.',
     addressLine: 'Carrera 26 # 55-30',
@@ -128,7 +142,10 @@ const venues = [
     pledgeType: 'percentage',
     pledgePercentage: '5.00',
     pledgeBasis: 'ventas_totales',
-    pledgeNote: 'Cinco por ciento de todo, sin dias especiales.',
+    pledgeNote: 'Cinco por ciento de todo, sin días especiales.',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 5% de un consumo tipico de 80.000. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '4000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-13'),
     verifiedNote: 'Confirmado en visita al sitio.',
@@ -152,6 +169,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '3000.00',
     pledgeUnit: 'botella',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 3000 x botella, una botella entre varios. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '3000.00',
     status: 'published',
     verifiedAt: new Date('2026-08-15'),
     verifiedNote: 'Confirmado con el administrador.',
@@ -163,7 +183,7 @@ const venues = [
     type: 'billar',
     tagline: 'Mesas, pola y quinientos por cada una.',
     description:
-      'Billar de toda la vida en La Enea. Todavia estamos confirmando el compromiso, por eso no aparece publicado.',
+      'Billar de toda la vida en La Enea. Todavía estamos confirmando el compromiso, por eso no aparece publicado.',
     addressLine: 'Calle 74 # 23-15',
     neighborhood: 'La Enea',
     city: 'Manizales',
@@ -174,6 +194,9 @@ const venues = [
     pledgeType: 'fixed_per_unit',
     pledgeAmount: '500.00',
     pledgeUnit: 'cerveza',
+    // Aporte estimado por persona por noche, NO lo que se gasta.
+    // 500 x cerveza, 5 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
+    estimatedPerPersonNight: '2500.00',
     status: 'draft',
   },
 ]
@@ -184,7 +207,7 @@ const purchases = [
     title: 'Cemento y bloques, primera entrega',
     summary: 'Material para levantar dos muros de carga.',
     story:
-      'Primera compra con lo que juntaron los sitios en las dos primeras semanas. Se entrego directo en obra.',
+      'Primera compra con lo que juntaron los sitios en las dos primeras semanas. Se entregó directo en obra.',
     municipality: 'Municipio por confirmar',
     department: 'Departamento por confirmar',
     beneficiaryLabel: 'Una familia del sector',
@@ -207,7 +230,7 @@ const purchases = [
     slug: 'tejas-y-madera-agosto',
     title: 'Tejas y madera para el techo',
     summary: 'Cubierta completa para una casa de dos cuartos.',
-    story: 'Segunda entrega. El techo se cayo entero, asi que fue tejas, correas y puntillas.',
+    story: 'Segunda entrega. El techo se cayó entero, así que fue tejas, correas y puntillas.',
     municipality: 'Municipio por confirmar',
     department: 'Departamento por confirmar',
     beneficiaryLabel: 'Una familia del sector',

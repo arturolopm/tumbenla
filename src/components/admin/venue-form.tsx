@@ -13,6 +13,7 @@ import {
 } from 'react'
 
 import type { GeocodeResult } from '@/app/api/geocode/route'
+import { saveMyVenueAction } from '@/app/actions/mi-sitio'
 import { type ActionState, saveVenueAction } from '@/app/actions/venues'
 import { AddressSearch } from '@/components/mapa/address-search'
 import type { PickedLocation } from '@/components/mapa/location-picker'
@@ -50,7 +51,7 @@ const UNIT_LABEL: Record<string, string> = {
   botella: 'por botella',
   trago: 'por trago',
   cerveza: 'por cerveza',
-  coctel: 'por coctel',
+  coctel: 'por cóctel',
   entrada: 'por entrada',
 }
 
@@ -62,9 +63,61 @@ const BASIS_LABEL: Record<string, string> = {
 
 const initialState: ActionState = { status: 'idle' }
 
-export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
+/**
+ * El formulario largo de un sitio, para los DOS PANELES Y NADA MAS.
+ *
+ * NO SE LE MUESTRA A QUIEN SE REGISTRA. Estuvo colgado en /registrar-sitio/nuevo
+ * y era la peor pantalla del producto: le pedia el compromiso completo y un pin
+ * en el mapa a alguien con quien todavia no habiamos hablado, y encima su
+ * buscador de direcciones llama a /api/geocode, que exige ser operador y le
+ * respondia 404. El alta ahora es una solicitud corta; esto lo llena un
+ * operador cuando ya confirmo el compromiso.
+ *
+ * `modo='panel'` esconde el selector de Estado, porque publicar es de la
+ * plataforma. ESCONDERLO NO ES LA PROTECCION: la proteccion es que
+ * saveMyVenueAction lee el status de la base y sobrescribe lo que llegue. Esto
+ * es solo no ofrecer un control que no se puede usar.
+ */
+export type PrefillSolicitud = {
+  solicitudId: string
+  name: string
+  type: string
+  city: string
+  addressLine: string
+  neighborhood: string | null
+  instagram: string | null
+  tiktok: string | null
+  email: string | null
+  whatsapp: string | null
+  phone: string | null
+  website: string | null
+  openingHours: string | null
+  description: string | null
+}
+
+export function VenueForm({
+  venue,
+  modo = 'admin',
+  onSuccessHref,
+  prefill,
+}: {
+  venue?: VenueAdminRow
+  modo?: 'admin' | 'panel'
+  onSuccessHref?: string
+  /**
+   * Lo que el sitio ya dijo en su solicitud de alta.
+   *
+   * Trae todo MENOS las dos cosas que el formulario de alta no pide: el punto
+   * en el mapa y el compromiso. Son justamente las dos que el operador acaba de
+   * confirmar hablando, y las que lo traen a esta pantalla.
+   */
+  prefill?: PrefillSolicitud
+}) {
   const router = useRouter()
-  const [state, formAction, pending] = useActionState(saveVenueAction, initialState)
+  const [state, formAction, pending] = useActionState(
+    modo === 'panel' ? saveMyVenueAction : saveVenueAction,
+    initialState
+  )
 
   const [pledgeType, setPledgeType] = useState<'percentage' | 'fixed_per_unit'>(
     venue?.pledge.type ?? 'percentage'
@@ -80,8 +133,12 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
   const [applied, setApplied] = useState(0)
 
   useEffect(() => {
-    if (state.status === 'success') router.push('/admin/sitios')
-  }, [state, router])
+    if (state.status !== 'success') return
+    router.push(onSuccessHref ?? '/admin/sitios')
+    // El panel se queda en la misma pagina, asi que sin refresh los campos
+    // seguirian mostrando lo de antes de guardar.
+    router.refresh()
+  }, [state, router, onSuccessHref])
 
   const fieldError = (name: string) =>
     state.status === 'error' ? state.fieldErrors?.[name]?.[0] : undefined
@@ -94,6 +151,10 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
   return (
     <form action={formAction} className="flex max-w-3xl flex-col gap-8">
       {venue ? <input type="hidden" name="id" value={venue.id} /> : null}
+      {/* Guardar con esto puesto no solo crea el sitio: ademas mete al
+          solicitante como dueno y cierra la solicitud, en un solo acto. Ver
+          saveVenueAction. */}
+      {prefill ? <input type="hidden" name="solicitudId" value={prefill.solicitudId} /> : null}
 
       {state.status === 'error' ? (
         <p
@@ -106,12 +167,12 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
 
       <Section title="Identidad">
         <Field label="Nombre" error={fieldError('name')}>
-          <input name="name" defaultValue={venue?.name} required className={inputClass} />
+          <input name="name" defaultValue={venue?.name ?? prefill?.name ?? ''} required className={inputClass} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tipo" error={fieldError('type')}>
-            <select name="type" defaultValue={venue?.type ?? 'bar'} className={inputClass}>
+            <select name="type" defaultValue={venue?.type ?? prefill?.type ?? 'bar'} className={inputClass}>
               {VENUE_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {TYPE_LABEL[type]}
@@ -120,25 +181,31 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
             </select>
           </Field>
 
-          <Field label="Estado" error={fieldError('status')}>
-            <select name="status" defaultValue={venue?.status ?? 'draft'} className={inputClass}>
-              {VENUE_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {STATUS_LABEL[status]}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {modo === 'admin' ? (
+            <Field label="Estado" error={fieldError('status')}>
+              <select
+                name="status"
+                defaultValue={venue?.status ?? 'draft'}
+                className={inputClass}
+              >
+                {VENUE_STATUSES.map((status) => (
+                  <option key={status} value={status}>
+                    {STATUS_LABEL[status]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          ) : null}
         </div>
 
         <Field label="Frase corta" hint="Sale debajo del nombre en la tarjeta.">
           <input name="tagline" defaultValue={venue?.tagline ?? ''} className={inputClass} />
         </Field>
 
-        <Field label="Descripcion">
+        <Field label="Descripción">
           <textarea
             name="description"
-            defaultValue={venue?.description ?? ''}
+            defaultValue={venue?.description ?? prefill?.description ?? ''}
             rows={4}
             className={cn(inputClass, 'h-auto py-2')}
           />
@@ -146,8 +213,8 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
       </Section>
 
       <Section
-        title="Donde queda"
-        hint="Busca la direccion, o pon el pin directo en el mapa si el sitio no aparece."
+        title="Dónde queda"
+        hint="Busca la dirección, o pon el pin directo en el mapa si el sitio no aparece."
       >
         <AddressSearch onPick={handlePick} />
 
@@ -177,7 +244,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Direccion" error={fieldError('addressLine')}>
+          <Field label="Dirección" error={fieldError('addressLine')}>
             <input
               // key: remontar el input es lo que hace que defaultValue tome el
               // valor sugerido. Sin esto habria que volverlo controlado y
@@ -185,7 +252,10 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
               key={`address-${applied}`}
               name="addressLine"
               defaultValue={
-                (applied > 0 ? suggestion?.addressLine : null) ?? venue?.addressLine ?? ''
+                (applied > 0 ? suggestion?.addressLine : null) ??
+                venue?.addressLine ??
+                prefill?.addressLine ??
+                ''
               }
               required
               className={inputClass}
@@ -197,7 +267,10 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
               key={`hood-${applied}`}
               name="neighborhood"
               defaultValue={
-                (applied > 0 ? suggestion?.neighborhood : null) ?? venue?.neighborhood ?? ''
+                (applied > 0 ? suggestion?.neighborhood : null) ??
+                venue?.neighborhood ??
+                prefill?.neighborhood ??
+                ''
               }
               className={inputClass}
             />
@@ -207,7 +280,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
             <input
               key={`city-${applied}`}
               name="city"
-              defaultValue={(applied > 0 ? suggestion?.city : null) ?? venue?.city ?? ''}
+              defaultValue={(applied > 0 ? suggestion?.city : null) ?? venue?.city ?? prefill?.city ?? ''}
               required
               className={inputClass}
             />
@@ -287,7 +360,7 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
                 className={inputClass}
               />
             </Field>
-            <Field label="Sobre que">
+            <Field label="Sobre qué">
               <select
                 name="pledgeBasis"
                 defaultValue={
@@ -345,26 +418,66 @@ export function VenueForm({ venue }: { venue?: VenueAdminRow }) {
             className={cn(inputClass, 'h-auto py-2')}
           />
         </Field>
+
+        {/* Va aca abajo y no junto al compromiso a proposito: son dos cosas
+            distintas y confundirlas es el riesgo de toda esta pantalla. El
+            compromiso es lo que el sitio se obliga a poner; esto es una
+            estimacion de lo que sale por cada persona en una noche, y en
+            /mi-historia se rotula "estimado" en todas partes. */}
+        <Field
+          label="Aporte estimado por persona, por noche"
+          hint="Opcional. En pesos. Es un ESTIMADO que declara el sitio, no un recibo: se multiplica por cada noche que alguien guarde. Déjalo vacío si no hay una cifra que el sitio respalde; vacío muestra las noches sin pesos, que es mejor que un número inventado."
+          error={fieldError('estimatedPerPersonNight')}
+        >
+          <input
+            name="estimatedPerPersonNight"
+            type="number"
+            step="100"
+            min="0"
+            placeholder="Sin cifra"
+            defaultValue={venue?.estimatedPerPersonNight ?? ''}
+            className={inputClass}
+          />
+        </Field>
       </Section>
 
       <Section title="Contacto">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Telefono">
-            <input name="phone" defaultValue={venue?.phone ?? ''} className={inputClass} />
+          <Field label="Teléfono">
+            <input name="phone" defaultValue={venue?.phone ?? prefill?.phone ?? ''} className={inputClass} />
           </Field>
           <Field label="WhatsApp">
-            <input name="whatsapp" defaultValue={venue?.whatsapp ?? ''} className={inputClass} />
+            <input name="whatsapp" defaultValue={venue?.whatsapp ?? prefill?.whatsapp ?? ''} className={inputClass} />
           </Field>
           <Field label="Instagram">
-            <input name="instagram" defaultValue={venue?.instagram ?? ''} className={inputClass} />
+            <input
+              name="instagram"
+              defaultValue={venue?.instagram ?? prefill?.instagram ?? ''}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="TikTok" hint="Sin la arroba.">
+            <input
+              name="tiktok"
+              defaultValue={venue?.tiktok ?? prefill?.tiktok ?? ''}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Correo del sitio" hint="El del bar, no el de quien lo administra.">
+            <input
+              name="email"
+              type="email"
+              defaultValue={venue?.email ?? prefill?.email ?? ''}
+              className={inputClass}
+            />
           </Field>
           <Field label="Sitio web">
-            <input name="website" defaultValue={venue?.website ?? ''} className={inputClass} />
+            <input name="website" defaultValue={venue?.website ?? prefill?.website ?? ''} className={inputClass} />
           </Field>
           <Field label="Horario">
             <input
               name="openingHours"
-              defaultValue={venue?.openingHours ?? ''}
+              defaultValue={venue?.openingHours ?? prefill?.openingHours ?? ''}
               className={inputClass}
             />
           </Field>

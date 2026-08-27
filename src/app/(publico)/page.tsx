@@ -22,7 +22,7 @@ export const revalidate = 300
 const PASOS = [
   {
     titulo: 'Sal de Fiesta',
-    body: 'No dejamos de bailar. Salir de rumba es el primer paso para activar la economia de la noche y de la gente que vive de ella.',
+    body: 'No dejamos de bailar. Salir de rumba es el primer paso para activar la economía de la noche y de la gente que vive de ella.',
     Icon: PartyPopperIcon,
     card: 'bg-primary text-primary-foreground',
     halo: 'bg-street-white/10',
@@ -31,7 +31,7 @@ const PASOS = [
   },
   {
     titulo: 'Apoya Aliados',
-    body: 'Consume en los bares y discotecas de la red. Parte de lo que te tomas se convierte en material de construccion.',
+    body: 'Consume en los bares y discotecas de la red. Parte de lo que te tomas se convierte en material de construcción.',
     Icon: HandshakeIcon,
     card: 'bg-party text-party-foreground',
     halo: 'bg-background/10',
@@ -84,8 +84,8 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-8 max-w-2xl text-pretty rounded-xl bg-background/80 p-6 text-body-lg shadow-2xl backdrop-blur-md">
-            Bares y discotecas que ponen una parte de sus ventas en material de construccion.
-            Mira cuales son, donde quedan, y en que se fue la plata.
+            Bares y discotecas que ponen una parte de sus ventas en material de construcción.
+            Mira cuáles son, dónde quedan, y en qué se fue la plata.
           </p>
 
           <div className="mt-12 flex flex-col gap-6 sm:flex-row">
@@ -94,14 +94,14 @@ export default async function HomePage() {
               className="flex items-center justify-center gap-2 rounded-xl bg-primary px-8 py-4 font-display text-label-lg text-primary-foreground uppercase shadow-xl transition-all hover:-translate-y-1 hover:shadow-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
             >
               <MapIcon className="size-5" />
-              Ver Mapa Solidario
+              Ver el mapa del parche
             </Link>
             <Link
               href="#le-entro"
               className="flex items-center justify-center gap-2 rounded-xl bg-party px-8 py-4 font-display text-label-lg text-party-foreground uppercase shadow-xl transition-all hover:-translate-y-1 hover:shadow-party/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
             >
               <HandshakeIcon className="size-5" />
-              Quiero poner
+              Como me uno
             </Link>
           </div>
         </div>
@@ -116,7 +116,7 @@ export default async function HomePage() {
             El Combo
           </h2>
           <p className="mt-4 text-body-lg text-muted-foreground">
-            Tres pasos para transformar el goce en impacto real. Asi es como movemos la aguja
+            Tres pasos para transformar el goce en impacto real. Así es como movemos la aguja
             mientras movemos el cuerpo.
           </p>
         </div>
@@ -158,7 +158,7 @@ export default async function HomePage() {
         <div className="relative z-10 grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
           <div className="rounded-xl bg-background p-8 shadow-2xl">
             <h3 className="mb-8 font-display font-bold text-headline-md text-street-white uppercase">
-              Energia Colectiva
+              Energía Colectiva
             </h3>
 
             <div className="flex flex-col gap-8">
@@ -231,15 +231,15 @@ export default async function HomePage() {
               >
                 <MegaphoneIcon className="size-10 shrink-0 text-primary-text" />
                 <p className="text-body-md">
-                  Ultima compra publicada:{' '}
+                  Última compra publicada:{' '}
                   <strong className="text-primary-text">{ultima.title}</strong>, en{' '}
                   {ultima.municipality}.
                 </p>
               </Link>
             ) : (
               <p className="mt-8 rounded-xl border border-border border-dashed p-6 text-body-md text-muted-foreground">
-                Todavia no hay compras publicadas. Cuando haya la primera, la factura aparece
-                aca.
+                Todavía no hay compras publicadas. Cuando haya la primera, la factura aparece
+                acá.
               </p>
             )}
           </div>

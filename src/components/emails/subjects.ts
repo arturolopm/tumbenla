@@ -7,6 +7,10 @@ export type EmailSubjectType =
   | 'forget-password'
   | 'reset-password'
   | 'invitation'
+  | 'venue-invitation'
+  | 'solicitud-dm'
+  | 'solicitud-aprobada'
+  | 'solicitud-rechazada'
   | 'welcome'
 
 /**
@@ -19,17 +23,27 @@ export function getEmailSubject(type: EmailSubjectType): string {
 
   switch (type) {
     case 'sign-in':
-      return `Sign in to ${brandName}`
+      return `Tu código para entrar a ${brandName}`
     case 'email-verification':
-      return `Verify your email for ${brandName}`
+      return `Tu código de ${brandName}`
     case 'forget-password':
-      return `Reset your ${brandName} password`
+      return `Cambia tu contraseña de ${brandName}`
     case 'reset-password':
-      return `Reset your ${brandName} password`
+      return `Cambia tu contraseña de ${brandName}`
     case 'invitation':
-      return `You've been invited to join a team on ${brandName}`
+      return `Te invitaron a un equipo en ${brandName}`
+    // El unico asunto en espanol: es el unico de esta lista que le llega a
+    // alguien del producto y no a una cuenta de prueba del boilerplate.
+    case 'venue-invitation':
+      return `Te invitaron a manejar tu sitio en ${brandName}`
+    case 'solicitud-dm':
+      return `Falta un paso para registrar tu sitio en ${brandName}`
+    case 'solicitud-aprobada':
+      return `Tu sitio ya quedó a tu nombre en ${brandName}`
+    case 'solicitud-rechazada':
+      return `Sobre tu solicitud en ${brandName}`
     case 'welcome':
-      return `Welcome to ${brandName}`
+      return `Bienvenido a ${brandName}`
     default:
       return brandName
   }

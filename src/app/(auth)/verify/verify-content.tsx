@@ -59,8 +59,8 @@ function VerificationForm({
     return (
       <div className='text-center'>
         <div className='animate-pulse'>
-          <div className='mx-auto mb-4 h-8 w-48 rounded bg-gray-200' />
-          <div className='mx-auto h-4 w-64 rounded bg-gray-200' />
+          <div className='mx-auto mb-4 h-8 w-48 rounded bg-secondary' />
+          <div className='mx-auto h-4 w-64 rounded bg-secondary' />
         </div>
       </div>
     )
@@ -69,13 +69,13 @@ function VerificationForm({
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className='font-medium text-[32px] text-foreground tracking-tight'>
-          {isVerified ? 'Email Verified!' : 'Verify Your Email'}
+        <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
+          {isVerified ? '¡Listo!' : 'Verifica tu correo'}
         </h1>
-        <p className='font-[380] text-[16px] text-muted-foreground'>
+        <p className='text-body-md text-muted-foreground'>
           {isVerified
-            ? 'Your email has been verified. Redirecting to dashboard...'
-            : `A verification code has been sent to ${email}`}
+            ? 'Tu correo quedó verificado. Te llevamos a lo tuyo…'
+            : `Te mandamos un código a ${email}`}
         </p>
       </div>
 
@@ -83,7 +83,7 @@ function VerificationForm({
         <div className='mt-8 space-y-8'>
           <div className='space-y-6'>
             <p className='text-center text-muted-foreground text-sm'>
-              Enter the 6-digit code to verify your account.
+              Escribe los 6 dígitos para confirmar que ese correo es tuyo.
             </p>
 
             <div className='flex justify-center'>
@@ -92,61 +92,61 @@ function VerificationForm({
                 value={otp}
                 onChange={handleOtpChange}
                 disabled={isLoading}
-                className={cn('gap-2', isInvalidOtp && 'border-red-500')}
+                className={cn('gap-2', isInvalidOtp && 'border-destructive')}
               >
                 <InputOTPGroup className='gap-2 [&>div]:rounded-[10px]'>
                   <InputOTPSlot
                     index={0}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
                     index={1}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
                     index={2}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
                     index={3}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
                     index={4}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
                     index={5}
                     className={cn(
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-gray-300 hover:border-gray-400',
-                      'focus:border-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100',
-                      isInvalidOtp && 'border-red-500 focus:border-red-500 focus:ring-red-100'
+                      'border-border hover:border-primary',
+                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
+                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                 </InputOTPGroup>
@@ -155,7 +155,7 @@ function VerificationForm({
 
             {/* Error message */}
             {errorMessage && (
-              <div className='mt-1 space-y-1 text-center text-red-400 text-xs'>
+              <div className='mt-1 space-y-1 text-center text-body-sm text-destructive-foreground'>
                 <p>{errorMessage}</p>
               </div>
             )}
@@ -163,26 +163,27 @@ function VerificationForm({
 
           <Button
             onClick={verifyCode}
-            className='flex w-full items-center justify-center gap-2 rounded-[10px] py-[6px] pr-[10px] pl-[12px] text-[15px] font-medium text-white shadow-[inset_0_2px_4px_0_#9B77FF] transition-all'
+            className='flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
             disabled={!isOtpComplete || isLoading}
           >
-            {isLoading ? 'Verifying...' : 'Verify Email'}
+            {isLoading ? 'Verificando…' : 'Verificar'}
           </Button>
 
           <div className='text-center'>
             <p className='text-muted-foreground text-sm'>
-              Didn't receive a code?{' '}
+              ¿No te llegó?{' '}
               {countdown > 0 ? (
                 <span>
-                  Resend in <span className='font-medium text-foreground'>{countdown}s</span>
+                  Puedes pedir otro en{' '}
+                  <span className='font-medium text-foreground'>{countdown}s</span>
                 </span>
               ) : (
                 <button
-                  className='font-medium text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+                  className='font-medium text-primary-text underline-offset-4 transition hover:underline'
                   onClick={handleResend}
                   disabled={isLoading || isResendDisabled}
                 >
-                  Resend
+                  Mándalo otra vez
                 </button>
               )}
             </p>
@@ -198,9 +199,9 @@ function VerificationForm({
                 }
                 router.push('/register')
               }}
-              className='font-medium text-(--brand-accent-hex) underline-offset-4 transition hover:text-(--brand-accent-hover-hex) hover:underline'
+              className='font-medium text-primary-text underline-offset-4 transition hover:underline'
             >
-              Back to signup
+              Volver al registro
             </button>
           </div>
         </div>
@@ -213,8 +214,8 @@ function VerificationFormFallback() {
   return (
     <div className='text-center'>
       <div className='animate-pulse'>
-        <div className='mx-auto mb-4 h-8 w-48 rounded bg-gray-200' />
-        <div className='mx-auto h-4 w-64 rounded bg-gray-200' />
+        <div className='mx-auto mb-4 h-8 w-48 rounded bg-secondary' />
+        <div className='mx-auto h-4 w-64 rounded bg-secondary' />
       </div>
     </div>
   )

@@ -48,7 +48,7 @@ const defaultConfig: BrandConfig = {
   logoUrl: undefined,
   faviconUrl: '/favicon/favicon.ico',
   customCssUrl: undefined,
-  supportEmail: 'hola@tumbenla.co',
+  supportEmail: 'hola@tumbenla.com',
   documentationUrl: undefined,
   termsUrl: '/terminos',
   privacyUrl: '/privacidad',

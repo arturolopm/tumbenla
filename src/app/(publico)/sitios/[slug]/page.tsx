@@ -4,7 +4,10 @@ import { notFound } from 'next/navigation'
 
 import { PledgeDetail } from '@/components/sitios/pledge-badge'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
+import { listNightsForVenue } from '@/lib/fiestas/queries'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
+import { formatCOP, formatDate } from '@/lib/utils/format'
+import { getVerifiedTotal, listVerifiedContributions } from '@/lib/venues/contributions'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { pledgeLabel } from '@/components/sitios/pledge-badge'
 
@@ -50,7 +53,7 @@ export async function generateMetadata({
 
   return buildMetadata({
     title: `${venue.name}, ${venue.city}`,
-    description: `${venue.name} pone ${pledgeLabel(venue.pledge)} en material de construccion.`,
+    description: `${venue.name} pone ${pledgeLabel(venue.pledge)} en material de construcción.`,
     canonical: `/sitios/${venue.slug}`,
   })
 }
@@ -60,6 +63,20 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const venue = await getVenueBySlug(slug)
 
   if (!venue) notFound()
+
+  // Esta consulta NO depende de la sesion —solo de noches publicadas y fotos
+  // habilitadas— asi que la pagina sigue siendo estatica y conserva su ISR, del
+  // que depende que la base de Neon duerma. El estado "¿ya reclame esta foto?"
+  // si depende de quien mira, y por eso vive en /sitios/[slug]/noches/[id],
+  // que es dinamica y de bajo volumen por diseno.
+  const noches = await listNightsForVenue(venue.id)
+
+  // Solo lo VERIFICADO, y el filtro vive dentro de la consulta, no aca. Un
+  // aporte que el sitio reporto y nosotros no hemos confirmado no existe para
+  // el publico: publicarlo seria afirmar bajo nuestro nombre algo que no
+  // comprobamos.
+  const aportes = await listVerifiedContributions(venue.id)
+  const totalAportado = await getVerifiedTotal(venue.id)
 
   const contactLinks = [
     venue.instagram
@@ -121,7 +138,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       ) : null}
 
       <div className="mt-10 grid gap-8 border-secondary border-t-2 pt-8 sm:grid-cols-2">
-        <Bloque titulo="Donde queda">
+        <Bloque titulo="Dónde queda">
           <p className="text-body-md text-muted-foreground">{venue.addressLine}</p>
           <p className="text-body-md text-muted-foreground">
             {venue.neighborhood ? `${venue.neighborhood}, ` : ''}
@@ -133,7 +150,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             rel="noreferrer noopener"
             className="self-start text-body-md text-primary-text hover:underline"
           >
-            Como llegar
+            Cómo llegar
           </a>
         </Bloque>
 
@@ -166,7 +183,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             publicly, so how it was verified belongs on the page, not in a
             database column nobody reads. */}
         {venue.verified ? (
-          <Bloque titulo="Como lo confirmamos">
+          <Bloque titulo="Cómo lo confirmamos">
             <p className="text-pretty text-body-md text-muted-foreground">
               {venue.verifiedNote ?? 'Confirmado directamente con el sitio.'}
             </p>
@@ -174,9 +191,90 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         ) : null}
       </div>
 
+      {aportes.length > 0 ? (
+        <section className="mt-10 rounded-xl border border-lime p-8">
+          <h2 className="font-display font-extrabold text-headline-md uppercase">
+            Lo que ya entregó
+          </h2>
+          <p className="mt-2 font-display font-black text-4xl text-lime leading-none tabular-nums">
+            {formatCOP(totalAportado.total, totalAportado.currency)}
+          </p>
+          {/* La atribucion no es cortesia: la cifra la reporta el sitio y la
+              confirmamos nosotros, y decir las dos cosas es la diferencia entre
+              un dato y una afirmacion nuestra sin respaldo. */}
+          <p className="mt-3 max-w-prose text-pretty text-body-md text-muted-foreground">
+            Reportado por el sitio y confirmado por nosotros. Cada entrega va con la fecha en
+            que la confirmamos.
+          </p>
+
+          <ul className="mt-6 flex flex-col gap-2">
+            {aportes.map((aporte) => (
+              <li
+                key={aporte.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 border-border border-t pt-2 text-body-md"
+              >
+                <span className="text-muted-foreground">
+                  {formatDate(aporte.periodStart)} – {formatDate(aporte.periodEnd)}
+                </span>
+                <span className="tabular-nums">
+                  {formatCOP(Number.parseFloat(aporte.amount), aporte.currency)}
+                </span>
+                {aporte.purchaseSlug ? (
+                  <Link
+                    href={`/transparencia/${aporte.purchaseSlug}`}
+                    className="w-full text-primary-text text-sm hover:underline sm:w-auto"
+                  >
+                    Se fue en {aporte.purchaseTitle} →
+                  </Link>
+                ) : (
+                  <span className="w-full text-muted-foreground text-sm sm:w-auto">
+                    Todavía sin gastar
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {noches.length > 0 ? (
+        <section className="mt-10">
+          <h2 className="font-display font-extrabold text-headline-md uppercase">
+            Las noches
+          </h2>
+          <p className="mt-2 max-w-prose text-pretty text-body-md text-muted-foreground">
+            Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en
+            tu historia.
+          </p>
+
+          <ul className="mt-6 flex flex-col gap-2">
+            {noches.map((noche) => (
+              <li key={noche.id}>
+                <Link
+                  href={`/sitios/${venue.slug}/noches/${noche.id}`}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-display font-bold uppercase">
+                      {noche.title || formatDate(noche.happenedAt)}
+                    </span>
+                    <span className="block text-muted-foreground text-sm">
+                      {formatDate(noche.happenedAt)}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-muted-foreground text-sm">
+                    {noche.photoCount} {noche.photoCount === 1 ? 'foto' : 'fotos'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <div className="mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8">
         <h2 className="font-display font-extrabold text-headline-md uppercase">
-          Y esa plata, en que se va
+          Y esa plata, en qué se va
         </h2>
         <p className="mt-2 text-pretty text-body-md text-muted-foreground">
           En cemento, bloques y tejas. Publicamos el recibo de cada compra.

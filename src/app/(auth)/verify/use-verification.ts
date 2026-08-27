@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { client, useSession } from '@/lib/auth/auth-client'
+import { DESTINO_POR_DEFECTO, esDestinoValido } from '@/lib/auth/redirect'
 
 interface UseVerificationParams {
   isProduction: boolean
@@ -27,6 +28,31 @@ interface UseVerificationReturn {
 
 const getOtpType = (fromSignup: boolean) => (fromSignup ? 'email-verification' : 'sign-in')
 
+/**
+ * A donde va la persona cuando termina de verificar.
+ *
+ * Se resuelve LEYENDO, no guardando en estado. Antes esto vivia en un useState
+ * que llenaba un efecto, y el efecto que redirige corria en el mismo commit:
+ * leia la cadena vacia, navegaba al despachador, y el destino real llegaba un
+ * render tarde, cuando la navegacion ya habia empezado. Quien llegaba por un
+ * enlace de invitacion lo perdia justo ahi.
+ *
+ * El parametro le gana a sessionStorage: es lo que trae el enlace que la
+ * persona acaba de abrir. Los dos se validan porque los dos los puede escribir
+ * alguien mas.
+ */
+const resolverDestino = (params: URLSearchParams): string => {
+  const delEnlace = params.get('redirectAfter')
+  if (delEnlace && esDestinoValido(delEnlace)) return delEnlace
+
+  if (typeof window !== 'undefined') {
+    const guardado = sessionStorage.getItem('inviteRedirectUrl')
+    if (guardado && esDestinoValido(guardado)) return guardado
+  }
+
+  return DESTINO_POR_DEFECTO
+}
+
 export function useVerification({
   isProduction,
   initialEmail = null,
@@ -41,24 +67,7 @@ export function useVerification({
   const [isSendingInitialOtp, setIsSendingInitialOtp] = useState(false)
   const [isInvalidOtp, setIsInvalidOtp] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
   const [isContextReady, setIsContextReady] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-
-    const storedRedirectUrl = sessionStorage.getItem('inviteRedirectUrl')
-    if (storedRedirectUrl) {
-      setRedirectUrl(storedRedirectUrl)
-    }
-
-    const redirectParam = searchParams.get('redirectAfter')
-    if (redirectParam) {
-      setRedirectUrl(redirectParam)
-    }
-  }, [searchParams])
 
   useEffect(() => {
     if (isSessionPending) {
@@ -66,7 +75,7 @@ export function useVerification({
     }
 
     if (session?.user.emailVerified) {
-      window.location.href = '/dashboard'
+      window.location.href = resolverDestino(searchParams)
       return
     }
 
@@ -87,7 +96,7 @@ export function useVerification({
     }
 
     setIsContextReady(true)
-  }, [initialEmail, isSessionPending, router, session])
+  }, [initialEmail, isSessionPending, router, searchParams, session])
 
   useEffect(() => {
     const fromSignup = searchParams.get('fromSignup') === 'true'
@@ -107,7 +116,7 @@ export function useVerification({
         type: getOtpType(fromSignup),
       })
       .catch(() => {
-        setErrorMessage('Failed to send verification code. Check email settings and try Resend.')
+        setErrorMessage('No se pudo mandar el código. Revisa el correo y pide otro.')
       })
       .finally(() => {
         setIsLoading(false)
@@ -151,29 +160,25 @@ export function useVerification({
         }
 
         setTimeout(() => {
-          if (redirectUrl) {
-            window.location.href = redirectUrl
-          } else {
-            window.location.href = '/dashboard'
-          }
+          window.location.href = resolverDestino(searchParams)
         }, 1000)
       } else {
-        const message = 'Invalid verification code. Please check and try again.'
+        const message = 'Ese código no es. Revísalo e intenta de nuevo.'
         setIsInvalidOtp(true)
         setErrorMessage(message)
         setOtp('')
       }
     } catch (error: unknown) {
-      let message = 'Verification failed. Please check your code and try again.'
+      let message = 'No se pudo verificar. Revisa el código e intenta de nuevo.'
       const errorMessageText =
         error instanceof Error ? error.message : typeof error === 'string' ? error : ''
 
       if (errorMessageText.includes('expired')) {
-        message = 'The verification code has expired. Please request a new one.'
+        message = 'Ese código ya venció. Pide uno nuevo.'
       } else if (errorMessageText.includes('invalid')) {
-        message = 'Invalid verification code. Please check and try again.'
+        message = 'Ese código no es. Revísalo e intenta de nuevo.'
       } else if (errorMessageText.includes('attempts')) {
-        message = 'Too many failed attempts. Please request a new code.'
+        message = 'Demasiados intentos. Pide un código nuevo.'
       }
 
       setIsInvalidOtp(true)
@@ -199,7 +204,7 @@ export function useVerification({
         type: getOtpType(fromSignup),
       })
       .catch(() => {
-        setErrorMessage('Failed to resend verification code. Please try again later.')
+        setErrorMessage('No se pudo mandar otro código. Intenta más tarde.')
       })
       .finally(() => {
         setIsLoading(false)

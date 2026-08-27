@@ -6,7 +6,7 @@ import { getTransparencyTotals, listPublishedPurchases } from '@/lib/transparenc
 import { formatCOP, formatDate, formatNumber } from '@/lib/utils/format'
 
 export const metadata: Metadata = buildMetadata({
-  title: 'A donde va la plata',
+  title: 'A dónde va la plata',
   description:
     'Cada compra de material que hicimos, con su recibo, sus cantidades y su fecha.',
   canonical: '/transparencia',
@@ -60,18 +60,18 @@ export default async function TransparenciaPage() {
         </h1>
 
         <p className="max-w-2xl text-pretty text-body-lg text-muted-foreground">
-          Cuentas claras, resistencia larga. Compramos el material nosotros y publicamos el
-          recibo. Si no hay recibo, no paso.
+          Cuentas claras, rumba larga. Compramos el material nosotros y publicamos el
+          recibo. Si no hay recibo, no pasó.
         </p>
       </header>
 
       {totals.purchaseCount === 0 ? (
         <div className="mx-auto mt-12 max-w-4xl rounded-xl border border-border border-dashed p-8">
           <p className="font-display font-bold text-headline-md uppercase">
-            Todavia no hemos comprado nada.
+            Todavía no hemos comprado nada.
           </p>
           <p className="mt-1 text-body-md text-muted-foreground">
-            Apenas hagamos la primera compra, el recibo aparece aca.
+            Apenas hagamos la primera compra, el recibo aparece acá.
           </p>
         </div>
       ) : (

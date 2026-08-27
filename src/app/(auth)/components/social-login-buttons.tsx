@@ -4,6 +4,8 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { GitHubIcon, GoogleIcon, MicrosoftIcon, FacebookIcon } from './icons'
 import { Button } from '@/components/ui/button'
 import { client } from '@/lib/auth/auth-client'
+import { DESTINO_POR_DEFECTO } from '@/lib/auth/redirect'
+import { mensajeDeError } from '../fallo-de-red'
 
 interface SocialLoginButtonsProps {
   githubAvailable: boolean
@@ -15,19 +17,47 @@ interface SocialLoginButtonsProps {
   children?: ReactNode
 }
 
+type Proveedor = 'github' | 'google' | 'microsoft' | 'facebook'
+
+const NOMBRE: Record<Proveedor, string> = {
+  github: 'GitHub',
+  google: 'Google',
+  microsoft: 'Microsoft',
+  facebook: 'Facebook',
+}
+
+/**
+ * Traduce el fallo a algo accionable. Devuelve un mensaje SIEMPRE: el caso que
+ * no se reconoce tambien tiene que verse, porque un boton que se apaga sin
+ * decir nada es indistinguible de uno roto.
+ */
+const mensajeDelProveedor = (error: unknown, proveedor: Proveedor): string => {
+  const texto = error instanceof Error ? error.message : ''
+
+  if (texto.includes('account exists')) {
+    return 'Ya hay una cuenta con ese correo. Entra con tu contraseña.'
+  }
+  if (texto.includes('cancelled')) {
+    return `Cancelaste la entrada con ${NOMBRE[proveedor]}.`
+  }
+  if (texto.includes('rate limit')) {
+    return 'Demasiados intentos. Espera un momento.'
+  }
+
+  return mensajeDeError(error, `No se pudo entrar con ${NOMBRE[proveedor]}. Intenta de nuevo.`)
+}
+
 export function SocialLoginButtons({
   githubAvailable,
   googleAvailable,
   microsoftAvailable,
   facebookAvailable,
-  callbackURL = '/dashboard',
+  callbackURL = DESTINO_POR_DEFECTO,
   children,
 }: SocialLoginButtonsProps) {
-  const [isGithubLoading, setIsGithubLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [isMicrosoftLoading, setIsMicrosoftLoading] = useState(false)
-  const [isFacebookLoading, setIsFacebookLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [cargando, setCargando] = useState<Proveedor | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   // Set mounted state to true on client-side
   useEffect(() => {
@@ -37,163 +67,60 @@ export function SocialLoginButtons({
   // Only render on the client side to avoid hydration errors
   if (!mounted) return null
 
-  async function signInWithGithub() {
-    if (!githubAvailable) return
-
-    setIsGithubLoading(true)
+  /**
+   * UN SOLO MANEJADOR PARA LOS CUATRO.
+   *
+   * Antes habia cuatro copias de este bloque, y en las cuatro el `catch`
+   * armaba un `errorMessage` con todos sus casos... y no lo usaba para nada:
+   * la variable moria ahi. Como ademas el `finally` apagaba el spinner, entrar
+   * con Google fallando se veia exactamente igual que no haber hecho clic.
+   */
+  const entrarCon = async (proveedor: Proveedor) => {
+    setCargando(proveedor)
+    setError(null)
     try {
-      await client.signIn.social({ provider: 'github', callbackURL })
-    } catch (err: any) {
-      let errorMessage = 'Failed to sign in with GitHub'
-
-      if (err.message?.includes('account exists')) {
-        errorMessage = 'An account with this email already exists. Please sign in instead.'
-      } else if (err.message?.includes('cancelled')) {
-        errorMessage = 'GitHub sign in was cancelled. Please try again.'
-      } else if (err.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (err.message?.includes('rate limit')) {
-        errorMessage = 'Too many attempts. Please try again later.'
-      }
+      await client.signIn.social({ provider: proveedor, callbackURL })
+    } catch (err) {
+      console.error(`Social login error (${proveedor}):`, err)
+      setError(mensajeDelProveedor(err, proveedor))
     } finally {
-      setIsGithubLoading(false)
+      setCargando(null)
     }
   }
 
-  async function signInWithGoogle() {
-    if (!googleAvailable) return
-
-    setIsGoogleLoading(true)
-    try {
-      await client.signIn.social({ provider: 'google', callbackURL })
-    } catch (err: any) {
-      let errorMessage = 'Failed to sign in with Google'
-
-      if (err.message?.includes('account exists')) {
-        errorMessage = 'An account with this email already exists. Please sign in instead.'
-      } else if (err.message?.includes('cancelled')) {
-        errorMessage = 'Google sign in was cancelled. Please try again.'
-      } else if (err.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (err.message?.includes('rate limit')) {
-        errorMessage = 'Too many attempts. Please try again later.'
-      }
-    } finally {
-      setIsGoogleLoading(false)
-    }
-  }
-
-  async function signInWithMicrosoft() {
-    if (!microsoftAvailable) return
-
-    setIsMicrosoftLoading(true)
-    try {
-      await client.signIn.social({ provider: 'microsoft', callbackURL })
-    } catch (err: any) {
-      let errorMessage = 'Failed to sign in with Microsoft'
-
-      if (err.message?.includes('account exists')) {
-        errorMessage = 'An account with this email already exists. Please sign in instead.'
-      } else if (err.message?.includes('cancelled')) {
-        errorMessage = 'Microsoft sign in was cancelled. Please try again.'
-      } else if (err.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (err.message?.includes('rate limit')) {
-        errorMessage = 'Too many attempts. Please try again later.'
-      }
-    } finally {
-      setIsMicrosoftLoading(false)
-    }
-  }
-
-  async function signInWithFacebook() {
-    if (!facebookAvailable) return
-
-    setIsFacebookLoading(true)
-    try {
-      await client.signIn.social({ provider: 'facebook', callbackURL })
-    } catch (err: any) {
-      let errorMessage = 'Failed to sign in with Facebook'
-
-      if (err.message?.includes('account exists')) {
-        errorMessage = 'An account with this email already exists. Please sign in instead.'
-      } else if (err.message?.includes('cancelled')) {
-        errorMessage = 'Facebook sign in was cancelled. Please try again.'
-      } else if (err.message?.includes('network')) {
-        errorMessage = 'Network error. Please check your connection and try again.'
-      } else if (err.message?.includes('rate limit')) {
-        errorMessage = 'Too many attempts. Please try again later.'
-      }
-    } finally {
-      setIsFacebookLoading(false)
-    }
-  }
-
-  const githubButton = (
+  const boton = (proveedor: Proveedor, disponible: boolean, Icono: typeof GitHubIcon) => (
     <Button
       variant='outline'
       size='lg'
       className='w-full hover:bg-gray-50'
-      disabled={!githubAvailable || isGithubLoading}
-      onClick={signInWithGithub}
+      disabled={!disponible || cargando !== null}
+      onClick={() => entrarCon(proveedor)}
     >
-      <GitHubIcon className='h-[18px]! w-[18px]! mr-1' />
-      {isGithubLoading ? 'Connecting...' : 'GitHub'}
+      <Icono className='h-[18px]! w-[18px]! mr-1' />
+      {cargando === proveedor ? 'Conectando…' : NOMBRE[proveedor]}
     </Button>
   )
 
-  const googleButton = (
-    <Button
-      variant='outline'
-      size='lg'
-      className='w-full hover:bg-gray-50'
-      disabled={!googleAvailable || isGoogleLoading}
-      onClick={signInWithGoogle}
-    >
-      <GoogleIcon className='h-[18px]! w-[18px]! mr-1' />
-      {isGoogleLoading ? 'Connecting...' : 'Google'}
-    </Button>
-  )
+  // Incluye los cuatro. Antes miraba solo GitHub y Google, asi que un proyecto
+  // configurado unicamente con Microsoft o Facebook no pintaba ningun boton.
+  const hayProveedor = githubAvailable || googleAvailable || microsoftAvailable || facebookAvailable
 
-  const microsoftButton = (
-    <Button
-      variant='outline'
-      size='lg'
-      className='w-full rounded-[10px] shadow-sm hover:bg-gray-50'
-      disabled={!microsoftAvailable || isMicrosoftLoading}
-      onClick={signInWithMicrosoft}
-    >
-      <MicrosoftIcon className='h-[18px]! w-[18px]! mr-1' />
-      {isMicrosoftLoading ? 'Connecting...' : 'Microsoft'}
-    </Button>
-  )
-
-  const facebookButton = (
-    <Button
-      variant='outline'
-      size='lg'
-      className='w-full  hover:bg-gray-50'
-      disabled={!facebookAvailable || isFacebookLoading}
-      onClick={signInWithFacebook}
-    >
-      <FacebookIcon className='h-[18px]! w-[18px]! mr-1' />
-      {isFacebookLoading ? 'Connecting...' : 'Facebook'}
-    </Button>
-  )
-
-  const hasAnyOAuthProvider = githubAvailable || googleAvailable
-
-  if (!hasAnyOAuthProvider && !children) {
+  if (!hayProveedor && !children) {
     return null
   }
 
   return (
-    <div className={`grid gap-3 font-light`}>
-      {googleAvailable && googleButton}
-      {githubAvailable && githubButton}
-      {microsoftAvailable && microsoftButton}
-      {facebookAvailable && facebookButton}
+    <div className='grid gap-3 font-light'>
+      {googleAvailable && boton('google', googleAvailable, GoogleIcon)}
+      {githubAvailable && boton('github', githubAvailable, GitHubIcon)}
+      {microsoftAvailable && boton('microsoft', microsoftAvailable, MicrosoftIcon)}
+      {facebookAvailable && boton('facebook', facebookAvailable, FacebookIcon)}
       {children}
+      {error ? (
+        <p role='alert' className='text-body-sm text-destructive-foreground'>
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }

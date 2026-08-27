@@ -24,7 +24,7 @@ function ResetPasswordContent() {
     if (!token) {
       setStatusMessage({
         type: 'error',
-        text: 'Invalid or missing reset token. Please request a new password reset link.',
+        text: 'Ese enlace no sirve o ya venció. Pide uno nuevo desde la pantalla de entrar.',
       })
     }
   }, [token])
@@ -47,12 +47,12 @@ function ResetPasswordContent() {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to reset password')
+        throw new Error(errorData.message || 'No se pudo cambiar la contraseña')
       }
 
       setStatusMessage({
         type: 'success',
-        text: 'Password reset successful! Redirecting to login...',
+        text: '¡Listo! Te llevamos a entrar con la nueva…',
       })
 
       setTimeout(() => {
@@ -62,7 +62,7 @@ function ResetPasswordContent() {
       console.error('Error resetting password:', error)
       setStatusMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'Failed to reset password',
+        text: error instanceof Error ? error.message : 'No se pudo cambiar la contraseña',
       })
     } finally {
       setIsSubmitting(false)
@@ -72,7 +72,9 @@ function ResetPasswordContent() {
   return (
     <>
       <div className='space-y-1 text-center'>
-        <h1 className={`font-medium text-[32px] text-foreground tracking-tight`}>Reset your password</h1>
+        <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
+          Contraseña nueva
+        </h1>
         <p className={`font-[380] text-[16px] text-muted-foreground`}>
           Enter a new password for your account
         </p>
@@ -100,7 +102,7 @@ function ResetPasswordContent() {
 export default function ResetPasswordPage() {
   return (
     <Suspense
-      fallback={<div className='flex h-screen items-center justify-center'>Loading...</div>}
+      fallback={<div className='flex h-screen items-center justify-center'>Cargando…</div>}
     >
       <ResetPasswordContent />
     </Suspense>

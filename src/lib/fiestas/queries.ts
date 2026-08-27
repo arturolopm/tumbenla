@@ -3,7 +3,7 @@ import 'server-only'
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { partyNight, partyPhoto, photoClaim, venue } from '@/database/schema'
+import { partyNight, partyPhoto, photoClaim, photoReport, venue } from '@/database/schema'
 import type { ClaimedPhoto, HistorySummary, PartyNight, PartyPhoto } from './types'
 
 /**
@@ -156,4 +156,108 @@ export const getHistorySummary = async (userId: string): Promise<HistorySummary>
     estimateIsPartial: nightsWithoutEstimate > 0,
     nightsWithoutEstimate,
   }
+}
+
+/**
+ * Las noches de un sitio para SU PROPIO panel: todas, incluidas las de
+ * borrador, y con el conteo por estado para que el operador del bar sepa que
+ * tiene sin revisar sin abrir cada noche.
+ *
+ * Es la contraparte privada de listNightsForVenue, que solo devuelve lo
+ * publicado. Estan separadas a proposito: una consulta con una bandera
+ * "incluirBorradores" es una consulta a la que se le olvida la bandera.
+ */
+export const listNightsForPanel = async (venueId: string) => {
+  return db
+    .select({
+      id: partyNight.id,
+      happenedAt: partyNight.happenedAt,
+      title: partyNight.title,
+      status: partyNight.status,
+      fotos: sql<number>`count(${partyPhoto.id})::int`,
+      pendientes: sql<number>`count(${partyPhoto.id}) filter (where ${partyPhoto.status} = 'pending')::int`,
+      disponibles: sql<number>`count(${partyPhoto.id}) filter (where ${partyPhoto.status} = 'available')::int`,
+    })
+    .from(partyNight)
+    .leftJoin(partyPhoto, eq(partyPhoto.nightId, partyNight.id))
+    .where(eq(partyNight.venueId, venueId))
+    .groupBy(partyNight.id)
+    .orderBy(desc(partyNight.happenedAt))
+}
+
+/** Todas las fotos de una noche, para el panel del sitio. Incluye 'pending' y
+ *  'hidden', que es justamente lo que el sitio tiene que poder ver. */
+export const listPhotosForPanel = async (nightId: string) => {
+  return db
+    .select({
+      id: partyPhoto.id,
+      url: partyPhoto.url,
+      caption: partyPhoto.caption,
+      status: partyPhoto.status,
+      source: partyPhoto.source,
+      createdAt: partyPhoto.createdAt,
+      reclamos: sql<number>`(select count(*) from ${photoClaim} where ${photoClaim.photoId} = ${partyPhoto.id})::int`,
+    })
+    .from(partyPhoto)
+    .where(eq(partyPhoto.nightId, nightId))
+    .orderBy(desc(partyPhoto.createdAt))
+}
+
+/** Lo que le falta por revisar a un sitio: fotos de la calle sin habilitar. */
+export const listPendingPhotosForVenue = async (venueId: string) => {
+  return db
+    .select({
+      id: partyPhoto.id,
+      url: partyPhoto.url,
+      caption: partyPhoto.caption,
+      source: partyPhoto.source,
+      createdAt: partyPhoto.createdAt,
+      nightId: partyNight.id,
+      happenedAt: partyNight.happenedAt,
+      nightTitle: partyNight.title,
+    })
+    .from(partyPhoto)
+    .innerJoin(partyNight, eq(partyPhoto.nightId, partyNight.id))
+    .where(and(eq(partyNight.venueId, venueId), eq(partyPhoto.status, 'pending')))
+    .orderBy(desc(partyPhoto.createdAt))
+}
+
+/** Los reportes abiertos de un sitio. Una peticion de privacidad se atiende, no
+ *  se archiva: por eso tiene su propia lista y no vive escondida en una foto. */
+export const listOpenReportsForVenue = async (venueId: string) => {
+  return db
+    .select({
+      id: photoReport.id,
+      reason: photoReport.reason,
+      createdAt: photoReport.createdAt,
+      photoId: partyPhoto.id,
+      url: partyPhoto.url,
+      photoStatus: partyPhoto.status,
+      nightId: partyNight.id,
+    })
+    .from(photoReport)
+    .innerJoin(partyPhoto, eq(photoReport.photoId, partyPhoto.id))
+    .innerJoin(partyNight, eq(partyPhoto.nightId, partyNight.id))
+    .where(and(eq(partyNight.venueId, venueId), eq(photoReport.status, 'open')))
+    .orderBy(desc(photoReport.createdAt))
+}
+
+/** Una noche publicada, para la pagina publica. Devuelve null si no lo esta:
+ *  adivinar el id de una noche en borrador no debe mostrarla. */
+export const getPublishedNight = async (nightId: string) => {
+  const [fila] = await db
+    .select({
+      id: partyNight.id,
+      happenedAt: partyNight.happenedAt,
+      title: partyNight.title,
+      venueId: venue.id,
+      venueSlug: venue.slug,
+      venueNombre: venue.name,
+    })
+    .from(partyNight)
+    .innerJoin(venue, eq(partyNight.venueId, venue.id))
+    .where(and(eq(partyNight.id, nightId), eq(partyNight.status, 'published')))
+    .limit(1)
+
+  return fila ?? null
 }

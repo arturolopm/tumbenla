@@ -10,7 +10,7 @@ const brandConfig = getBrandConfig()
 export const siteConfig = {
   name: brandConfig.name,
   description:
-    'Bares y discotecas que ponen una parte de sus ventas en material de construccion. Mira cuales son, donde quedan, y en que se fue la plata.',
+    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Mira cuáles son, dónde quedan, y en qué se fue la plata.',
   url: getBaseUrl(),
   twitterHandle: '@tumbenla',
   creator: 'Tumbenla',
@@ -20,8 +20,8 @@ export const siteConfig = {
     'bares que donan',
     'discotecas que donan',
     'rumba con causa',
-    'material de construccion',
-    'reconstruccion Colombia',
+    'material de construcción',
+    'reconstrucción Colombia',
     'donaciones Colombia',
     'vida nocturna Colombia',
     'bares Colombia',
@@ -82,8 +82,6 @@ const normalizeCanonicalPath = (canonicalPath?: string, allowQuery?: boolean) =>
  * Generate Open Graph metadata
  */
 const getOpenGraph = (options: SEOOptions) => {
-  const imageUrl = options.image || '/opengraph-image.png'
-
   return {
     type: options.type || 'website',
     url: options.canonical ? getAbsoluteUrl(options.canonical) : siteConfig.url,
@@ -91,12 +89,19 @@ const getOpenGraph = (options: SEOOptions) => {
     description: options.description || siteConfig.description,
     siteName: siteConfig.name,
     locale: siteConfig.locale,
-    images: [
-      {
-        url: imageUrl,
-        ...(options.imageAlt && { alt: options.imageAlt }),
-      },
-    ],
+    // SOLO cuando la pagina trae una imagen propia. Sin esta condicion, el
+    // valor explicito le gana SIEMPRE al archivo `opengraph-image.tsx`, que es
+    // la convencion de Next: la imagen dibujada existiria y no la usaria nadie.
+    // Aca vivia un `|| '/opengraph-image.png'` que apuntaba al PNG del
+    // boilerplate, y por eso compartir el sitio mostraba "Launch SaaS in days".
+    ...(options.image && {
+      images: [
+        {
+          url: options.image,
+          ...(options.imageAlt && { alt: options.imageAlt }),
+        },
+      ],
+    }),
     ...(options.publishedTime && { publishedTime: options.publishedTime }),
     ...(options.modifiedTime && { modifiedTime: options.modifiedTime }),
     ...(options.authors && { authors: options.authors }),
@@ -107,14 +112,14 @@ const getOpenGraph = (options: SEOOptions) => {
  * Generate Twitter Card metadata
  */
 const getTwitterCard = (options: SEOOptions) => {
-  const imageUrl = options.image || '/twitter-image.png'
-
   return {
     card: 'summary_large_image' as const,
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     creator: siteConfig.twitterHandle,
-    images: [imageUrl],
+    // Mismo motivo que en getOpenGraph: si no se declara, manda
+    // `twitter-image.tsx`.
+    ...(options.image && { images: [options.image] }),
   }
 }
 
