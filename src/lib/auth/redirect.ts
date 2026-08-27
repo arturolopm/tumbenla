@@ -25,7 +25,7 @@ export const DESTINO_POR_DEFECTO = '/entrar'
  * OJO CON LA DOBLE BARRA: `//evil.com` empieza por '/' y un `startsWith('/')`
  * pelado lo da por bueno, pero el navegador lo lee como URL relativa al
  * protocolo y navega a evil.com. Es la forma clasica de convertir un login en
- * un redirector abierto: el enlace se ve como tumbenla.co/login?... y termina
+ * un redirector abierto: el enlace se ve como tumbenla.com/login?... y termina
  * en otro dominio con la sesion recien creada. Por eso aca se exige que
  * empiece por '/' y que el segundo caracter no sea ni '/' ni '\' (Chrome y
  * Firefox normalizan '\' a '/' antes de resolver).

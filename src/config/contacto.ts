@@ -11,7 +11,7 @@
 export const INSTAGRAM_VERIFICACION = 'tumbenla'
 
 /** El correo publico. El mismo del pie de pagina. */
-export const CORREO_CONTACTO = 'hola@tumbenla.co'
+export const CORREO_CONTACTO = 'hola@tumbenla.com'
 
 export const urlInstagram = (handle: string) => `https://instagram.com/${handle.replace(/^@/, '')}`
 

@@ -36,10 +36,10 @@ export function SiteFooter() {
             Conéctate
           </h2>
           <a
-            href="mailto:hola@tumbenla.co"
+            href="mailto:hola@tumbenla.com"
             className="text-body-md text-muted-foreground transition-colors hover:text-street-white"
           >
-            hola@tumbenla.co
+            hola@tumbenla.com
           </a>
         </div>
 

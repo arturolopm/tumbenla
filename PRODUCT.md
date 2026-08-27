@@ -331,6 +331,25 @@ Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
 segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
 fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
 
+### El correo sale de un SUBDOMINIO, y responde a otro sitio
+
+`send.tumbenla.com` esta verificado en Resend (DKIM + SPF + MX de retorno) y es
+de donde salen los correos. **Ese subdominio no recibe nada.** El buzon vive en
+`hola@tumbenla.com`, detras de un reenviador, y llega ahi por el `Reply-To` que
+`getReplyToAddress()` pone a TODO correo desde `processEmailData`.
+
+Por que en subdominio y no en el apex: si algun dia un envio quema la
+reputacion, no se lleva por delante la del dominio principal, y deja el apex
+libre de conflictos de SPF para los MX del buzon que recibe.
+
+**Si se cambia `DEFAULT_FROM_EMAIL` a una direccion de otro dominio, deja de
+salir.** Resend solo firma dominios verificados. Y si se borra
+`DEFAULT_REPLY_TO`, cada respuesta se pierde en silencio: hay copy que la pide
+("respondenos a este correo" en el correo de rechazo de una solicitud).
+
+Los registros DNS viven en Vercel, que es el nameserver de `tumbenla.com`:
+`vercel dns ls tumbenla.com`.
+
 ### `/api/geocode` esta cerrado A PROPOSITO
 
 Exige `assertAdmin()` y responde 404 a cualquier otro. No es un descuido y no

@@ -14,24 +14,25 @@ export function WelcomeEmail({ userName }: WelcomeEmailProps) {
   const baseUrl = getBaseUrl()
 
   return (
-    <EmailLayout preview={`Welcome to ${brand.name}`}>
+    <EmailLayout preview={`Bienvenido a ${brand.name}`}>
       <Text style={{ ...baseStyles.paragraph, marginTop: 0 }}>
-        {userName ? `Hey ${userName},` : 'Hey,'}
+        {userName ? `Hola ${userName},` : 'Hola,'}
       </Text>
       <Text style={baseStyles.paragraph}>
-        Welcome to {brand.name}! Your account is ready. Start building, and deploying
-        production-ready apps.
+        Tu cuenta de {brand.name} ya está lista. Acá lo que sigue: sales como sales siempre, y
+        cuando el sitio suba las fotos de esa noche, entras, buscas las tuyas y las guardas.
+        Cada noche que guardes suma a tu historia.
       </Text>
 
-      <Link href={`${baseUrl}/w`} style={{ textDecoration: 'none' }}>
-        <Text style={baseStyles.button}>Get Started</Text>
+      {/* /sitios y no /w: la ruta del boilerplate no existe en este proyecto. */}
+      <Link href={`${baseUrl}/sitios`} style={{ textDecoration: 'none' }}>
+        <Text style={baseStyles.button}>Ver el mapa del parche</Text>
       </Link>
 
       <Text style={baseStyles.paragraph}>
-        If you have any questions or feedback, just reply to this email. I read every message!
+        Si tienes un bar o una discoteca y quieres poner tu parte, respóndenos este correo y
+        hablamos.
       </Text>
-
-      <Text style={baseStyles.paragraph}>- Irere Emmanuel, co-founder of {brand.name}</Text>
     </EmailLayout>
   )
 }
