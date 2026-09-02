@@ -10,6 +10,34 @@ the accumulated technical debt and findings with file paths.
 decision, find a trap, or finish something on the roadmap. It outranks the
 original build plan in `~/.claude/plans/` where the two disagree.
 
+## La organizacion
+
+Tumbenla se opera como una empresa chiquita con tres departamentos. `org/ORG.md`
+es la carta: quien decide que, y como se hablan.
+
+| Departamento | Documento de pie | Agente | Decide |
+|---|---|---|---|
+| Producto | `PRODUCT.md` | `producto` | alcance, roadmap, y si algo choca con una decision tomada |
+| Crecimiento | `org/crecimiento/CRECIMIENTO.md` | `crecimiento` | mensaje, canal, publico, que experimento se propone |
+| Datos | `org/datos/METRICAS.md` | `datos` | si una cifra se puede afirmar |
+
+El codigo no es un departamento: es el taller donde los tres trabajan, y lo
+gobierna este archivo. El arbol de `org/` es el organigrama: `crecimiento/`
+(adquisicion, retencion, voz, publicos, y las piezas producidas en `piezas/`) y
+`datos/` (definicion y consulta de cada cifra). `PRODUCT.md` se queda en la raiz
+porque la leen los tres, no solo Producto.
+
+**Se hablan por un solo canal:** `org/crecimiento/EXPERIMENTOS.md`. Un
+experimento va `Propuesto` (Crecimiento) -> `Medible` (Datos) -> `Aprobado`
+(Producto) -> `En curso` -> `Cerrado`, y no se salta ningun estado. Si la
+metrica no existe, no arranca. El comando `/experimento` corre el ciclo.
+
+Antes de escribir cualquier copy, lee `org/crecimiento/VOZ.md`. Estan instaladas
+las 50 skills de marketing de `coreyhaines31/marketingskills`; son de un SaaS B2B
+con precio y plan, asi que **se usan filtradas** — la tabla de cual si y cual no
+esta en `org/ORG.md`, y las prohibiciones que mandan sobre todas ellas estan en
+`.agents/product-marketing.md`.
+
 ## Flujo de ramas
 
 `local (Docker) -> PR -> preview -> PR -> main (produccion)`
@@ -236,7 +264,7 @@ mailer degrades to Mailpit locally. See `docs/email/providers.mdx`.
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **ShipFree** (1673 symbols, 3445 relationships, 126 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **ShipFree** (8003 symbols, 11478 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 

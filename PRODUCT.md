@@ -15,6 +15,10 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 > Este archivo es el mapa vivo del producto. El plan de construccion original
 > esta en `~/.claude/plans/partitioned-crunching-hartmanis.md` y ya quedo
 > parcialmente desactualizado; cuando los dos se contradigan, manda este.
+>
+> Producto es uno de tres departamentos. La carta organizacional esta en
+> `org/ORG.md`; crecimiento y retencion viven en `org/`. Este archivo guarda las
+> conclusiones; los intentos viven en `org/crecimiento/EXPERIMENTOS.md`.
 
 ---
 
@@ -703,6 +707,9 @@ base desde ahi.
 
 - Una decision que ya se tomo va a "Decisiones tomadas", con el porque en una
   linea. Ese porque es lo que evita rediscutirla.
+- Una conclusion que salga de un experimento cerrado en
+  `org/crecimiento/EXPERIMENTOS.md` sube aca. La bitacora guarda el intento;
+  este archivo guarda lo que quedo.
 - Un hallazgo va a "Deuda y hallazgos" con la ruta del archivo y **cuando**
   muerde, no solo que existe.
 - Cuando algo del roadmap se construya, se mueve a "Estado" y se borra de la
