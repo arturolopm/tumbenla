@@ -28,6 +28,63 @@ order by n.happened_at desc;
 
 ---
 
+## La que atrapa el fraude
+
+**Tasa de escaneo del pago-en-barra contra la del pago-en-app.**
+
+El mecanismo del producto (Decision 26) es que el mesero no distingue cual orden
+esta pagada hasta despues de escanear. Si eso se cumple, **las dos tasas tienen
+que ser iguales**. No escanear una orden de barra le borra al sitio una deuda con
+nosotros; no escanear una de app le hace perder su propia parte. Un sitio cuyas
+ordenes de barra se escanean menos que las de app **encontro como distinguirlas**,
+y eso es exactamente lo que hay que ver.
+
+```sql
+-- por sitio: que fraccion de cada metodo termino escaneada
+select
+  o.venue_id,
+  o.pay_method,
+  count(*)                                   as ordenes,
+  count(*) filter (where r.redimidas > 0)    as con_escaneo,
+  round(100.0 * count(*) filter (where r.redimidas > 0) / count(*), 1) as tasa
+from product_order o
+left join lateral (
+  select count(*) filter (where status = 'redeemed') as redimidas
+  from order_redemption where order_id = o.id
+) r on true
+where o.created_at > now() - interval '30 days'
+group by o.venue_id, o.pay_method
+order by o.venue_id, o.pay_method;
+```
+
+**Como se lee.** Una diferencia grande entre los dos `pay_method` de un mismo
+sitio es la senal. No es prueba —un bar puede tener el celular dañado— pero es
+por donde se empieza a preguntar. Con pocas ordenes no dice nada: por debajo de
+unas 20 por metodo, "no concluyente".
+
+---
+
+## El libro tiene que cuadrar
+
+No es una metrica de producto, es una **prueba de integridad** y se corre igual
+que las demas:
+
+```sql
+select sum(amount) as debe_dar_cero from ledger_entry;
+```
+
+Si no da cero, hay un asiento que no se escribio y **ninguna cifra de plata de
+este archivo sirve hasta que se arregle**. Es la ventaja de la partida doble
+sobre un saldo con signo: el error se ve solo.
+
+```sql
+-- y por transaccion, para encontrar cual quedo coja
+select transaction_id, sum(amount) from ledger_entry
+group by transaction_id having sum(amount) <> 0;
+```
+
+---
+
 ## Lado sitio
 
 | Metrica | Definicion | Estado |
@@ -38,12 +95,25 @@ order by n.happened_at desc;
 | Solicitud → publicada | `venue_application.created_at` → `venue.published_at` | medible |
 | **Verificacion de aporte** | `venue_contribution.verified_at - created_at` | **medible** |
 | Aportes por estado | `venue_contribution` agrupado por `status` | medible |
+| Sitios con carta | sitios con al menos un `venue_product` publicado | **NO existe aun** |
+| Producto: creado → aprobado | `venue_product.reviewed_at - created_at` | **NO existe aun** |
+| Tragos entregados por sitio | `order_redemption` en `redeemed` | **NO existe aun** |
+| Saldo por sitio | `sum(amount)` de su cuenta `venue_current` | **NO existe aun** |
+| Ordenes sin escanear | `product_order` pagada, sin redencion, viva | **NO existe aun** |
 | Sitios activos | con `party_night` en las ultimas 3 semanas | medible |
 | Sitios en silencio | publicados, sin `party_night` en 3 semanas | medible |
 | **Origen de la solicitud** | de donde llego el bar | **NO existe** — ver abajo |
 
-**Activacion de un sitio:** su primer `venue_contribution` con
-`status = 'verified'`. No la publicacion, no la primera noche.
+**Activacion de un sitio:** su **primer trago entregado** — la primera
+`order_redemption` en `redeemed` de un producto suyo. No la publicacion, no la
+primera noche, y **ya no el primer aporte verificado**: eso definia la
+activacion cuando reportar era el camino principal, y desde la Decision 1 el
+camino principal es vender. Un sitio que armo la carta pero nunca escaneo nada
+no esta activo, esta decorado.
+
+Para los sitios que van por el camino viejo (aporte por porcentaje, opcional),
+la activacion sigue siendo su primer `venue_contribution` verificado. Son dos
+definiciones porque son dos caminos, y al reportar hay que decir cual se uso.
 
 ```sql
 -- tiempo de reportado a verificado, la metrica de retencion mas importante
@@ -73,10 +143,14 @@ having max(n.happened_at) < now() - interval '21 days' or max(n.happened_at) is 
 | **Segunda noche** | rumberos con reclamos en 2+ `party_night` distintas | medible |
 | Reclamos por rumbero | `photo_claim` agrupado por `user_id` | medible |
 | Fotos disponibles sin reclamar | `party_photo` sin `photo_claim` | medible |
+| Tragos pedidos | `product_order` por `created_at` | **NO existe aun** |
+| **Pedido → escaneado** | `order_redemption.redeemed_at - product_order.created_at` | **NO existe aun** |
 | Cuanta gente ve el mapa | — | **NO existe** — ver abajo |
 
-**Activacion de un rumbero:** su primer `photo_claim`. No la cuenta, no la
-visita. (Decision 9: no hay boton de "estuve aqui" porque se infla con clics.)
+**Activacion de un rumbero:** su primer `photo_claim` **o su primer trago
+pedido**, lo que pase primero. La foto sigue contando: es el camino por el que
+llego la gente que ya esta. (Decision 9: no hay boton de "estuve aqui" porque se
+infla con clics; un trago pedido no se infla porque cuesta plata.)
 
 **Retencion de un rumbero:** llegar a la segunda noche. Alguien con reclamos en
 dos noches distintas entendio para que sirve esto; alguien con una vino por una

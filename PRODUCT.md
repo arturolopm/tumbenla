@@ -1,14 +1,26 @@
 # Tumbenla — producto
 
-Directorio de bares y discotecas que ponen una parte de sus ventas en material
-de construccion. La gente sale como sale siempre; el sitio pone su parte y nos
-manda el recibo; nosotros lo verificamos, compramos el material y publicamos la
-factura. Son dos eslabones, no uno, y los dos se ven: lo que el sitio dice que
-entrego (verificado por nosotros) y en que lo gastamos.
+Bares y discotecas que ponen una parte de sus ventas en material de
+construccion. La gente sale como sale siempre; nosotros compramos el material y
+publicamos la factura. Se ven los dos eslabones: lo que entro por cada sitio y
+en que lo gastamos.
 
-**La plata no pasa por la app.** No cobramos, no procesamos pagos, no guardamos
-tarjetas. Lo unico que tenemos es la confianza, y por eso casi todas las
-decisiones de abajo se resuelven a favor de no afirmar mas de lo que sabemos.
+El camino principal es **vender un trago**: el sitio arma un producto (un coctel
+nuevo, o una cerveza, un combo o una botella que ya tenia en su carta) y dice en
+la descripcion como se reparte cada peso. La persona lo pide, lo paga —en la app
+o en la barra— y le sale un QR; el mesero lo escanea para entregarlo. Ese
+escaneo es el hecho que mueve todo lo demas.
+
+**Por la app pasa plata, y solo para eso.** Se cobra un producto concreto de un
+sitio concreto, con su reparto declarado antes de pagar. No hay planes, no hay
+suscripcion, y no guardamos tarjetas: eso lo hace la pasarela. Lo unico que
+tenemos sigue siendo la confianza, y por eso casi todas las decisiones de abajo
+se resuelven a favor de no afirmar mas de lo que sabemos.
+
+El **compromiso por porcentaje de ventas** —el modelo viejo, en el que el sitio
+reportaba lo que entrego y nos mandaba el recibo— sigue existiendo, sigue siendo
+manual y verificado a mano, y deja de ser el camino usual. No se quito: se corrio
+a un lado.
 
 Prueba de concepto: **Manizales**. Mas ciudades despues.
 
@@ -42,6 +54,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Aportes del sitio: reporte, recibo y verificacion | Construido |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | **A medias** |
+| **Vender el trago: producto, QR, escaneo y compensacion** | **Sin construir.** Es el camino principal nuevo (decisiones 1 y 26-32); el plan esta en el roadmap |
 
 ---
 
@@ -62,7 +75,20 @@ la plataforma y son lo unico que respalda lo que el mapa afirma.
 
 Estan aca para no volver a discutirlas cada dos semanas.
 
-1. **Solo directorio.** La plata no pasa por la app.
+1. **Se vende un trago, y la plata pasa por la app.** *(Reemplaza a "Solo
+   directorio. La plata no pasa por la app", que fue la decision fundacional del
+   producto.)* Se cobra un producto concreto de un sitio concreto, con su
+   reparto escrito antes de pagar, y se entrega contra un QR de un solo uso. Lo
+   que se cobra no es un servicio nuestro: es el trago del bar, y por eso el
+   reparto va en la descripcion y no en una letra chiquita.
+   **Por que se reabrio:** el modelo viejo pedia que el sitio decidiera poner,
+   calculara cuanto, y despues nos mandara el recibo — tres actos de voluntad
+   despues de la venta, todos opcionales, todos manuales. Este pide uno solo y
+   ocurre durante la venta. El viejo sobrevive como opcional (decision 19), no
+   se elimino.
+   **Lo que NO cambia:** no hay planes ni suscripcion, no guardamos tarjetas, y
+   ninguna cifra se afirma sin respaldo. Cobrar no nos da licencia para decir
+   mas de lo que sabemos; nos da mas cosas que tenemos que poder probar.
 2. **Los recibos son publicos.** Iniciar sesion AGREGA una capa personal; nunca
    restringe. Cerrar `/transparencia` detras del login le quitaria el argumento
    justo a quien todavia no confia lo suficiente como para crear una cuenta.
@@ -158,6 +184,43 @@ Estan aca para no volver a discutirlas cada dos semanas.
     ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
     (`UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`). Asi un acento
     nunca llega a una URL, a una consulta ni a una migracion.
+26. **Toda orden lleva QR, y el mesero no sabe cual esta pagada hasta despues de
+    escanear.** Es el mecanismo entero, no un detalle de implementacion. Un
+    mesero que cobra en la barra y nos dice que nunca entrego se queda con todo;
+    la defensa no es pedirle al cliente que verifique nada, es que no escanear
+    una orden de barra le borra una deuda pero no escanear una de app le hace
+    perder su propia parte, y como no distingue cual tiene enfrente, la unica
+    politica segura es escanear todas. **La incertidumbre hace el trabajo que
+    haria una auditoria.** De aqui salen las dos siguientes, que no se pueden
+    quitar sin tumbar esta.
+27. **Se escanea ANTES de cobrar, y sin escaneo no hay credito.** La pantalla
+    del escaneo es la que le dice al mesero si cobra ("YA PAGADO, entrega" o
+    "COBRAR $30.000"); si cobrara primero ya sabria cual es y la decision 26 se
+    cae. Y la parte del sitio en una orden pagada en la app se le abona **al
+    redimir**, no al pagar: es lo que vuelve caro no escanear.
+28. **Al comprador solo se le pide mostrar el QR.** Nada de confirmar, calificar
+    ni marcar recibido. La confirmacion en vivo —la pantalla pasa a "Listo" en el
+    momento del escaneo— lo vuelve un sensor sin pedirle trabajo: si no cambio,
+    dice "no me salio" ahi mismo. Todo lo demas lo hacemos nosotros, lo hace el
+    sitio, o se resuelve por disputa.
+29. **Se compra sin cuenta.** Nombre y correo. Con sesion la orden se amarra a
+    la cuenta y sale en `/mi-historia`; sin sesion vive en una URL con token y
+    en el correo. Es la decision 2 aplicada al pago: iniciar sesion AGREGA,
+    nunca restringe. Un registro con verificacion por correo entre la persona y
+    el trago, parada en una barra y con mala senal, es donde se pierde la venta.
+30. **El precio y el reparto se congelan en la orden.** Los cinco campos de
+    plata se copian al comprar. Si el sitio cambia el precio o el reparto
+    manana, la orden vieja conserva lo que la persona vio. Un reparto que se
+    puede reescribir despues del hecho no es una promesa, es un adorno.
+31. **Un operador aprueba cada producto antes de que se venda.** El sitio lo
+    crea en borrador; nadie puede pedirlo hasta que se publica. El porcentaje es
+    una afirmacion publica sobre plata hecha bajo nuestro dominio, asi que pasa
+    por el mismo filtro que un aporte (decision 19).
+32. **Sin reclamar, caduca a los 45 dias y se va en material; se devuelve a
+    quien lo pida.** El sitio no cobra lo que no entrego. El apartado para pedir
+    la devolucion existe y esta a la vista, pero cuesta escribir un correo: es a
+    proposito, y es la unica parte del producto donde la friccion es la
+    funcion.
 
 ---
 
@@ -214,6 +277,39 @@ idea y que no toca ninguna columna `pledge_*`.
 ---
 
 ## Roadmap
+
+### Vender el trago
+
+Es el camino principal nuevo (decision 1). Va en siete pasos y en ese orden; el
+detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelines-synthetic-pillow.md`.
+
+- [x] **Doctrina.** Reescribir la decision 1, agregar las 26-32 y los riesgos
+      7-9. Va primero para que no haya codigo que contradiga el archivo.
+- [ ] **Esquema.** `venue_product`, `product_order`, `order_redemption`,
+      `ledger_account`, `ledger_transaction`, `ledger_entry`, `venue_settlement`,
+      y `venue_contribution.source`. Partida doble: los asientos de una
+      transaccion suman cero y `select sum(amount) from ledger_entry` da cero
+      siempre. Trigger que rechaza `UPDATE`/`DELETE` sobre `ledger_entry`.
+- [ ] **Carta y revision.** `/panel/[slug]/carta` y la cola en
+      `/admin/productos`. Nada se vende sin pasar por ahi (decision 31).
+- [ ] **Pedido y pago.** La carta publica en `/sitios/[slug]`, el checkout, un
+      adaptador de pasarela agnostico (proveedor de mentira mientras se decide
+      cual), y `/orden/[token]` con el QR y su confirmacion en vivo.
+      **En ESE paso, y no antes, hay que reescribir
+      `src/app/(publico)/como-funciona/page.tsx:160`**, que hoy dice "La plata
+      no pasa por esta pagina. No cobramos, no procesamos pagos". Hoy es
+      verdad y tiene que seguir estando hasta que el cobro exista de verdad:
+      cambiarlo antes seria la misma mentira al reves.
+- [ ] **Escaneo y redencion.** `/panel/[slug]/escanear`, el `UPDATE` atomico y
+      los asientos.
+- [ ] **Saldo y liquidacion.** `/panel/[slug]/cuenta`, `/admin/cuentas`, y el
+      puente que convierte la parte de material en un `venue_contribution`
+      verificado para que `/transparencia` siga respondiendo lo mismo.
+- [ ] **Caducidad y devolucion.** Los 45 dias y el correo (decision 32).
+
+**La pasarela esta sin decidir a proposito.** Se escribe el adaptador contra una
+interfaz propia y la real entra despues sin tocar esquema ni pantallas. Cuando
+se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
 
 ### Ahora
 
@@ -334,6 +430,36 @@ portador y entra quien lo abra en el grupo de WhatsApp del bar.
 Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
 segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
 fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
+
+### Redimir un QR es UNA sentencia, nunca leer-y-despues-escribir
+
+```sql
+UPDATE order_redemption
+   SET status = 'redeemed', redeemed_at = now(), redeemed_by_user_id = $1
+ WHERE id = $2 AND status = 'issued'
+RETURNING *;
+```
+
+Cero filas de vuelta = ya estaba redimido. Toda la garantia que sostiene el
+producto —una persona no recibe dos tragos, un sitio no cobra mas de lo que se
+pago— vive en el `AND status = 'issued'` de adentro. Un `select` para comprobar
+seguido de un `update` deja ganar a los dos escaneos simultaneos, y la ventana
+entre los dos es de milisegundos: no se reproduce probando a mano, se reproduce
+un sabado a las 11 de la noche.
+
+Va acompanada de dos cosas que **no** son la misma y hacen falta igual:
+
+- **Una fila de redencion por unidad comprada.** Cantidad 3 son 3 codigos. Asi
+  el limite no es una validacion que alguien pueda olvidar: no existe una cuarta
+  fila que redimir.
+- **Idempotencia, que es otro problema.** El `UPDATE` resuelve *dos escaneos a
+  la vez*. No resuelve *el mismo escaneo reintentado* —el mesero toca dos veces,
+  la red repite el POST—, que con solo el `UPDATE` le responde "ya se entrego" a
+  quien acaba de escanear bien. Eso lo resuelve la clave de idempotencia unica
+  de `ledger_transaction`.
+
+Y la redencion y sus asientos van en la MISMA transaccion: no puede existir un
+trago entregado sin su movimiento en el libro.
 
 ### El correo sale de un SUBDOMINIO, y responde a otro sitio
 
@@ -700,6 +826,23 @@ base desde ahi.
 6. **El estimado de aporte puede leerse como un recibo.** Hoy el copy lo aclara y
    avisa cuando esta incompleto. Cualquier rediseno de `/mi-historia` tiene que
    conservar eso; es la diferencia entre un estimado y una mentira.
+7. **Intermediacion de pagos.** Al cobrar en la app recaudamos plata que en
+   parte es del sitio, y al cobrar en la barra el sitio recauda plata que en
+   parte es nuestra. Son dos figuras distintas: en la primera somos custodios de
+   plata ajena, en la segunda somos acreedores. La compensacion entre las dos
+   es un acuerdo entre partes y **tiene que estar escrito con cada sitio antes
+   de venderle el primer trago a nadie**, no despues de la primera discusion.
+   Este riesgo hace crecer al 1, no lo reemplaza.
+8. **Un sitio que acumula saldo en contra y cierra.** Con el pago en barra, un
+   sitio nos va debiendo hasta que se liquida. Si cierra debiendo, esa plata ya
+   se le prometio a material. No hay tope ni garantia en el MVP: la mitigacion
+   es liquidar seguido y mirar el saldo, no un contrato. **Antes de abrir la
+   segunda ciudad hay que definir un tope por sitio.**
+9. **Pasivo de devoluciones.** Una orden que caduca a los 45 dias pasa a
+   material, pero la devolucion se sigue pudiendo pedir por correo. Si esa plata
+   ya se gasto en material, la devolucion sale de otro lado. Con el volumen de
+   hoy es un caso por mes y se resuelve a mano; deja de serlo cuando caduquen
+   decenas al mes.
 
 ---
 

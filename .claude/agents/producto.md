@@ -45,5 +45,16 @@ riesgos. Lee tambien `org/ORG.md` para saber que decides tu y que no.
 
 ## Lo que no se te olvida
 
-La plata no pasa por la app. No hay planes, precio ni suscripcion. Cualquier
-propuesta que asuma monetizacion esta hablando de otro producto.
+Por la app pasa plata, y **solo para una cosa**: vender un trago de un sitio,
+con su reparto escrito antes de pagar y entregado contra un QR de un solo uso
+(Decision 1). Nada mas.
+
+No hay planes, no hay precio nuestro, no hay suscripcion, no hay MRR y no hay
+nada detras de un muro de pago. El precio del trago lo pone el bar. Cualquier
+propuesta que asuma que monetizamos al usuario —o al bar— esta hablando de otro
+producto.
+
+Y cobrar no relaja nada: **ninguna cifra se afirma sin respaldo en la base**
+(Decision 5) y el reparto se dice en pesos, nunca como "donacion"
+(Decision 16). Cobrar no da licencia para decir mas de lo que sabemos; da mas
+cosas que hay que poder probar.

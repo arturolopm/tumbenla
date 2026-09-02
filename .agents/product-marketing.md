@@ -7,27 +7,40 @@
 
 ## Que es
 
-Directorio de bares y discotecas de **Manizales, Colombia** que ponen una parte
-de sus ventas en material de construccion despues del sismo. El sitio reporta lo
-que entrego, nosotros lo verificamos, compramos el material y publicamos la
-factura.
+Bares y discotecas de **Manizales, Colombia** que ponen una parte de sus ventas
+en material de construccion despues del sismo. Nosotros compramos el material y
+publicamos la factura.
 
-**La plata no pasa por la app.** No cobramos, no procesamos pagos, no hay planes,
-no hay suscripcion, no hay MRR, no hay trial. Lo unico que tenemos es la
-confianza.
+El camino principal es **vender un trago**: el sitio arma un producto (un coctel
+nuevo, o una cerveza, un combo o una botella de su carta) y dice en la
+descripcion como se reparte cada peso. La persona lo pide, lo paga —en la app o
+en la barra— y le sale un QR que el mesero escanea para entregarlo.
+
+**Por la app pasa plata, y solo para eso: un trago de un sitio.** No hay planes,
+no hay suscripcion, no hay MRR, no hay trial, no hay prueba gratis y no hay nada
+que "empiece desde $X al mes". Ninguna skill de SaaS aplica en esa parte. Lo
+unico que tenemos sigue siendo la confianza.
+
+El compromiso por porcentaje de ventas (el sitio reporta lo que entrego y nos
+manda el recibo) sigue existiendo como opcional y verificado a mano. Ya no es el
+camino usual, asi que no es el titular de ninguna pieza.
 
 ## Los dos publicos (mercado de dos lados)
 
 | | **Sitio** (oferta) | **Rumbero** (demanda) |
 |---|---|---|
 | Quien | dueno o administrador de un bar o discoteca en Manizales | alguien que sale de rumba en Manizales |
-| Que gana | aparecer en el mapa, prueba publica de que cumplio, mas gente en la puerta | ver que su noche conto, sus fotos, su estimado en `/mi-historia` |
-| Que le pedimos | reportar el aporte con recibo | reclamar sus fotos |
+| Que gana | aparecer en el mapa, vender un trago que la gente busca, prueba publica de que cumplio | pedir un trago que ya viene con su parte adentro, sus fotos, su historia en `/mi-historia` |
+| Que le pedimos | armar un producto y **escanear el QR de cada orden** | pedir el trago y mostrar el QR |
 | Donde esta | la calle, WhatsApp, el gremio, Instagram del bar | Instagram, TikTok, el grupo de la parcha, el bar mismo |
-| Acto de activacion | primer aporte **verificado** | primera foto reclamada |
+| Acto de activacion | **primer trago entregado** (escaneado) | **primer trago pedido** |
 
-Ninguno de los dos lados vale solo. Las fotos de los sitios traen rumberos; los
-rumberos reclamando fotos le dan al sitio la razon para seguir reportando.
+Ninguno de los dos lados vale solo. Un sitio sin gente pidiendo no tiene por que
+armar la carta; gente pidiendo en un sitio que no escanea se va y no vuelve.
+
+El aporte por porcentaje sigue siendo un camino valido, pero **no es el que se
+promociona**: pedirle a un bar que calcule y reporte es pedirle tres actos de
+voluntad despues de la venta. Armar un producto es uno solo y ocurre durante.
 
 ## Voz
 
@@ -60,15 +73,41 @@ recomendacion de una skill importada**:
 8. **El estimado es un estimado.** Cualquier pieza que muestre el aporte de una
    persona conserva el rotulo. Es la diferencia entre un estimado y una mentira.
    *(Riesgo 6)*
+9. **El reparto se dice EN PESOS, y sin la palabra "dona".** La prohibicion 2 no
+   se relaja porque ahora se cobre; al contrario, es donde mas facil se cuela.
+   *(Decisiones 16 y 30)*
+
+   | No | Si |
+   |---|---|
+   | "80% se dona a las victimas" | "De $30.000: **$24.000 se van en material**. $6.000 se quedan en el bar" |
+   | "100% donado" | "De $30.000: **los $30.000 se van en material**" |
+   | "Aporta con tu coctel" | "Pide el coctel. La cuenta queda publicada" |
+
+   El porcentaje suelto es abstracto; los pesos se verifican despues contra la
+   factura. Y no se promete a donde va mas alla de "material": el destino
+   concreto solo se afirma cuando la compra existe y esta publicada.
+10. **No se anuncia un producto que no este aprobado y publicado.** Ninguna
+    pieza sale antes de que el operador lo apruebe (decision 31), porque hasta
+    ese momento el reparto todavia puede cambiar.
 
 ## Skills importadas que NO aplican aca
 
-No hay ingresos en la app, no hay ventas B2B y no hay producto de pago. Estas
-estan instaladas pero no se usan salvo que el modelo de negocio cambie:
+Ahora se cobra, pero **no somos un SaaS**: no hay plan, no hay suscripcion, no
+hay MRR y el precio del trago lo pone el bar, no nosotros. Casi todas estas
+siguen sin aplicar:
 
-`pricing`, `paywalls`, `offers`, `revops`, `sales-enablement`, `prospecting`,
-`cold-email`, `aso`, `sms`, `ads`, `ad-creative`, `attribution` (multi-touch),
-`churn-prevention` (la parte de dunning y pagos fallidos).
+`paywalls` (nada se esconde detras de pagar — decision 2), `revops`,
+`sales-enablement`, `prospecting`, `cold-email`, `aso`, `sms`, `ads`,
+`ad-creative`, `attribution` (multi-touch), `churn-prevention` (la parte de
+dunning y pagos fallidos, que aca no existe: no hay cobro recurrente que falle).
+
+Dos cambiaron de estado con la decision 1 y **se usan filtradas**:
+
+- `pricing` — solo para ayudarle a un sitio a pensar el precio y el reparto de
+  SU trago. Nada de escalones, ni de anclaje, ni de "el plan recomendado".
+- `offers` — solo para como se presenta un producto en la carta. Nada de
+  descuentos, urgencia falsa, ni escasez inventada; el argumento es a donde va
+  la plata, y ese ya es suficiente.
 
 Las que si aplican y como, en `org/ORG.md`.
 
