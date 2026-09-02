@@ -24,17 +24,17 @@ export default async function PanelIndexPage() {
 
   if (sitios.length === 0) {
     return (
-      <div className="mx-auto max-w-2xl px-margin-mobile py-section-gap">
-        <h1 className="font-display font-black text-3xl uppercase tracking-tighter">
+      <div className='mx-auto max-w-2xl px-margin-mobile py-section-gap'>
+        <h1 className='font-display font-black text-3xl uppercase tracking-tighter'>
           No manejas ningún sitio
         </h1>
-        <p className="mt-3 text-body-md text-muted-foreground">
-          Este panel es para los sitios de la red. Si trabajas en uno, pídele al dueño que te
-          invite con tu correo; la invitación te llega acá mismo.
+        <p className='mt-3 text-body-md text-muted-foreground'>
+          Este panel es para los sitios de la red. Si trabajas en uno, pídele al dueño que te invite
+          con tu correo; la invitación te llega acá mismo.
         </p>
         <Link
-          href="/mi-historia"
-          className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase"
+          href='/mi-historia'
+          className='mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase'
         >
           Ir a mi historia
         </Link>
@@ -43,19 +43,17 @@ export default async function PanelIndexPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-margin-mobile py-section-gap">
-      <h1 className="font-display font-black text-3xl uppercase tracking-tighter">
-        ¿Cuál sitio?
-      </h1>
-      <ul className="mt-6 flex flex-col gap-2">
+    <div className='mx-auto max-w-2xl px-margin-mobile py-section-gap'>
+      <h1 className='font-display font-black text-3xl uppercase tracking-tighter'>¿Cuál sitio?</h1>
+      <ul className='mt-6 flex flex-col gap-2'>
         {sitios.map((sitio) => (
           <li key={sitio.slug}>
             <Link
               href={`/panel/${sitio.slug}`}
-              className="flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary"
+              className='flex items-center justify-between rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary'
             >
-              <span className="font-display font-bold uppercase">{sitio.nombre}</span>
-              <span className="text-muted-foreground text-xs uppercase">
+              <span className='font-display font-bold uppercase'>{sitio.nombre}</span>
+              <span className='text-muted-foreground text-xs uppercase'>
                 {sitio.role === 'owner' ? 'Dueño' : 'Equipo'}
               </span>
             </Link>

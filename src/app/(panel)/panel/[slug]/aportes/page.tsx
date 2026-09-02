@@ -15,15 +15,14 @@ export default async function AportesPage({ params }: { params: Promise<{ slug: 
   const aportes = await listContributionsForPanel(sitio.id)
 
   return (
-    <div className="flex max-w-3xl flex-col gap-8">
+    <div className='flex max-w-3xl flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           Lo que has entregado
         </h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
-          Reporta cuánto entregaste y de qué periodo, y adjunta el recibo. Nosotros lo
-          confirmamos antes de que salga publicado, y después lo amarramos a la compra que
-          financió.
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
+          Reporta cuánto entregaste y de qué periodo, y adjunta el recibo. Nosotros lo confirmamos
+          antes de que salga publicado, y después lo amarramos a la compra que financió.
         </p>
       </header>
 

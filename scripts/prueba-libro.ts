@@ -172,6 +172,47 @@ const malo = await publicarMovimiento({
 ok('rechazado', malo.ok, false)
 ok('y el saldo quedo intacto', (await saldoDeSitio(sitio.id)) - saldoInicial, 15000)
 
+console.log('\n== los asientos de una ENTREGA, como los arma el escaner ==')
+// Se replican aca los mismos asientos que construye `redimirAction`, porque es
+// donde un signo al reves o una cuenta cambiada no lo atrapa nada: la accion
+// funciona, el trago sale, y el saldo del sitio queda torcido en silencio.
+const cuentaMaterial = material
+const saldoAntesDeEntregas = await saldoDeSitio(sitio.id)
+
+const entregaPagadaEnLaApp = (precio: number, pct: number, clave: string) => {
+  const reparto = repartir(precio, pct)
+  return publicarMovimiento({
+    kind: 'redeemed',
+    idempotencyKey: clave,
+    asientos: [
+      { accountId: porEntregar, amount: precio },
+      { accountId: cuentaMaterial, amount: -reparto.material },
+      ...(reparto.sitio > 0 ? [{ accountId: cuentaSitio, amount: -reparto.sitio }] : []),
+    ],
+  })
+}
+
+ok('entrega 80/20 publica', (await entregaPagadaEnLaApp(30000, 80, `e1-${sello}`)).ok, true)
+ok(
+  'le queda debiendo al sitio su 20%',
+  (await saldoDeSitio(sitio.id)) - saldoAntesDeEntregas,
+  -6000
+)
+
+// El borde que casi nadie prueba: reparto del 100%. Ahi el sitio no se queda con
+// nada y el TERCER ASIENTO NO DEBE EXISTIR, porque `material` ya vale el precio
+// entero. Si se escribiera igual, el movimiento no sumaria cero y se rechaza.
+ok(
+  'entrega 100/0 publica, sin tercer asiento',
+  (await entregaPagadaEnLaApp(30000, 100, `e2-${sello}`)).ok,
+  true
+)
+ok(
+  'y esa no movio el saldo del sitio',
+  (await saldoDeSitio(sitio.id)) - saldoAntesDeEntregas,
+  -6000
+)
+
 console.log('\n== La prueba de integridad ==')
 const cuadre = await libroCuadra()
 ok('el libro entero suma cero', cuadre, { cuadra: true, diferencia: 0 })

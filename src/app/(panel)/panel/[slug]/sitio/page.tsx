@@ -6,11 +6,7 @@ import { getVenueById } from '@/lib/venues/queries'
 
 export const dynamic = 'force-dynamic'
 
-export default async function PanelSitioPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function PanelSitioPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const cabecera = await getVenueForPanel(slug)
   if (!cabecera) notFound()
@@ -21,18 +17,18 @@ export default async function PanelSitioPage({
   if (!sitio) notFound()
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className='flex flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           El sitio
         </h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
-          Esto es lo que ve la gente en tu perfil. El compromiso que declares acá es el que
-          aparece en el mapa, así que cámbialo solo si de verdad cambió.
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
+          Esto es lo que ve la gente en tu perfil. El compromiso que declares acá es el que aparece
+          en el mapa, así que cámbialo solo si de verdad cambió.
         </p>
       </header>
 
-      <VenueForm venue={sitio} modo="panel" onSuccessHref={`/panel/${slug}/sitio`} />
+      <VenueForm venue={sitio} modo='panel' onSuccessHref={`/panel/${slug}/sitio`} />
     </div>
   )
 }

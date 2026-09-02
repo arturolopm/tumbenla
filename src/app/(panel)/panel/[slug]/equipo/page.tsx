@@ -24,14 +24,14 @@ export default async function EquipoPage({ params }: { params: Promise<{ slug: s
   ])
 
   return (
-    <div className="flex max-w-3xl flex-col gap-8">
+    <div className='flex max-w-3xl flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           Equipo
         </h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
-          Invita a tu gente por correo para que no tengas que subir tú todas las fotos. El
-          equipo sube noches y aprueba fotos; solo tú manejas quién entra.
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
+          Invita a tu gente por correo para que no tengas que subir tú todas las fotos. El equipo
+          sube noches y aprueba fotos; solo tú manejas quién entra.
         </p>
       </header>
 

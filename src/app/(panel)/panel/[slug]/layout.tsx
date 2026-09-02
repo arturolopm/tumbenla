@@ -1,11 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { PanelShell } from '@/components/panel/panel-shell'
-import {
-  getVenueForPanel,
-  listMyVenues,
-  requireVenueAccess,
-} from '@/lib/auth/venue-access'
+import { getVenueForPanel, listMyVenues, requireVenueAccess } from '@/lib/auth/venue-access'
 
 /**
  * Aca si esta el gate, porque aca si se conoce el slug.
