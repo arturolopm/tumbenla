@@ -3,7 +3,16 @@ import 'server-only'
 import { and, asc, desc, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { orderRedemption, productOrder, venue, venueProduct } from '@/database/schema'
+import {
+  ledgerAccount,
+  ledgerEntry,
+  ledgerTransaction,
+  orderRedemption,
+  productOrder,
+  venue,
+  venueProduct,
+  venueSettlement,
+} from '@/database/schema'
 import { repartir } from '@/lib/comercio/dinero'
 import type {
   EstadoDeOrden,
@@ -349,4 +358,131 @@ export const estadoDeOrdenPorToken = async (
     entregadas: Number(conteo?.entregadas ?? 0),
     total: Number(fila.quantity),
   }
+}
+
+// -------------------------------------------------------- saldo y liquidacion
+
+export type MovimientoDTO = {
+  id: string
+  fecha: Date
+  tipo: string
+  monto: number
+  producto: string | null
+  payMethod: PayMethod | null
+  liquidado: boolean
+}
+
+/**
+ * El movimiento de la cuenta de un sitio, mas nuevo arriba.
+ *
+ * Cada fila es un asiento contra SU cuenta `venue_current`. El signo es desde
+ * nuestro lado: positivo = el sitio nos debe, negativo = le debemos.
+ */
+export const movimientosDeSitio = async (
+  venueId: string,
+  limite = 100
+): Promise<MovimientoDTO[]> => {
+  const filas = await db
+    .select({
+      id: ledgerEntry.id,
+      fecha: ledgerEntry.createdAt,
+      monto: ledgerEntry.amount,
+      tipo: ledgerTransaction.kind,
+      settlementId: ledgerTransaction.settlementId,
+      producto: venueProduct.name,
+      payMethod: productOrder.payMethod,
+    })
+    .from(ledgerEntry)
+    .innerJoin(ledgerAccount, eq(ledgerAccount.id, ledgerEntry.accountId))
+    .innerJoin(ledgerTransaction, eq(ledgerTransaction.id, ledgerEntry.transactionId))
+    .leftJoin(productOrder, eq(productOrder.id, ledgerTransaction.orderId))
+    .leftJoin(venueProduct, eq(venueProduct.id, productOrder.productId))
+    .where(and(eq(ledgerAccount.kind, 'venue_current'), eq(ledgerAccount.venueId, venueId)))
+    .orderBy(desc(ledgerEntry.createdAt))
+    .limit(limite)
+
+  return filas.map((f) => ({
+    id: f.id,
+    fecha: f.fecha,
+    tipo: f.tipo,
+    monto: Number(f.monto),
+    producto: f.producto,
+    payMethod: (f.payMethod as PayMethod) ?? null,
+    liquidado: f.settlementId !== null,
+  }))
+}
+
+export type SaldoDeSitio = {
+  venueId: string
+  slug: string
+  nombre: string
+  saldo: number
+  movimientos: number
+}
+
+/**
+ * Los saldos de todos los sitios, para el operador.
+ *
+ * Solo los que tienen movimiento: un sitio que nunca vendio nada no es una fila
+ * en cero que haya que leer, es un sitio que no aparece.
+ */
+export const saldosDeTodosLosSitios = async (): Promise<SaldoDeSitio[]> => {
+  const filas = await db
+    .select({
+      venueId: venue.id,
+      slug: venue.slug,
+      nombre: venue.name,
+      saldo: sql<string>`coalesce(sum(${ledgerEntry.amount}), 0)`,
+      movimientos: sql<string>`count(${ledgerEntry.id})`,
+    })
+    .from(ledgerAccount)
+    .innerJoin(venue, eq(venue.id, ledgerAccount.venueId))
+    .innerJoin(ledgerEntry, eq(ledgerEntry.accountId, ledgerAccount.id))
+    .where(eq(ledgerAccount.kind, 'venue_current'))
+    .groupBy(venue.id, venue.slug, venue.name)
+    .orderBy(desc(sql`abs(sum(${ledgerEntry.amount}))`))
+
+  return filas.map((f) => ({
+    venueId: f.venueId,
+    slug: f.slug,
+    nombre: f.nombre,
+    saldo: Number(f.saldo),
+    movimientos: Number(f.movimientos),
+  }))
+}
+
+export type LiquidacionDTO = {
+  id: string
+  fecha: Date
+  monto: number
+  direccion: 'to_venue' | 'from_venue'
+  metodo: string | null
+  referencia: string | null
+  nota: string | null
+}
+
+export const liquidacionesDeSitio = async (venueId: string): Promise<LiquidacionDTO[]> => {
+  const filas = await db
+    .select({
+      id: venueSettlement.id,
+      fecha: venueSettlement.createdAt,
+      monto: venueSettlement.amount,
+      direccion: venueSettlement.direction,
+      metodo: venueSettlement.method,
+      referencia: venueSettlement.reference,
+      nota: venueSettlement.note,
+    })
+    .from(venueSettlement)
+    .where(eq(venueSettlement.venueId, venueId))
+    .orderBy(desc(venueSettlement.createdAt))
+
+  return filas.map((f) => ({
+    id: f.id,
+    fecha: f.fecha,
+    monto: Number(f.monto),
+    direccion: f.direccion as 'to_venue' | 'from_venue',
+    metodo: f.metodo,
+    referencia: f.referencia,
+    nota: f.nota,
+  }))
 }

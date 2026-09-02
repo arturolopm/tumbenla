@@ -32,6 +32,7 @@ const NAV = [
   { href: '/admin/solicitudes', label: 'Solicitudes' },
   { href: '/admin/productos', label: 'Productos' },
   { href: '/admin/aportes', label: 'Aportes' },
+  { href: '/admin/cuentas', label: 'Cuentas' },
 ]
 
 export function AdminShell({
