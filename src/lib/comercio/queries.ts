@@ -486,3 +486,68 @@ export const liquidacionesDeSitio = async (venueId: string): Promise<Liquidacion
     nota: f.nota,
   }))
 }
+
+// -------------------------------------------------------- la historia de quien pide
+
+export type PedidoMio = {
+  id: string
+  publicToken: string
+  fecha: Date
+  productoNombre: string
+  venueSlug: string
+  venueNombre: string
+  cantidad: number
+  total: number
+  material: number
+  estado: EstadoDeOrden
+  entregadas: number
+}
+
+/**
+ * Los pedidos de una persona, para /mi-historia.
+ *
+ * Incluye los que hizo como invitado y despues quedaron amarrados a su cuenta
+ * (ver `vincularPedidosDeInvitado`).
+ */
+export const misPedidos = async (userId: string): Promise<PedidoMio[]> => {
+  const filas = await db
+    .select({
+      id: productOrder.id,
+      publicToken: productOrder.publicToken,
+      fecha: productOrder.createdAt,
+      productoNombre: venueProduct.name,
+      venueSlug: venue.slug,
+      venueNombre: venue.name,
+      quantity: productOrder.quantity,
+      totalAmount: productOrder.totalAmount,
+      unitDonationAmount: productOrder.unitDonationAmount,
+      status: productOrder.status,
+      entregadas: sql<string>`(
+        select count(*) from ${orderRedemption}
+        where ${orderRedemption.orderId} = ${productOrder.id}
+          and ${orderRedemption.status} = 'redeemed'
+      )`,
+    })
+    .from(productOrder)
+    .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+    .innerJoin(venue, eq(productOrder.venueId, venue.id))
+    .where(eq(productOrder.userId, userId))
+    .orderBy(desc(productOrder.createdAt))
+
+  return filas.map((f) => {
+    const cantidad = Number(f.quantity)
+    return {
+      id: f.id,
+      publicToken: f.publicToken,
+      fecha: f.fecha,
+      productoNombre: f.productoNombre,
+      venueSlug: f.venueSlug,
+      venueNombre: f.venueNombre,
+      cantidad,
+      total: Number(f.totalAmount),
+      material: Number(f.unitDonationAmount) * cantidad,
+      estado: f.status as EstadoDeOrden,
+      entregadas: Number(f.entregadas),
+    }
+  })
+}

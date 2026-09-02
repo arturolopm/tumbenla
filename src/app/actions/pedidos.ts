@@ -54,6 +54,9 @@ const pedidoSchema = z.object({
     .min(1, 'Al menos uno')
     .max(MAX_UNIDADES, `Máximo ${MAX_UNIDADES} de una`),
   payMethod: z.enum(PAY_METHODS),
+  // Solo dice si le OFRECEMOS terminar la cuenta al llegar al QR. No cambia
+  // nada del pedido: el pedido se crea igual, con cuenta o sin ella.
+  quiereCuenta: z.enum(['0', '1']).optional(),
 })
 
 /** Emite una redencion POR UNIDAD y devuelve los codigos en claro.
@@ -128,6 +131,7 @@ export const crearPedidoAction = async (
     buyerEmail: formData.get('buyerEmail'),
     quantity: formData.get('quantity'),
     payMethod: formData.get('payMethod'),
+    quiereCuenta: formData.get('quiereCuenta') ?? undefined,
   })
 
   if (!parsed.success) {
@@ -158,6 +162,9 @@ export const crearPedidoAction = async (
 
   const publicToken = generarToken()
 
+  // Se ofrece la cuenta solo si la pidio Y no tiene sesion ya.
+  const sufijoDeCuenta = parsed.data.quiereCuenta === '1' && !sesion ? '?cuenta=1' : ''
+
   try {
     const [orden] = await db
       .insert(productOrder)
@@ -185,7 +192,11 @@ export const crearPedidoAction = async (
       // escaneo es lo que le dice al mesero cuanto cobrar.
       const codigos = await emitirCodigos(orden.id, parsed.data.quantity)
       await avisarPorCorreo(orden.id, codigos)
-      return { status: 'success', token: publicToken, url: `/orden/${publicToken}` }
+      return {
+        status: 'success',
+        token: publicToken,
+        url: `/orden/${publicToken}${sufijoDeCuenta}`,
+      }
     }
 
     const pasarela = obtenerPasarela()
@@ -207,7 +218,14 @@ export const crearPedidoAction = async (
       await confirmarPago(orden.id, pasarela.nombre, intento.referencia)
     }
 
-    return { status: 'success', token: publicToken, url: intento.url }
+    // El proveedor de mentira devuelve a la propia pagina del pedido; una
+    // pasarela de verdad devolveria a la suya y volveria despues. En los dos
+    // casos la invitacion a terminar la cuenta viaja en la URL de vuelta.
+    const destino = intento.url.startsWith('/orden/')
+      ? `${intento.url}${sufijoDeCuenta}`
+      : intento.url
+
+    return { status: 'success', token: publicToken, url: destino }
   } catch {
     return { status: 'error', error: 'No se pudo crear el pedido. Intenta otra vez.' }
   }

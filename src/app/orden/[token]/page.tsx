@@ -1,7 +1,10 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
+import { headers } from 'next/headers'
+
 import { PantallaDeOrden } from '@/components/comercio/pantalla-de-orden'
+import { auth } from '@/lib/auth/auth'
 import { ordenPorToken } from '@/lib/comercio/queries'
 import { svgDelCodigo } from '@/lib/comercio/qr'
 import { getBaseUrl } from '@/lib/utils/urls'
@@ -20,10 +23,20 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function OrdenPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function OrdenPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>
+  searchParams: Promise<{ cuenta?: string }>
+}) {
   const { token } = await params
+  const { cuenta } = await searchParams
   const orden = await ordenPorToken(token)
   if (!orden) notFound()
+
+  // Si ya entro, no hay nada que ofrecerle.
+  const sesion = await auth.api.getSession({ headers: await headers() })
 
   // El QR lleva una URL y no el codigo pelado: asi un lector cualquiera —el de
   // la camara del telefono, que es lo que va a usar medio mundo— abre la
@@ -64,6 +77,8 @@ export default async function OrdenPage({ params }: { params: Promise<{ token: s
         venueNombre: orden.venueNombre,
       }}
       codigos={codigos}
+      ofrecerCuenta={cuenta === '1' && !sesion}
+      correo={orden.compradorEmail}
     />
   )
 }

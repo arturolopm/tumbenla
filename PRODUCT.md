@@ -203,11 +203,25 @@ Estan aca para no volver a discutirlas cada dos semanas.
     momento del escaneo— lo vuelve un sensor sin pedirle trabajo: si no cambio,
     dice "no me salio" ahi mismo. Todo lo demas lo hacemos nosotros, lo hace el
     sitio, o se resuelve por disputa.
-29. **Se compra sin cuenta.** Nombre y correo. Con sesion la orden se amarra a
-    la cuenta y sale en `/mi-historia`; sin sesion vive en una URL con token y
-    en el correo. Es la decision 2 aplicada al pago: iniciar sesion AGREGA,
-    nunca restringe. Un registro con verificacion por correo entre la persona y
-    el trago, parada en una barra y con mala senal, es donde se pierde la venta.
+29. **Se compra sin cuenta, pero la cuenta se OFRECE con su razon.** Nombre y
+    correo. Es la decision 2 aplicada al pago: iniciar sesion AGREGA, nunca
+    restringe, y un registro con verificacion por correo entre la persona y el
+    trago —parada en una barra, con mala senal— es donde se pierde la venta.
+    En el pedido se muestra la eleccion de frente, "con cuenta" o "como
+    invitado", y **con cuenta viene marcado**: la cuenta es lo que junta las
+    fotos de la noche, los tragos pedidos y a donde fue la plata en un solo
+    lugar. Pero **no bloquea**: la orden se crea igual y la cuenta se termina en
+    la pantalla del QR, mientras la persona espera el trago.
+29b. **Un pedido de invitado se amarra despues, por el correo VERIFICADO.**
+    *(Sin esto, "seguir como invitado" seria un callejon sin salida y la
+    decision 29 estaria prometiendo una historia que nace incompleta: nadie va a
+    volver a pedir el trago de hace tres semanas.)* Al entrar, todo pedido con
+    ese correo y sin dueno queda amarrado a la cuenta. **Exige `emailVerified`, y
+    eso es lo que lo hace seguro:** el correo de un pedido lo escribe cualquiera
+    en un formulario publico, asi que sin esa condicion alguien se registra con
+    el correo ajeno y se queda con el historial de otro —que dice donde estuvo,
+    cuando y con quien—. Vive en `src/lib/comercio/vincular.ts` y corre en
+    `/entrar`, que es por donde pasa todo el que inicia sesion.
 30. **El precio y el reparto se congelan en la orden.** Los cinco campos de
     plata se copian al comprar. Si el sitio cambia el precio o el reparto
     manana, la orden vieja conserva lo que la persona vio. Un reparto que se
@@ -389,6 +403,11 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   llega a un usuario en un producto que es solo en espanol (decision 7).
 - **Un sitio con saldo en contra no tiene tope.** Ver riesgo 8. Antes de la
   segunda ciudad hay que definirlo.
+- **No se puede decir QUE factura pago un pedido.** Los aportes se liquidan en
+  bloque, no pedido por pedido, asi que en `/mi-historia` se afirma que la plata
+  entra a lo que el sitio pone en material y se enlaza `/transparencia`, pero no
+  se promete la trazabilidad exacta. Rastrearla pedido a pedido pide amarrar
+  `product_order` a `material_purchase`, y eso es un cambio de esquema.
 
 ### Sin verificar
 

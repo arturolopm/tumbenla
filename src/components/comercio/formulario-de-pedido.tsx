@@ -28,6 +28,7 @@ export function FormularioDePedido({
   producto,
   correoDeLaCuenta,
   nombreDeLaCuenta,
+  sinSesion,
 }: {
   venueSlug: string
   venueNombre: string
@@ -42,6 +43,8 @@ export function FormularioDePedido({
   }
   correoDeLaCuenta: string
   nombreDeLaCuenta: string
+  /** Sin sesion se ofrece la cuenta; con sesion ya no hay nada que ofrecer. */
+  sinSesion: boolean
 }) {
   const router = useRouter()
   const [estado, enviar, enviando] = useActionState<PedidoState, FormData>(crearPedidoAction, {
@@ -49,6 +52,9 @@ export function FormularioDePedido({
   })
   const [cantidad, setCantidad] = useState(1)
   const [metodo, setMetodo] = useState<'app' | 'bar'>('app')
+  // Arranca en true: la cuenta es lo que recomendamos, y es lo que convierte un
+  // trago suelto en una historia. Quien no la quiera la apaga de un toque.
+  const [quiereCuenta, setQuiereCuenta] = useState(true)
 
   useEffect(() => {
     if (estado.status === 'success') router.push(estado.url)
@@ -68,6 +74,7 @@ export function FormularioDePedido({
       <input type='hidden' name='venueSlug' value={venueSlug} />
       <input type='hidden' name='productoSlug' value={producto.slug} />
       <input type='hidden' name='payMethod' value={metodo} />
+      <input type='hidden' name='quiereCuenta' value={quiereCuenta ? '1' : '0'} />
 
       <header>
         <Link
@@ -173,6 +180,43 @@ export function FormularioDePedido({
         />
       </Campo>
 
+      {/* LA CUENTA SE OFRECE, NO SE EXIGE (decisiones 2 y 29). Nada de esto
+          bloquea el pedido: se crea igual y la cuenta se termina despues,
+          mientras esperas el trago. Poner un registro con verificacion por
+          correo ENTRE la persona y la barra es donde se pierde la venta.
+
+          Y no es un "crea tu cuenta" a secas: se dice PARA QUE sirve, porque la
+          razon es de verdad —tus fotos, tus pedidos y a donde fue la plata, en
+          un solo lugar— y sin la razon nadie marca una casilla. */}
+      {sinSesion ? (
+        <fieldset className='flex flex-col gap-1'>
+          <legend className='font-display text-label-lg uppercase'>Tu historia</legend>
+          <div className='mt-1 grid gap-3 sm:grid-cols-2'>
+            <OpcionDePago
+              activa={quiereCuenta}
+              onClick={() => setQuiereCuenta(true)}
+              titulo='Con cuenta'
+              detalle='Guarda tus fotos, tus pedidos y a dónde fue la plata.'
+            />
+            <OpcionDePago
+              activa={!quiereCuenta}
+              onClick={() => setQuiereCuenta(false)}
+              titulo='Como invitado'
+              detalle='Solo el código. Puedes crear la cuenta después.'
+            />
+          </div>
+          {quiereCuenta ? (
+            <p className='mt-2 text-muted-foreground text-sm'>
+              Primero te sale el código. La cuenta la terminas mientras esperas.
+            </p>
+          ) : (
+            <p className='mt-2 text-muted-foreground text-sm'>
+              Si después creas la cuenta con este mismo correo, este pedido aparece ahí solo.
+            </p>
+          )}
+        </fieldset>
+      ) : null}
+
       <button
         type='submit'
         disabled={enviando}
@@ -186,7 +230,9 @@ export function FormularioDePedido({
       </button>
 
       <p className='text-body-md text-muted-foreground'>
-        No tienes que crear cuenta. Te sale un código para mostrar en la barra.
+        {sinSesion
+          ? 'No tienes que crear cuenta para pedir. Te sale un código para mostrar en la barra.'
+          : 'Este pedido queda guardado en tu historia.'}
       </p>
     </form>
   )

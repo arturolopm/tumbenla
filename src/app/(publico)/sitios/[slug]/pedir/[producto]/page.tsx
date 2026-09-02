@@ -52,6 +52,7 @@ export default async function PedirPage({
         }}
         correoDeLaCuenta={sesion?.user?.email ?? ''}
         nombreDeLaCuenta={sesion?.user?.name ?? ''}
+        sinSesion={!sesion}
       />
     </div>
   )

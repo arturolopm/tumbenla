@@ -141,6 +141,13 @@ export default function RegisterForm({
   useEffect(() => {
     setMounted(true)
     setCallbackUrl(leerDestino(searchParams))
+
+    // Quien llega desde un pedido ya escribio su correo una vez, de pie y en un
+    // bar. Volver a pedirselo es la friccion que hace que no termine la cuenta,
+    // y ademas es lo que AMARRA el pedido que acaba de hacer: si escribe otro
+    // correo, su historia nace incompleta y no hay como repararla despues.
+    const correo = searchParams?.get('correo')
+    if (correo) setEmail(correo)
   }, [searchParams])
 
   const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,9 +252,7 @@ export default function RegisterForm({
         sessionStorage.setItem('verificationEmail', emailValue)
       }
 
-      router.push(
-        `/verify?fromSignup=true&redirectAfter=${encodeURIComponent(callbackUrl)}`
-      )
+      router.push(`/verify?fromSignup=true&redirectAfter=${encodeURIComponent(callbackUrl)}`)
     } catch (error) {
       console.error('Signup error:', error)
       // Estaba en ingles en una app que es toda en espanol, y decia lo mismo

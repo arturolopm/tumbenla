@@ -53,7 +53,17 @@ const CADENCIA = [
 const intervaloPara = (transcurrido: number): number | null =>
   CADENCIA.find((t) => transcurrido < t.hasta)?.cada ?? null
 
-export function PantallaDeOrden({ orden, codigos }: { orden: Orden; codigos: Codigo[] }) {
+export function PantallaDeOrden({
+  orden,
+  codigos,
+  ofrecerCuenta = false,
+  correo = '',
+}: {
+  orden: Orden
+  codigos: Codigo[]
+  ofrecerCuenta?: boolean
+  correo?: string
+}) {
   const [estado, setEstado] = useState<Codigo[]>(codigos)
   const [entregadas, setEntregadas] = useState(
     codigos.filter((c) => c.estado === 'redeemed').length
@@ -231,6 +241,29 @@ export function PantallaDeOrden({ orden, codigos }: { orden: Orden; codigos: Cod
         >
           Revisar otra vez
         </button>
+      ) : null}
+
+      {/* VA DESPUES DEL QR, NO ANTES. Lo que la persona necesita en los
+          proximos treinta segundos es el codigo; la cuenta se termina mientras
+          espera el trago. Ponerlo arriba seria tapar lo unico urgente con lo
+          unico que puede esperar. */}
+      {ofrecerCuenta ? (
+        <section className='rounded-xl border-2 border-primary bg-primary/5 p-5'>
+          <p className='font-display font-bold text-lg'>Termina tu cuenta</p>
+          <p className='mt-1 text-body-md text-muted-foreground'>
+            Con la cuenta te quedan las fotos de la noche, tus pedidos y la factura del material que
+            compramos con esto. Todo en un solo lugar.
+          </p>
+          <Link
+            href={`/register?correo=${encodeURIComponent(correo)}&redirectAfter=${encodeURIComponent(`/orden/${orden.publicToken}`)}`}
+            className='mt-4 inline-block rounded-xl bg-primary px-6 py-3 font-display text-label-lg text-primary-foreground uppercase'
+          >
+            Crear mi cuenta
+          </Link>
+          <p className='mt-3 text-muted-foreground text-sm'>
+            Este pedido se amarra solo, sin que tengas que hacer nada más.
+          </p>
+        </section>
       ) : null}
 
       <footer className='mt-2 rounded-xl border border-border p-5'>
