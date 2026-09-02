@@ -41,6 +41,7 @@ import {
   getEmailSubject,
   renderSolicitudDecisionEmail,
   renderSolicitudDmEmail,
+  renderPedidoEmail,
   renderVenueInvitationEmail,
 } from '@/components/emails'
 import { getFromEmailAddress, getReplyToAddress } from './utils'
@@ -358,4 +359,40 @@ export async function sendApplicationDecisionEmail(params: {
   if (!result.success) {
     throw new Error(result.message || 'No se pudo enviar la decision')
   }
+}
+
+/**
+ * El correo con el codigo del pedido.
+ *
+ * ES EL RESPALDO DEL QR en pantalla: la pestaña se cierra, el telefono se apaga,
+ * o se compro desde el celular de un amigo. El formulario de pedido se lo
+ * promete a la persona, asi que tiene que salir.
+ *
+ * NO REVIENTA SI FALLA. Es la diferencia con la invitacion de equipo, donde el
+ * correo ES el flujo: aca la persona ya tiene su QR en pantalla y esta parada en
+ * la barra. Tumbarle el pedido porque el proveedor de correo esta caido seria
+ * cambiar un inconveniente por una venta perdida.
+ */
+export async function sendPedidoEmail(params: {
+  to: string
+  compradorNombre: string
+  productoNombre: string
+  venueNombre: string
+  cantidad: number
+  total: number
+  material: number
+  pagaEnBarra: boolean
+  token: string
+  codigos: string[]
+}): Promise<void> {
+  const { to, ...resto } = params
+  const html = await renderPedidoEmail(resto)
+
+  await sendEmail({
+    to,
+    subject: getEmailSubject('pedido'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
 }

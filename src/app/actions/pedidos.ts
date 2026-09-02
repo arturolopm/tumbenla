@@ -5,8 +5,9 @@ import { headers } from 'next/headers'
 import { z } from 'zod'
 
 import { db } from '@/database'
-import { orderRedemption, productOrder } from '@/database/schema'
+import { orderRedemption, productOrder, venue, venueProduct } from '@/database/schema'
 import { auth } from '@/lib/auth/auth'
+import { sendPedidoEmail } from '@/lib/messaging/email/mailer'
 import { generarCodigo } from '@/lib/comercio/codigos'
 import { montosDeOrden } from '@/lib/comercio/dinero'
 import { CUENTA, cuentaDePlataforma, publicarMovimiento } from '@/lib/comercio/libro'
@@ -66,6 +67,54 @@ const emitirCodigos = async (orderId: string, cantidad: number, conexion = db) =
   await conexion.insert(orderRedemption).values(codigos.map((code) => ({ orderId, code })))
 
   return codigos
+}
+
+/**
+ * Manda el correo con los codigos, y NUNCA tumba el pedido si falla.
+ *
+ * Es la diferencia con la invitacion de equipo, donde el correo ES el flujo:
+ * aca la persona ya tiene su QR en pantalla y esta parada en la barra. Perder
+ * la venta porque el proveedor de correo esta caido seria cambiar un
+ * inconveniente por una venta perdida.
+ */
+const avisarPorCorreo = async (orderId: string, codigos: string[]) => {
+  try {
+    const [d] = await db
+      .select({
+        buyerName: productOrder.buyerName,
+        buyerEmail: productOrder.buyerEmail,
+        quantity: productOrder.quantity,
+        totalAmount: productOrder.totalAmount,
+        unitDonationAmount: productOrder.unitDonationAmount,
+        payMethod: productOrder.payMethod,
+        publicToken: productOrder.publicToken,
+        producto: venueProduct.name,
+        sitio: venue.name,
+      })
+      .from(productOrder)
+      .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+      .innerJoin(venue, eq(productOrder.venueId, venue.id))
+      .where(eq(productOrder.id, orderId))
+      .limit(1)
+
+    if (!d) return
+
+    const cantidad = Number(d.quantity)
+    await sendPedidoEmail({
+      to: d.buyerEmail,
+      compradorNombre: d.buyerName,
+      productoNombre: d.producto,
+      venueNombre: d.sitio,
+      cantidad,
+      total: Number(d.totalAmount),
+      material: Number(d.unitDonationAmount) * cantidad,
+      pagaEnBarra: d.payMethod === 'bar',
+      token: d.publicToken,
+      codigos,
+    })
+  } catch {
+    // Se pierde el correo, no el pedido.
+  }
 }
 
 export const crearPedidoAction = async (
@@ -134,7 +183,8 @@ export const crearPedidoAction = async (
     if (parsed.data.payMethod === 'bar') {
       // El QR tiene que existir ANTES de que se pague: es la comanda, y el
       // escaneo es lo que le dice al mesero cuanto cobrar.
-      await emitirCodigos(orden.id, parsed.data.quantity)
+      const codigos = await emitirCodigos(orden.id, parsed.data.quantity)
+      await avisarPorCorreo(orden.id, codigos)
       return { status: 'success', token: publicToken, url: `/orden/${publicToken}` }
     }
 
@@ -198,6 +248,8 @@ export const confirmarPago = async (
   const efectivo = await cuentaDePlataforma(CUENTA.efectivo)
   const porEntregar = await cuentaDePlataforma(CUENTA.porEntregar)
 
+  let codigosEmitidos: string[] = []
+
   try {
     await db.transaction(async (tx) => {
       const marcada = await tx
@@ -215,7 +267,7 @@ export const confirmarPago = async (
       // Otro proceso la marco entre el select y el update.
       if (marcada.length === 0) return
 
-      await emitirCodigos(orderId, cantidad, tx as unknown as typeof db)
+      codigosEmitidos = await emitirCodigos(orderId, cantidad, tx as unknown as typeof db)
 
       // Entra plata que TODAVIA NO ES NUESTRA: se reconoce el efectivo y un
       // pasivo igual. Lo pagado y no entregado es custodia, y no se reparte
@@ -233,6 +285,10 @@ export const confirmarPago = async (
         tx as unknown as typeof db
       )
     })
+
+    // Fuera de la transaccion: mandar un correo no puede alargar un bloqueo de
+    // base ni deshacer un pago si el proveedor de correo tarda.
+    if (codigosEmitidos.length > 0) await avisarPorCorreo(orderId, codigosEmitidos)
 
     return { ok: true }
   } catch {

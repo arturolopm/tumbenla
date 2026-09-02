@@ -1,3 +1,4 @@
+import { PedidoEmail } from '@/components/emails/comercio'
 import { render } from '@react-email/components'
 import { OTPVerificationEmail, ResetPasswordEmail, WelcomeEmail } from '@/components/emails/auth'
 import {
@@ -34,6 +35,20 @@ export async function renderVenueInvitationEmail(params: {
   token: string
 }): Promise<string> {
   return await render(VenueInvitationEmail(params))
+}
+
+export async function renderPedidoEmail(params: {
+  compradorNombre: string
+  productoNombre: string
+  venueNombre: string
+  cantidad: number
+  total: number
+  material: number
+  pagaEnBarra: boolean
+  token: string
+  codigos: string[]
+}): Promise<string> {
+  return await render(PedidoEmail(params))
 }
 
 export async function renderSolicitudDmEmail(params: {

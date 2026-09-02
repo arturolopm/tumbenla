@@ -15,6 +15,7 @@
     "migrate": "bun run ./scripts/migrate.ts",
     "migrate:local": "bun run ./scripts/migrate.ts",
     "prueba:libro": "bun --conditions react-server ./scripts/prueba-libro.ts",
+    "caducar": "bun --conditions react-server ./scripts/caducar-pedidos.ts",
     "seed:cuentas": "bun --conditions react-server ./scripts/seed-cuentas-de-prueba.ts",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",

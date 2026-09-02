@@ -54,7 +54,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Aportes del sitio: reporte, recibo y verificacion | Construido |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | **A medias** |
-| **Vender el trago: producto, QR, escaneo y compensacion** | **Sin construir.** Es el camino principal nuevo (decisiones 1 y 26-32); el plan esta en el roadmap |
+| **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido, probado en local. **Falta la pasarela de verdad** (hoy corre con una de mentira) y probarlo en preview |
 
 ---
 
@@ -285,14 +285,14 @@ detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelin
 
 - [x] **Doctrina.** Reescribir la decision 1, agregar las 26-32 y los riesgos
       7-9. Va primero para que no haya codigo que contradiga el archivo.
-- [ ] **Esquema.** `venue_product`, `product_order`, `order_redemption`,
+- [x] **Esquema.** `venue_product`, `product_order`, `order_redemption`,
       `ledger_account`, `ledger_transaction`, `ledger_entry`, `venue_settlement`,
       y `venue_contribution.source`. Partida doble: los asientos de una
       transaccion suman cero y `select sum(amount) from ledger_entry` da cero
       siempre. Trigger que rechaza `UPDATE`/`DELETE` sobre `ledger_entry`.
-- [ ] **Carta y revision.** `/panel/[slug]/carta` y la cola en
+- [x] **Carta y revision.** `/panel/[slug]/carta` y la cola en
       `/admin/productos`. Nada se vende sin pasar por ahi (decision 31).
-- [ ] **Pedido y pago.** La carta publica en `/sitios/[slug]`, el checkout, un
+- [x] **Pedido y pago.** La carta publica en `/sitios/[slug]`, el checkout, un
       adaptador de pasarela agnostico (proveedor de mentira mientras se decide
       cual), y `/orden/[token]` con el QR y su confirmacion en vivo.
       **En ESE paso, y no antes, hay que reescribir
@@ -300,12 +300,12 @@ detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelin
       no pasa por esta pagina. No cobramos, no procesamos pagos". Hoy es
       verdad y tiene que seguir estando hasta que el cobro exista de verdad:
       cambiarlo antes seria la misma mentira al reves.
-- [ ] **Escaneo y redencion.** `/panel/[slug]/escanear`, el `UPDATE` atomico y
+- [x] **Escaneo y redencion.** `/panel/[slug]/escanear`, el `UPDATE` atomico y
       los asientos.
-- [ ] **Saldo y liquidacion.** `/panel/[slug]/cuenta`, `/admin/cuentas`, y el
+- [x] **Saldo y liquidacion.** `/panel/[slug]/cuenta`, `/admin/cuentas`, y el
       puente que convierte la parte de material en un `venue_contribution`
       verificado para que `/transparencia` siga respondiendo lo mismo.
-- [ ] **Caducidad y devolucion.** Los 45 dias y el correo (decision 32).
+- [x] **Caducidad y devolucion.** Los 45 dias y el correo (decision 32).
 
 **La pasarela esta sin decidir a proposito.** Se escribe el adaptador contra una
 interfaz propia y la real entra despues sin tocar esquema ni pantallas. Cuando
@@ -371,6 +371,24 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 - **Marcadores DOM.** Correcto con decenas de sitios. Pasadas las centenas toca
   capa con clustering y consulta acotada por viewport contra `venue_lat_lng_idx`,
   no seguir apilando nodos.
+
+### Lo que queda abierto de "vender el trago"
+
+- **La pasarela es de mentira.** `src/lib/comercio/pasarela.ts` da los pagos por
+  buenos sin salir a ninguna parte. `obtenerPasarela()` revienta si NODE_ENV es
+  production y no hay una real, asi que no se puede desplegar por accidente,
+  pero **hasta que exista una de verdad esto no puede ir a produccion**. Tiene
+  que cubrir Nequi y PSE.
+- **`code_hash` en `order_redemption` esta muerta.** Quedo del diseno hasheado,
+  ya es nullable y nadie la escribe. Borrarla en un deploy aparte.
+- **La caducidad necesita un cron.** `bun run caducar` esta escrito, probado y es
+  idempotente, pero nada lo dispara. Sin eso, ninguna orden caduca nunca.
+- **El pie de los correos esta en INGLES.** "Questions?", "Privacy Policy",
+  "Terms of Service", "Unsubscribe" en `EmailLayout`. Es anterior a esto —le
+  pasa igual a la invitacion de equipo, que ya se despacho— pero es texto que le
+  llega a un usuario en un producto que es solo en espanol (decision 7).
+- **Un sitio con saldo en contra no tiene tope.** Ver riesgo 8. Antes de la
+  segunda ciudad hay que definirlo.
 
 ### Sin verificar
 

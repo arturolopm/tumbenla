@@ -245,6 +245,19 @@ export function PantallaDeOrden({ orden, codigos }: { orden: Orden; codigos: Cod
         <p className='mt-2 text-muted-foreground text-sm'>
           Guarda este enlace: es tu pedido. También te llegó al correo.
         </p>
+        {/* Los 45 dias se dicen ANTES, no cuando ya pasaron (decision 32).
+            Enterarse despues de que la plata ya se fue es exactamente la
+            sorpresa que este producto no se puede permitir. Y la devolucion
+            cuesta escribir un correo a proposito: es la unica parte del
+            producto donde la friccion es la funcion. */}
+        <p className='mt-2 text-muted-foreground text-sm'>
+          Si no lo reclamas en 45 días, esa plata se va toda en material. Si prefieres que te la
+          devolvamos, escríbenos a{' '}
+          <a href='mailto:hola@tumbenla.com' className='text-primary-text underline'>
+            hola@tumbenla.com
+          </a>{' '}
+          y lo hacemos.
+        </p>
       </footer>
     </main>
   )

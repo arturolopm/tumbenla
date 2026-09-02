@@ -9,6 +9,8 @@ import {
   ledgerAccount,
   ledgerEntry,
   ledgerTransaction,
+  orderRedemption,
+  productOrder,
   venue,
   venueContribution,
   venueSettlement,
@@ -216,4 +218,113 @@ export const liquidarAction = async (
         ? 'Registrado. Ya cuenta como material del sitio.'
         : 'Registrado. Quedó al día con el sitio.',
   }
+}
+
+/**
+ * Devolverle la plata a alguien que no reclamo su trago.
+ *
+ * SOLO LA PLATAFORMA, y a mano. La decision 32 dice que a los 45 dias lo no
+ * reclamado se va en material, con un apartado para pedir la devolucion — y ese
+ * paso extra es a proposito: es la unica parte del producto donde la friccion
+ * es la funcion. Alguien escribe, un operador mira y devuelve.
+ *
+ * NO EDITA NADA. La devolucion es un movimiento NUEVO que compensa al de la
+ * caducidad; el asiento viejo se queda donde esta, que es lo que hace que el
+ * libro se pueda auditar. Un trigger en la base lo impone, no la disciplina.
+ */
+export const devolverAction = async (orderId: string, nota?: string): Promise<LiquidacionState> => {
+  const admin = await assertAdmin()
+  if (!admin.ok) return { status: 'error', error: admin.error }
+
+  const [orden] = await db
+    .select({
+      id: productOrder.id,
+      status: productOrder.status,
+      totalAmount: productOrder.totalAmount,
+      unitPrice: productOrder.unitPrice,
+      slug: venue.slug,
+    })
+    .from(productOrder)
+    .innerJoin(venue, eq(venue.id, productOrder.venueId))
+    .where(eq(productOrder.id, orderId))
+    .limit(1)
+
+  if (!orden) return { status: 'error', error: 'Ese pedido no existe.' }
+
+  if (orden.status !== 'expired' && orden.status !== 'paid') {
+    return { status: 'error', error: 'Ese pedido no se puede devolver.' }
+  }
+
+  // Cuantas unidades quedaron sin entregar. De un pedido a medias solo se
+  // devuelve lo que no salio por la barra.
+  const sinEntregar = await db
+    .select({ id: orderRedemption.id })
+    .from(orderRedemption)
+    .where(
+      and(
+        eq(orderRedemption.orderId, orden.id),
+        inArray(orderRedemption.status, ['issued', 'void'])
+      )
+    )
+
+  if (sinEntregar.length === 0) {
+    return { status: 'error', error: 'Ese pedido se entregó completo. No hay qué devolver.' }
+  }
+
+  const monto = Number(orden.unitPrice) * sinEntregar.length
+  const efectivo = await cuentaDePlataforma(CUENTA.efectivo)
+  const material = await cuentaDePlataforma(CUENTA.material)
+  const porEntregar = await cuentaDePlataforma(CUENTA.porEntregar)
+  const yaCaducado = orden.status === 'expired'
+
+  try {
+    await db.transaction(async (tx) => {
+      const marcada = await tx
+        .update(productOrder)
+        .set({ status: 'refunded', updatedAt: new Date() })
+        .where(and(eq(productOrder.id, orden.id), eq(productOrder.status, orden.status)))
+        .returning({ id: productOrder.id })
+
+      if (marcada.length === 0) throw new Error('cambio de estado mientras tanto')
+
+      await tx
+        .update(orderRedemption)
+        .set({ status: 'void', updatedAt: new Date() })
+        .where(and(eq(orderRedemption.orderId, orden.id), eq(orderRedemption.status, 'issued')))
+
+      // De donde sale la plata depende de donde estaba parqueada:
+      //   ya caducado  → se habia comprometido a material; se devuelve de ahi.
+      //   sin caducar  → seguia en custodia; se devuelve de la custodia.
+      const asientos = yaCaducado
+        ? [
+            { accountId: material, amount: monto },
+            { accountId: efectivo, amount: -monto },
+          ]
+        : [
+            { accountId: porEntregar, amount: monto },
+            { accountId: efectivo, amount: -monto },
+          ]
+
+      const mov = await publicarMovimiento(
+        {
+          kind: 'refund',
+          idempotencyKey: `devolucion:${orden.id}`,
+          orderId: orden.id,
+          createdByUserId: admin.userId,
+          note: nota,
+          asientos,
+        },
+        tx as unknown as typeof db
+      )
+
+      if (!mov.ok) throw new Error(mov.error)
+    })
+  } catch {
+    return { status: 'error', error: 'No se pudo devolver.' }
+  }
+
+  revalidatePath('/admin/cuentas')
+  revalidatePath('/transparencia')
+
+  return { status: 'success', mensaje: `Devuelto. Sale ${monto} de la cuenta.` }
 }
