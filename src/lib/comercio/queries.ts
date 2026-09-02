@@ -3,9 +3,15 @@ import 'server-only'
 import { and, asc, desc, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { productOrder, venue, venueProduct } from '@/database/schema'
+import { orderRedemption, productOrder, venue, venueProduct } from '@/database/schema'
 import { repartir } from '@/lib/comercio/dinero'
-import type { EstadoDeProducto, KindDeProducto } from '@/lib/comercio/types'
+import type {
+  EstadoDeOrden,
+  EstadoDeProducto,
+  EstadoDeRedencion,
+  KindDeProducto,
+  PayMethod,
+} from '@/lib/comercio/types'
 
 /**
  * Lecturas de la carta.
@@ -193,4 +199,154 @@ export const contarOrdenesPorProducto = async (
     .groupBy(productOrder.productId)
 
   return Object.fromEntries(filas.map((f) => [f.productId, Number(f.total)]))
+}
+
+// -------------------------------------------------------- ordenes
+
+export type RedencionDTO = {
+  id: string
+  /** El codigo en claro. Es lo que va en el QR y lo que se teclea a mano. */
+  codigo: string
+  estado: EstadoDeRedencion
+  redimidaEn: Date | null
+}
+
+export type OrdenDTO = {
+  id: string
+  publicToken: string
+  compradorNombre: string
+  compradorEmail: string
+  cantidad: number
+  precioUnitario: number
+  materialPorUnidad: number
+  sitioPorUnidad: number
+  total: number
+  porcentajeMaterial: number
+  payMethod: PayMethod
+  estado: EstadoDeOrden
+  creadaEn: Date
+  caducaEn: Date | null
+  productoNombre: string
+  productoKind: KindDeProducto
+  productoDescripcion: string | null
+  venueId: string
+  venueSlug: string
+  venueNombre: string
+  redenciones: RedencionDTO[]
+}
+
+/**
+ * La orden que hay detras de /orden/[token].
+ *
+ * Se busca por `publicToken` y no por id: el id sale en pantallas de operacion
+ * y en logs, y quien pueda abrir esta pagina puede leer los codigos.
+ */
+export const ordenPorToken = async (token: string): Promise<OrdenDTO | null> => {
+  const [fila] = await db
+    .select({
+      id: productOrder.id,
+      publicToken: productOrder.publicToken,
+      buyerName: productOrder.buyerName,
+      buyerEmail: productOrder.buyerEmail,
+      quantity: productOrder.quantity,
+      unitPrice: productOrder.unitPrice,
+      unitDonationAmount: productOrder.unitDonationAmount,
+      unitVenueAmount: productOrder.unitVenueAmount,
+      totalAmount: productOrder.totalAmount,
+      donationPercentage: productOrder.donationPercentage,
+      payMethod: productOrder.payMethod,
+      status: productOrder.status,
+      createdAt: productOrder.createdAt,
+      expiresAt: productOrder.expiresAt,
+      productoNombre: venueProduct.name,
+      productoKind: venueProduct.kind,
+      productoDescripcion: venueProduct.description,
+      venueId: productOrder.venueId,
+      venueSlug: venue.slug,
+      venueNombre: venue.name,
+    })
+    .from(productOrder)
+    .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+    .innerJoin(venue, eq(productOrder.venueId, venue.id))
+    .where(eq(productOrder.publicToken, token))
+    .limit(1)
+
+  if (!fila) return null
+
+  const redenciones = await db
+    .select({
+      id: orderRedemption.id,
+      code: orderRedemption.code,
+      status: orderRedemption.status,
+      redeemedAt: orderRedemption.redeemedAt,
+    })
+    .from(orderRedemption)
+    .where(eq(orderRedemption.orderId, fila.id))
+    .orderBy(asc(orderRedemption.createdAt))
+
+  return {
+    id: fila.id,
+    publicToken: fila.publicToken,
+    compradorNombre: fila.buyerName,
+    compradorEmail: fila.buyerEmail,
+    cantidad: Number(fila.quantity),
+    precioUnitario: Number(fila.unitPrice),
+    materialPorUnidad: Number(fila.unitDonationAmount),
+    sitioPorUnidad: Number(fila.unitVenueAmount),
+    total: Number(fila.totalAmount),
+    porcentajeMaterial: Number(fila.donationPercentage),
+    payMethod: fila.payMethod as PayMethod,
+    estado: fila.status as EstadoDeOrden,
+    creadaEn: fila.createdAt,
+    caducaEn: fila.expiresAt,
+    productoNombre: fila.productoNombre,
+    productoKind: fila.productoKind as KindDeProducto,
+    productoDescripcion: fila.productoDescripcion,
+    venueId: fila.venueId,
+    venueSlug: fila.venueSlug,
+    venueNombre: fila.venueNombre,
+    redenciones: redenciones.map((r) => ({
+      id: r.id,
+      codigo: r.code,
+      estado: r.status as EstadoDeRedencion,
+      redimidaEn: r.redeemedAt,
+    })),
+  }
+}
+
+/**
+ * Lo minimo que sondea la pagina del QR, cada segundo.
+ *
+ * Un `select` por indice que devuelve unas decenas de bytes, sin sesion que
+ * validar (el token de la URL ES la autenticacion) y sin tocar `venue` ni
+ * `venue_product`. Se mantiene aparte de `ordenPorToken` justo por eso: la
+ * consulta que corre mil veces no puede ser la que arma la pantalla entera.
+ */
+export const estadoDeOrdenPorToken = async (
+  token: string
+): Promise<{ estado: EstadoDeOrden; entregadas: number; total: number } | null> => {
+  const [fila] = await db
+    .select({
+      id: productOrder.id,
+      status: productOrder.status,
+      quantity: productOrder.quantity,
+    })
+    .from(productOrder)
+    .where(eq(productOrder.publicToken, token))
+    .limit(1)
+
+  if (!fila) return null
+
+  const [conteo] = await db
+    .select({
+      entregadas: sql<string>`count(*) filter (where ${orderRedemption.status} = 'redeemed')`,
+    })
+    .from(orderRedemption)
+    .where(eq(orderRedemption.orderId, fila.id))
+
+  return {
+    estado: fila.status as EstadoDeOrden,
+    entregadas: Number(conteo?.entregadas ?? 0),
+    total: Number(fila.quantity),
+  }
 }

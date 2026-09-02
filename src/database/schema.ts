@@ -1108,6 +1108,22 @@ export const productOrder = pgTable(
     totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
     currency: text('currency').default('COP').notNull(),
 
+    /**
+     * What addresses /orden/[token] — the page holding the QR.
+     *
+     * A SEPARATE COLUMN AND NOT THE ROW ID, even though the id is already a
+     * random UUID. The id turns up in operator screens, in logs and in support
+     * queries, and whoever can open this page can read the redemption codes and
+     * walk up to the bar with them. Keeping the addressable string apart from
+     * the one staff read off a screen is the whole point.
+     *
+     * Stored in the clear, unlike venue_invitation.tokenHash, and that is a
+     * deliberate difference: a buyer who loses the email has to be able to get
+     * the link again, which a hash cannot do. It is an unguessable bearer link,
+     * so it never gets rendered in an operator screen.
+     */
+    publicToken: text('public_token').notNull(),
+
     // 'app' | 'bar' — where the money is collected, NOT where the order is made.
     payMethod: text('pay_method').notNull(),
     // 'pending' | 'paid' | 'expired' | 'refunded' | 'cancelled'
@@ -1134,6 +1150,7 @@ export const productOrder = pgTable(
     /** The webhook's idempotency. Its absence is a live bug in the boilerplate
      *  webhook this schema deliberately does not reuse. */
     uniqueIndex('product_order_providerReference_key').on(table.providerReference),
+    uniqueIndex('product_order_publicToken_key').on(table.publicToken),
   ]
 )
 
@@ -1165,7 +1182,31 @@ export const orderRedemption = pgTable(
     orderId: text('order_id')
       .notNull()
       .references(() => productOrder.id, { onDelete: 'cascade' }),
-    codeHash: text('code_hash').notNull(),
+    /**
+     * The 8-character code, IN THE CLEAR, and that is a corrected decision.
+     *
+     * It was hashed at first, copying venue_invitation.tokenHash. That was
+     * wrong here and the reason is operational: the buyer has to be able to
+     * READ this code off their screen and a bartender has to be able to type it
+     * when the camera will not focus — dark room, scratched screen, greasy
+     * lens, permission denied. Manual entry is the fallback the whole scanner
+     * leans on, and a hash cannot be displayed, so hashing quietly removed it.
+     *
+     * The two cases are not alike. An invitation token grants access to a
+     * venue's panel and is worth protecting at rest. This is a voucher for one
+     * drink at one bar, redeemable only through an endpoint that already
+     * demands a staff session at THAT venue — the people who could read it out
+     * of a backup are the same people who can already hand out the drink.
+     */
+    code: text('code').notNull(),
+    /**
+     * Left over from the hashed design and no longer written.
+     *
+     * Nullable rather than dropped: removing a column has to be its own deploy
+     * (`PRODUCT.md`, "Migraciones"), because the new schema is live seconds
+     * before the new code is. Drop it in a later one.
+     */
+    codeHash: text('code_hash'),
     // 'issued' | 'redeemed' | 'void'
     status: text('status').default('issued').notNull(),
     redeemedAt: timestamp('redeemed_at'),
@@ -1180,7 +1221,8 @@ export const orderRedemption = pgTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('order_redemption_codeHash_key').on(table.codeHash),
+    uniqueIndex('order_redemption_code_key').on(table.code),
+    index('order_redemption_codeHash_idx').on(table.codeHash),
     index('order_redemption_orderId_idx').on(table.orderId),
     index('order_redemption_status_idx').on(table.status),
   ]

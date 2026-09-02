@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 
 import { PledgeDetail } from '@/components/sitios/pledge-badge'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
+import { CartaPublica } from '@/components/comercio/carta-publica'
+import { listarCartaPublica } from '@/lib/comercio/queries'
 import { listNightsForVenue } from '@/lib/fiestas/queries'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
 import { formatCOP, formatDate } from '@/lib/utils/format'
@@ -78,6 +80,11 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const aportes = await listVerifiedContributions(venue.id)
   const totalAportado = await getVerifiedTotal(venue.id)
 
+  // La carta NO depende de la sesion, asi que el ISR de esta pagina sobrevive.
+  // Es de las mas visitadas del sitio y meterle algo que dependa de quien mira
+  // la volveria dinamica y despertaria la base en cada visita.
+  const carta = await listarCartaPublica(venue.id)
+
   const contactLinks = [
     venue.instagram
       ? {
@@ -100,23 +107,23 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   const directionsHref = `https://www.openstreetmap.org/?mlat=${venue.lat}&mlon=${venue.lng}#map=18/${venue.lat}/${venue.lng}`
 
   return (
-    <article className="mx-auto w-full max-w-4xl px-margin-mobile py-section-gap lg:px-margin-desktop">
+    <article className='mx-auto w-full max-w-4xl px-margin-mobile py-section-gap lg:px-margin-desktop'>
       <VolverASitios />
 
-      <header className="mt-6 flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2">
+      <header className='mt-6 flex flex-col gap-6'>
+        <div className='flex flex-col gap-3'>
+          <div className='flex flex-wrap gap-2'>
             <Chip>{TYPE_LABEL[venue.type] ?? venue.type}</Chip>
             {venue.neighborhood ? <Chip>{venue.neighborhood}</Chip> : null}
             <Chip>{venue.city}</Chip>
           </div>
 
-          <h1 className="text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-6xl">
+          <h1 className='text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-6xl'>
             {venue.name}
           </h1>
 
           {venue.tagline ? (
-            <p className="text-pretty text-body-lg text-muted-foreground">{venue.tagline}</p>
+            <p className='text-pretty text-body-lg text-muted-foreground'>{venue.tagline}</p>
           ) : null}
         </div>
 
@@ -124,52 +131,52 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       </header>
 
       {venue.coverImageUrl ? (
-        <div className="halftone-overlay relative mt-8 overflow-hidden rounded-xl border-2 border-secondary bg-muted">
+        <div className='halftone-overlay relative mt-8 overflow-hidden rounded-xl border-2 border-secondary bg-muted'>
           {/* Plain <img>: remote image hosts are
               not configured in next.config yet. */}
-          <img src={venue.coverImageUrl} alt="" className="w-full object-cover" />
+          <img src={venue.coverImageUrl} alt='' className='w-full object-cover' />
         </div>
       ) : null}
 
       {venue.description ? (
-        <div className="mt-8 max-w-prose text-pretty text-body-md leading-relaxed">
+        <div className='mt-8 max-w-prose text-pretty text-body-md leading-relaxed'>
           {venue.description}
         </div>
       ) : null}
 
-      <div className="mt-10 grid gap-8 border-secondary border-t-2 pt-8 sm:grid-cols-2">
-        <Bloque titulo="Dónde queda">
-          <p className="text-body-md text-muted-foreground">{venue.addressLine}</p>
-          <p className="text-body-md text-muted-foreground">
+      <div className='mt-10 grid gap-8 border-secondary border-t-2 pt-8 sm:grid-cols-2'>
+        <Bloque titulo='Dónde queda'>
+          <p className='text-body-md text-muted-foreground'>{venue.addressLine}</p>
+          <p className='text-body-md text-muted-foreground'>
             {venue.neighborhood ? `${venue.neighborhood}, ` : ''}
             {venue.city}
           </p>
           <a
             href={directionsHref}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="self-start text-body-md text-primary-text hover:underline"
+            target='_blank'
+            rel='noreferrer noopener'
+            className='self-start text-body-md text-primary-text hover:underline'
           >
             Cómo llegar
           </a>
         </Bloque>
 
         {venue.openingHours ? (
-          <Bloque titulo="Cuando abren">
-            <p className="text-body-md text-muted-foreground">{venue.openingHours}</p>
+          <Bloque titulo='Cuando abren'>
+            <p className='text-body-md text-muted-foreground'>{venue.openingHours}</p>
           </Bloque>
         ) : null}
 
         {contactLinks.length > 0 ? (
-          <Bloque titulo="Contacto">
-            <ul className="flex flex-col gap-1">
+          <Bloque titulo='Contacto'>
+            <ul className='flex flex-col gap-1'>
               {contactLinks.map((link) => (
                 <li key={link.href}>
                   <a
                     href={link.href}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-body-md text-muted-foreground transition-colors hover:text-street-white"
+                    target='_blank'
+                    rel='noreferrer noopener'
+                    className='text-body-md text-muted-foreground transition-colors hover:text-street-white'
                   >
                     {link.label}
                   </a>
@@ -183,51 +190,53 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
             publicly, so how it was verified belongs on the page, not in a
             database column nobody reads. */}
         {venue.verified ? (
-          <Bloque titulo="Cómo lo confirmamos">
-            <p className="text-pretty text-body-md text-muted-foreground">
+          <Bloque titulo='Cómo lo confirmamos'>
+            <p className='text-pretty text-body-md text-muted-foreground'>
               {venue.verifiedNote ?? 'Confirmado directamente con el sitio.'}
             </p>
           </Bloque>
         ) : null}
       </div>
 
+      {carta.length > 0 ? <CartaPublica slug={venue.slug} productos={carta} /> : null}
+
       {aportes.length > 0 ? (
-        <section className="mt-10 rounded-xl border border-lime p-8">
-          <h2 className="font-display font-extrabold text-headline-md uppercase">
+        <section className='mt-10 rounded-xl border border-lime p-8'>
+          <h2 className='font-display font-extrabold text-headline-md uppercase'>
             Lo que ya entregó
           </h2>
-          <p className="mt-2 font-display font-black text-4xl text-lime leading-none tabular-nums">
+          <p className='mt-2 font-display font-black text-4xl text-lime leading-none tabular-nums'>
             {formatCOP(totalAportado.total, totalAportado.currency)}
           </p>
           {/* La atribucion no es cortesia: la cifra la reporta el sitio y la
               confirmamos nosotros, y decir las dos cosas es la diferencia entre
               un dato y una afirmacion nuestra sin respaldo. */}
-          <p className="mt-3 max-w-prose text-pretty text-body-md text-muted-foreground">
-            Reportado por el sitio y confirmado por nosotros. Cada entrega va con la fecha en
-            que la confirmamos.
+          <p className='mt-3 max-w-prose text-pretty text-body-md text-muted-foreground'>
+            Reportado por el sitio y confirmado por nosotros. Cada entrega va con la fecha en que la
+            confirmamos.
           </p>
 
-          <ul className="mt-6 flex flex-col gap-2">
+          <ul className='mt-6 flex flex-col gap-2'>
             {aportes.map((aporte) => (
               <li
                 key={aporte.id}
-                className="flex flex-wrap items-baseline justify-between gap-2 border-border border-t pt-2 text-body-md"
+                className='flex flex-wrap items-baseline justify-between gap-2 border-border border-t pt-2 text-body-md'
               >
-                <span className="text-muted-foreground">
+                <span className='text-muted-foreground'>
                   {formatDate(aporte.periodStart)} – {formatDate(aporte.periodEnd)}
                 </span>
-                <span className="tabular-nums">
+                <span className='tabular-nums'>
                   {formatCOP(Number.parseFloat(aporte.amount), aporte.currency)}
                 </span>
                 {aporte.purchaseSlug ? (
                   <Link
                     href={`/transparencia/${aporte.purchaseSlug}`}
-                    className="w-full text-primary-text text-sm hover:underline sm:w-auto"
+                    className='w-full text-primary-text text-sm hover:underline sm:w-auto'
                   >
                     Se fue en {aporte.purchaseTitle} →
                   </Link>
                 ) : (
-                  <span className="w-full text-muted-foreground text-sm sm:w-auto">
+                  <span className='w-full text-muted-foreground text-sm sm:w-auto'>
                     Todavía sin gastar
                   </span>
                 )}
@@ -238,31 +247,29 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       ) : null}
 
       {noches.length > 0 ? (
-        <section className="mt-10">
-          <h2 className="font-display font-extrabold text-headline-md uppercase">
-            Las noches
-          </h2>
-          <p className="mt-2 max-w-prose text-pretty text-body-md text-muted-foreground">
-            Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en
-            tu historia.
+        <section className='mt-10'>
+          <h2 className='font-display font-extrabold text-headline-md uppercase'>Las noches</h2>
+          <p className='mt-2 max-w-prose text-pretty text-body-md text-muted-foreground'>
+            Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en tu
+            historia.
           </p>
 
-          <ul className="mt-6 flex flex-col gap-2">
+          <ul className='mt-6 flex flex-col gap-2'>
             {noches.map((noche) => (
               <li key={noche.id}>
                 <Link
                   href={`/sitios/${venue.slug}/noches/${noche.id}`}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary"
+                  className='flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary'
                 >
-                  <span className="min-w-0">
-                    <span className="block font-display font-bold uppercase">
+                  <span className='min-w-0'>
+                    <span className='block font-display font-bold uppercase'>
                       {noche.title || formatDate(noche.happenedAt)}
                     </span>
-                    <span className="block text-muted-foreground text-sm">
+                    <span className='block text-muted-foreground text-sm'>
                       {formatDate(noche.happenedAt)}
                     </span>
                   </span>
-                  <span className="shrink-0 text-muted-foreground text-sm">
+                  <span className='shrink-0 text-muted-foreground text-sm'>
                     {noche.photoCount} {noche.photoCount === 1 ? 'foto' : 'fotos'}
                   </span>
                 </Link>
@@ -272,16 +279,16 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         </section>
       ) : null}
 
-      <div className="mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8">
-        <h2 className="font-display font-extrabold text-headline-md uppercase">
+      <div className='mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8'>
+        <h2 className='font-display font-extrabold text-headline-md uppercase'>
           Y esa plata, en qué se va
         </h2>
-        <p className="mt-2 text-pretty text-body-md text-muted-foreground">
+        <p className='mt-2 text-pretty text-body-md text-muted-foreground'>
           En cemento, bloques y tejas. Publicamos el recibo de cada compra.
         </p>
         <Link
-          href="/transparencia"
-          className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90"
+          href='/transparencia'
+          className='mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
         >
           Ver los recibos
         </Link>
@@ -292,7 +299,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-block rounded border border-secondary px-2 py-1 font-display text-label-sm text-muted-foreground">
+    <span className='inline-block rounded border border-secondary px-2 py-1 font-display text-label-sm text-muted-foreground'>
       {children}
     </span>
   )
@@ -300,10 +307,8 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="font-display text-label-lg text-lime uppercase tracking-widest">
-        {titulo}
-      </h2>
+    <section className='flex flex-col gap-2'>
+      <h2 className='font-display text-label-lg text-lime uppercase tracking-widest'>{titulo}</h2>
       {children}
     </section>
   )

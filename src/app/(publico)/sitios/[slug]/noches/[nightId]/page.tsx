@@ -4,11 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 
 import { GaleriaDeLaNoche } from '@/components/fiestas/galeria-de-la-noche'
 import { auth } from '@/lib/auth/auth'
-import {
-  getPublishedNight,
-  listAvailablePhotos,
-  listClaimedPhotoIds,
-} from '@/lib/fiestas/queries'
+import { getPublishedNight, listAvailablePhotos, listClaimedPhotoIds } from '@/lib/fiestas/queries'
 import { formatDate } from '@/lib/utils/format'
 
 /**
@@ -53,20 +49,20 @@ export default async function NochePublicaPage({
   )
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-margin-mobile py-section-gap lg:px-margin-desktop">
+    <div className='mx-auto w-full max-w-5xl px-margin-mobile py-section-gap lg:px-margin-desktop'>
       <header>
         <Link
           href={`/sitios/${slug}`}
-          className="text-muted-foreground text-sm hover:text-primary-text"
+          className='text-muted-foreground text-sm hover:text-primary-text'
         >
           ← {noche.venueNombre}
         </Link>
-        <h1 className="mt-2 text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter">
+        <h1 className='mt-2 text-balance font-display font-black text-4xl uppercase leading-none tracking-tighter'>
           {noche.title || formatDate(noche.happenedAt)}
         </h1>
-        <p className="mt-3 max-w-prose text-pretty text-body-lg text-muted-foreground">
-          {formatDate(noche.happenedAt)} en {noche.venueNombre}. Busca las tuyas y guárdalas:
-          cada noche que guardes suma a tu historia.
+        <p className='mt-3 max-w-prose text-pretty text-body-lg text-muted-foreground'>
+          {formatDate(noche.happenedAt)} en {noche.venueNombre}. Busca las tuyas y guárdalas: cada
+          noche que guardes suma a tu historia.
         </p>
       </header>
 
