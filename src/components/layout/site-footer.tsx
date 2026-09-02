@@ -59,6 +59,19 @@ export function SiteFooter() {
         </div>
       </div>
 
+      {/* El remate de la marca. Sale del video de lanzamiento y se queda fijo:
+          es lo que el producto es en paisa — usted sale, se parcha, rumbea, y
+          de paso ayuda. Va en lima porque es el punto mas brillante del
+          sistema y aca no compite con ninguna seleccion. */}
+      <div className="relative z-10 mt-16 w-full px-margin-mobile lg:px-margin-desktop">
+        <p className="max-w-3xl text-pretty text-body-lg text-muted-foreground">
+          Así usted sale, se parcha, rumbea, y de paso ayuda.
+        </p>
+        <p className="mt-3 font-display font-black text-4xl text-lime uppercase leading-none tracking-tighter sm:text-6xl">
+          ¿Qué chimba cierto?
+        </p>
+      </div>
+
       <div className="relative z-10 mt-16 flex w-full flex-col items-center justify-between gap-4 border-surface-variant border-t px-margin-mobile pt-8 md:flex-row lg:px-margin-desktop">
         <span className="text-label-sm text-muted-foreground uppercase">
           Hecho con orgullo en Colombia © {new Date().getFullYear()}
