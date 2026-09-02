@@ -12,12 +12,12 @@ export default async function AdminAportesPage() {
   ])
 
   return (
-    <div className="flex max-w-4xl flex-col gap-8">
+    <div className='flex max-w-4xl flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase tracking-tighter">Aportes</h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
-          Lo que cada sitio dice que entregó. Nada de esto se ve en público hasta que lo
-          verifiques: lo que publicamos lleva nuestro nombre encima.
+        <h1 className='font-display font-black text-3xl uppercase tracking-tighter'>Aportes</h1>
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
+          Lo que cada sitio dice que entregó. Nada de esto se ve en público hasta que lo verifiques:
+          lo que publicamos lleva nuestro nombre encima.
         </p>
       </header>
 

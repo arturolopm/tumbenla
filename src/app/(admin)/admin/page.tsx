@@ -12,28 +12,28 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className='flex flex-col gap-6'>
       <div>
-        <h1 className="font-display font-extrabold text-3xl">Resumen</h1>
-        <p className="text-muted-foreground text-sm">Lo que hay cargado ahora mismo.</p>
+        <h1 className='font-display font-extrabold text-3xl'>Resumen</h1>
+        <p className='text-muted-foreground text-sm'>Lo que hay cargado ahora mismo.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Publicados" value={counts.published} />
-        <Stat label="En borrador" value={counts.draft} />
-        <Stat label="Pausados" value={counts.paused} />
+      <div className='grid gap-4 sm:grid-cols-3'>
+        <Stat label='Publicados' value={counts.published} />
+        <Stat label='En borrador' value={counts.draft} />
+        <Stat label='Pausados' value={counts.paused} />
       </div>
 
-      <div className="flex gap-3">
+      <div className='flex gap-3'>
         <Link
-          href="/admin/sitios/nuevo"
-          className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm"
+          href='/admin/sitios/nuevo'
+          className='rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm'
         >
           Agregar un sitio
         </Link>
         <Link
-          href="/admin/sitios"
-          className="rounded-md border border-border px-4 py-2 font-medium text-sm"
+          href='/admin/sitios'
+          className='rounded-md border border-border px-4 py-2 font-medium text-sm'
         >
           Ver todos
         </Link>
@@ -44,9 +44,9 @@ export default async function AdminPage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <p className="text-muted-foreground text-sm">{label}</p>
-      <p className="mt-1 font-display font-extrabold text-4xl tabular-nums">{value}</p>
+    <div className='rounded-xl border border-border bg-card p-5'>
+      <p className='text-muted-foreground text-sm'>{label}</p>
+      <p className='mt-1 font-display font-extrabold text-4xl tabular-nums'>{value}</p>
     </div>
   )
 }

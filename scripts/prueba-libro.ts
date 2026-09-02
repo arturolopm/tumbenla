@@ -30,6 +30,7 @@
 import { db } from '@/database'
 import { venue } from '@/database/schema'
 import { montosDeOrden, repartir, textoDelReparto } from '@/lib/comercio/dinero'
+import { formatCOP } from '@/lib/utils/format'
 import {
   CUENTA,
   cuentaDePlataforma,
@@ -73,7 +74,9 @@ console.log('\n== El copy del reparto (VOZ.md: en pesos, sin "dona") ==')
 const texto = textoDelReparto(30000, 80)
 console.log(`       "${texto}"`)
 ok('no dice "dona" ni "victima"', /dona|donaci|victim|damnific|solidar/i.test(texto), false)
-ok('dice los pesos', texto.includes('$24.000') && texto.includes('$6.000'), true)
+// formatCOP mete un espacio fino despues del signo, asi que se compara con la
+// misma funcion que usa el resto de la app y no con un literal a mano.
+ok('dice los pesos', texto.includes(formatCOP(24000)) && texto.includes(formatCOP(6000)), true)
 console.log(`       "${textoDelReparto(30000, 100)}"`)
 
 console.log('\n== El libro ==')

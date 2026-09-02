@@ -18,6 +18,8 @@
  * enteros.
  */
 
+import { formatCOP } from '@/lib/utils/format'
+
 /** El reparto de UNA unidad. Las dos partes suman el precio, exacto. */
 export type Reparto = {
   /** Lo que se va en material. */
@@ -87,11 +89,13 @@ export const montosDeOrden = (
  */
 export const textoDelReparto = (precioUnitario: number, porcentajeMaterial: number): string => {
   const { material, sitio } = repartir(precioUnitario, porcentajeMaterial)
-  const pesos = (n: number) => `$${n.toLocaleString('es-CO')}`
 
+  // formatCOP y no un `$${n.toLocaleString()}` propio: el primero rinde
+  // "$ 30.000" y el segundo "$30.000", y con los dos en el repo la misma cifra
+  // sale escrita de dos formas en la misma pantalla.
   if (sitio === 0) {
-    return `De ${pesos(precioUnitario)}: los ${pesos(precioUnitario)} se van en material.`
+    return `De ${formatCOP(precioUnitario)}: los ${formatCOP(precioUnitario)} se van en material.`
   }
 
-  return `De ${pesos(precioUnitario)}: ${pesos(material)} se van en material. ${pesos(sitio)} se quedan en el sitio.`
+  return `De ${formatCOP(precioUnitario)}: ${formatCOP(material)} se van en material. ${formatCOP(sitio)} se quedan en el sitio.`
 }

@@ -39,11 +39,20 @@ import { MenuCuenta } from '@/components/layout/menu-cuenta'
 
 type Sitio = { slug: string; nombre: string; role: string }
 
+/**
+ * Escanear va de PRIMERO a proposito, y no es una preferencia estetica: es la
+ * unica pantalla que se abre con gente esperando en la barra. Todo lo demas se
+ * hace sentado y de dia.
+ *
+ * (Estas tres entradas estaban repetidas dos veces, asi que el menu pintaba
+ * seis filas y React se quejaba de llaves duplicadas, porque SidebarMenuItem se
+ * indexa por href.)
+ */
 const items = (slug: string, esDueno: boolean) => [
+  { href: `/panel/${slug}/escanear`, label: 'Escanear' },
   { href: `/panel/${slug}`, label: 'Resumen', exacto: true },
-  { href: `/panel/${slug}/noches`, label: 'Las noches' },
-  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
-  { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
+  { href: `/panel/${slug}/carta`, label: 'La carta' },
+  { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
   { href: `/panel/${slug}/noches`, label: 'Las noches' },
   { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
   { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
@@ -73,14 +82,14 @@ export function PanelShell({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="px-2 py-1 font-display font-extrabold text-lg">
+          <Link href='/' className='px-2 py-1 font-display font-extrabold text-lg'>
             TUMBENLA
           </Link>
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className="truncate">{sitio.nombre}</SidebarGroupLabel>
+            <SidebarGroupLabel className='truncate'>{sitio.nombre}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {nav.map((item) => (
@@ -120,29 +129,29 @@ export function PanelShell({
         </SidebarContent>
 
         <SidebarFooter>
-          <p className="truncate px-2 py-1 text-muted-foreground text-xs" title={email}>
+          <p className='truncate px-2 py-1 text-muted-foreground text-xs' title={email}>
             {email}
           </p>
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-border border-b px-4">
+        <header className='flex h-14 items-center gap-3 border-border border-b px-4'>
           <SidebarTrigger />
-          <p className="truncate font-medium text-sm">{sitio.nombre}</p>
+          <p className='truncate font-medium text-sm'>{sitio.nombre}</p>
           {/* Un operador entrando al panel de un sitio ajeno tiene que verlo.
               Sin este aviso es facil creer que se esta mirando el propio y
               tocar datos de alguien mas. */}
           {esPlataforma ? (
-            <span className="rounded-full border border-primary px-2 py-0.5 text-primary-text text-xs">
+            <span className='rounded-full border border-primary px-2 py-0.5 text-primary-text text-xs'>
               Estás entrando como operación
             </span>
           ) : null}
-          <div className="ml-auto">
+          <div className='ml-auto'>
             <MenuCuenta />
           </div>
         </header>
-        <div className="p-4 sm:p-6">{children}</div>
+        <div className='p-4 sm:p-6'>{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )
