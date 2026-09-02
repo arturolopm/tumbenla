@@ -52,7 +52,11 @@ const items = (slug: string, esDueno: boolean) => [
   { href: `/panel/${slug}/escanear`, label: 'Escanear' },
   { href: `/panel/${slug}`, label: 'Resumen', exacto: true },
   { href: `/panel/${slug}/carta`, label: 'La carta' },
-  { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
+  // La cuenta es SOLO del dueño, igual que Equipo: un mesero entrega tragos, y
+  // ensenarle el saldo es ensenarle cuanto factura el bar. Va gateada aca y no
+  // solo en la pagina, porque un enlace que lleva a un 404 es peor que no
+  // tenerlo: parece que algo se rompio.
+  ...(esDueno ? [{ href: `/panel/${slug}/cuenta`, label: 'La cuenta' }] : []),
   { href: `/panel/${slug}/noches`, label: 'Las noches' },
   { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
   { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
