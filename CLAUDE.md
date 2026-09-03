@@ -193,6 +193,9 @@ quedan como estan.
 
 En general: antes de escribir un helper, mirar si el stack ya lo trae.
 
+Los patrones concretos —contenedor/presentacion, cuando un efecto sobra, contadores como hook— y
+los fallos que ya mordieron viven en `docs/react-patterns.md`.
+
 ### TypeScript
 
 - **Strict mode**: Enabled
