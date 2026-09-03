@@ -18,7 +18,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { MenuCuenta } from '@/components/layout/menu-cuenta'
+import { AccountMenu } from '@/components/layout/account-menu'
 
 /**
  * Reusa src/components/ui/sidebar.tsx, que eran 21.8 KB ya construidos y sin
@@ -106,7 +106,7 @@ export function AdminShell({
           <SidebarTrigger />
           <p className='font-medium text-sm'>Operación</p>
           <div className='ml-auto'>
-            <MenuCuenta />
+            <AccountMenu />
           </div>
         </header>
         <div className='p-4 sm:p-6'>{children}</div>

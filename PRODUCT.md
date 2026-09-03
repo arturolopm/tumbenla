@@ -235,6 +235,26 @@ Estan aca para no volver a discutirlas cada dos semanas.
     la devolucion existe y esta a la vista, pero cuesta escribir un correo: es a
     proposito, y es la unica parte del producto donde la friccion es la
     funcion.
+33. **Quien trabaja en un sitio entra por el sitio, no por el sitio publico.**
+    La sesion tiene dos sombreros sobre la MISMA cuenta —salir de rumba cuelga
+    de `photo_claim`, trabajar cuelga de `venue_member`— y el que manda por
+    defecto es el de trabajo. En concreto: la barra publica pinta "Mi bar" con
+    enlace directo a `/panel/{slug}`, el control de cuenta muestra el NOMBRE
+    DEL SITIO en vez del de la persona, y ver el producto como rumbero pasa a
+    ser el acto secundario ("Verlo como rumbero"), no el primario.
+    **Y un mesero no ve el resumen del panel: `/panel/{slug}` lo redirige a
+    `/escanear`.** El resumen habla del perfil del sitio, su estado en el mapa
+    y su equipo —trabajo de dueno, sentado y de dia—; a quien atiende la barra
+    le aterrizaba en "Nombre, direccion, contacto" sin una sola mencion de
+    escanear, con la unica pantalla que necesita escondida detras de una barra
+    lateral colapsada en el telefono. Al dueno se le conserva el resumen, pero
+    encabezado por la tarjeta de escanear, porque tambien cubre la barra en una
+    noche movida.
+    **Por que importa:** escanear es la unica pantalla del producto que se abre
+    de pie, de noche y con alguien esperando. Cualquier paso entre la sesion y
+    esa pantalla se paga en la barra, y la decision 26 depende de que escanear
+    sea lo comodo: si no escanear es mas facil que escanear, el mecanismo del QR
+    indistinguible se cae solo.
 
 ---
 
@@ -414,8 +434,11 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 `CLAUDE.md` fija la regla: **identificadores y comentarios en ingles, español
 solo para lo que el usuario lee.** El repo todavia no cumple.
 
-**Cuanto:** 57 archivos con comentarios en español y **81 exports con nombre en
-español**. Los mas cargados:
+**Cuanto:** 51 archivos con comentarios en español y **78 exports con nombre en
+español** (iban en 57 y 81). Se pagaron al tocarlos por la decision 33: los seis
+archivos de la barra publica, el menu de cuenta, el panel y `/api/mi-acceso`, y
+los tres exports `MenuCuenta` → `AccountMenu`, `PanelSitioLayout` →
+`PanelVenueLayout` y `PanelResumenPage` → `PanelSummaryPage`. Los mas cargados:
 
 | Archivo | Exports |
 |---|---|
