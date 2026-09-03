@@ -1,19 +1,19 @@
 /**
- * Cuentas de prueba para verificar permisos a mano.
+ * Test accounts for checking permissions by hand.
  *
  *   bun run seed:cuentas
  *
- * POR QUE EXISTE. Lo unico que este producto no puede permitirse es que el
- * personal del bar A toque algo del bar B, y eso NO lo atrapa TypeScript, no lo
- * atrapa `bun lint`, y funciona perfecto con la sesion correcta. Solo se ve
- * probandolo con la sesion EQUIVOCADA, que es justo lo que nadie hace por
- * costumbre porque montar la segunda sesion cuesta.
+ * WHY IT EXISTS. The one thing this product cannot afford is staff from venue A
+ * touching anything of venue B, and TypeScript does not catch that, `bun lint`
+ * does not catch it, and it works perfectly with the right session. It only
+ * shows up when you test with the WRONG session — which is exactly what nobody
+ * does out of habit, because setting up the second session is a chore.
  *
- * Esto la monta: tres cuentas verificadas, duenas de sitios DISTINTOS, con
- * contrasena conocida. Asi la prueba incomoda cuesta lo mismo que la comoda.
+ * This removes the chore: verified accounts owning DIFFERENT venues, with a
+ * known password, so the awkward test costs the same as the comfortable one.
  *
- * Solo escribe si la cuenta no existe, asi que se puede correr muchas veces.
- * NUNCA correr contra produccion: crea usuarios con contrasena publicada.
+ * It only writes when the account is missing, so it can be run repeatedly.
+ * NEVER run against production: it creates users with a published password.
  */
 import { eq } from 'drizzle-orm'
 
@@ -21,68 +21,75 @@ import { db } from '@/database'
 import { user, venue, venueMember } from '@/database/schema'
 import { auth } from '@/lib/auth/auth'
 
-const CLAVE = 'Prueba-2026-tumbenla'
+const PASSWORD = 'Prueba-2026-tumbenla'
 
 if (process.env.NODE_ENV === 'production') {
-  throw new Error('Este script no corre en produccion.')
+  throw new Error('This script does not run in production.')
 }
 
-const sitios = await db
+const venues = await db
   .select({ id: venue.id, slug: venue.slug, name: venue.name })
   .from(venue)
   .orderBy(venue.slug)
   .limit(2)
 
-if (sitios.length < 2) {
-  throw new Error('Hacen falta al menos dos sitios. Corre: bun scripts/seed-tumbenla.ts')
+if (venues.length < 2) {
+  throw new Error('Need at least two venues. Run: bun scripts/seed-tumbenla.ts')
 }
 
-const cuentas = [
-  { email: 'duenoa@prueba.local', name: 'Dueño A', sitio: sitios[0], role: 'owner' as const },
-  { email: 'duenob@prueba.local', name: 'Dueño B', sitio: sitios[1], role: 'owner' as const },
-  { email: 'mesero@prueba.local', name: 'Mesero A', sitio: sitios[0], role: 'staff' as const },
+/**
+ * The operator has NO venue membership on purpose. Platform power comes from
+ * ADMIN_EMAILS (decision 17), not from a row, and keeping the two apart is what
+ * lets us check that an operator can review and settle without belonging to any
+ * venue.
+ */
+const accounts = [
+  { email: 'duenoa@prueba.local', name: 'Dueño A', venue: venues[0], role: 'owner' as const },
+  { email: 'duenob@prueba.local', name: 'Dueño B', venue: venues[1], role: 'owner' as const },
+  { email: 'mesero@prueba.local', name: 'Mesero A', venue: venues[0], role: 'staff' as const },
+  { email: 'operador@prueba.local', name: 'Operación', venue: null, role: null },
 ]
 
-for (const cuenta of cuentas) {
-  const [existente] = await db
+for (const account of accounts) {
+  const [existing] = await db
     .select({ id: user.id })
     .from(user)
-    .where(eq(user.email, cuenta.email))
+    .where(eq(user.email, account.email))
     .limit(1)
 
-  let userId = existente?.id
+  let userId = existing?.id
 
   if (!userId) {
     await auth.api.signUpEmail({
-      body: { email: cuenta.email, password: CLAVE, name: cuenta.name },
+      body: { email: account.email, password: PASSWORD, name: account.name },
     })
-    const [creado] = await db
+    const [created] = await db
       .select({ id: user.id })
       .from(user)
-      .where(eq(user.email, cuenta.email))
+      .where(eq(user.email, account.email))
       .limit(1)
-    userId = creado?.id
+    userId = created?.id
   }
 
-  if (!userId) throw new Error(`No se pudo crear ${cuenta.email}`)
+  if (!userId) throw new Error(`Could not create ${account.email}`)
 
-  // Verificado a la fuerza: el correo de verificacion no llega a ninguna parte
-  // en local, y assertVenueAccess exige emailVerified.
+  // Forced verified: the verification email goes nowhere useful locally, and
+  // both assertVenueAccess and assertAdmin require emailVerified.
   await db.update(user).set({ emailVerified: true }).where(eq(user.id, userId))
 
-  await db
-    .insert(venueMember)
-    .values({ venueId: cuenta.sitio.id, userId, role: cuenta.role })
-    .onConflictDoNothing()
-
-  console.log(`  ${cuenta.email}  →  ${cuenta.sitio.slug} (${cuenta.role})`)
+  if (account.venue && account.role) {
+    await db
+      .insert(venueMember)
+      .values({ venueId: account.venue.id, userId, role: account.role })
+      .onConflictDoNothing()
+    console.log(`  ${account.email.padEnd(22)} → ${account.venue.slug} (${account.role})`)
+  } else {
+    console.log(`  ${account.email.padEnd(22)} → operador (necesita estar en ADMIN_EMAILS)`)
+  }
 }
 
-console.log(`\n  contraseña de todas: ${CLAVE}`)
-console.log('\n  Para una sesion en curl:')
-console.log(`    curl -s -c galletas.txt -X POST localhost:3000/api/auth/sign-in/email \\`)
-console.log(`      -H 'content-type: application/json' \\`)
-console.log(`      -d '{"email":"duenoa@prueba.local","password":"${CLAVE}"}'`)
-console.log('    curl -s -b galletas.txt localhost:3000/panel/<slug>/carta\n')
+console.log(`\n  contraseña de todas: ${PASSWORD}`)
+console.log('\n  Para que el operador entre, el servidor tiene que arrancar con:')
+console.log('    ADMIN_EMAILS=operador@prueba.local bun dev\n')
 
 process.exit(0)
