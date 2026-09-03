@@ -8,6 +8,7 @@ import {
   materialPurchaseItem,
   materialPurchaseMedia,
   venue,
+  venueProduct,
 } from '../src/database/schema'
 import { ID_PREFIX, createId } from '../src/lib/utils/id'
 
@@ -58,10 +59,6 @@ const venues = [
     longitude: '-75.493500',
     instagram: 'laguaridadelmono',
     openingHours: 'Mie a Sab, 5:00 p.m. a 2:00 a.m.',
-    pledgeType: 'fixed_per_unit',
-    pledgeAmount: '1000.00',
-    pledgeUnit: 'cerveza',
-    pledgeNote: 'Mil pesos por cerveza, todas las noches que abrimos.',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 1000 x cerveza, 4 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '4000.00',
@@ -86,10 +83,6 @@ const venues = [
     longitude: '-75.490000',
     instagram: 'venenomanizales',
     openingHours: 'Jue a Sab, 9:00 p.m. a 4:00 a.m.',
-    pledgeType: 'percentage',
-    pledgePercentage: '10.00',
-    pledgeBasis: 'ventas_totales',
-    pledgeNote: 'El 10% de todo lo que se venda los jueves.',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 10% de un consumo tipico de 90.000. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '9000.00',
@@ -113,9 +106,6 @@ const venues = [
     longitude: '-75.526500',
     instagram: 'terrazachipre',
     openingHours: 'Mar a Sab, 4:00 p.m. a 1:00 a.m.',
-    pledgeType: 'fixed_per_unit',
-    pledgeAmount: '2000.00',
-    pledgeUnit: 'coctel',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 2000 x coctel, 3 cocteles por noche. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '6000.00',
@@ -139,10 +129,6 @@ const venues = [
     longitude: '-75.502000',
     instagram: 'salonmilanmzl',
     openingHours: 'Vie y Sab, 8:00 p.m. a 3:00 a.m.',
-    pledgeType: 'percentage',
-    pledgePercentage: '5.00',
-    pledgeBasis: 'ventas_totales',
-    pledgeNote: 'Cinco por ciento de todo, sin días especiales.',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 5% de un consumo tipico de 80.000. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '4000.00',
@@ -166,9 +152,6 @@ const venues = [
     longitude: '-75.517400',
     instagram: 'barlanonamzl',
     openingHours: 'Mar a Dom, 12:00 m. a 11:00 p.m.',
-    pledgeType: 'fixed_per_unit',
-    pledgeAmount: '3000.00',
-    pledgeUnit: 'botella',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 3000 x botella, una botella entre varios. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '3000.00',
@@ -191,9 +174,6 @@ const venues = [
     latitude: '5.033000',
     longitude: '-75.473000',
     openingHours: 'Lun a Sab, 2:00 p.m. a 12:00 a.m.',
-    pledgeType: 'fixed_per_unit',
-    pledgeAmount: '500.00',
-    pledgeUnit: 'cerveza',
     // Aporte estimado por persona por noche, NO lo que se gasta.
     // 500 x cerveza, 5 cervezas por noche. Es lo que /mi-historia multiplica por las noches.
     estimatedPerPersonNight: '2500.00',
@@ -253,6 +233,66 @@ const purchases = [
   },
 ]
 
+
+/**
+ * La carta de cada sitio.
+ *
+ * NO ES ADORNO DEL SEED. Desde la decision 34 la tarjeta y el pin de un sitio
+ * salen de lo que entrego y de lo que pone su trago mas barato, asi que un
+ * sitio sin productos sale sin etiqueta y con el pin apagado. Sin estas filas
+ * el mapa local se ve roto y no hay como revisar nada de lo que se construyo.
+ *
+ * Las cifras son las del compromiso viejo de cada sitio, traducidas a un
+ * producto, para que quien conozca el seed reconozca los numeros. Todo esto
+ * sigue siendo inventado, igual que los sitios.
+ */
+const PRODUCTOS: Record<string, { name: string; kind: string; price: string; pct: string }[]> = {
+  'la-guarida-del-mono': [
+    { name: 'Cerveza de la casa', kind: 'cerveza', price: '8000.00', pct: '12.50' },
+    { name: 'Michelada Palogrande', kind: 'coctel', price: '14000.00', pct: '40.00' },
+  ],
+  'discoteca-veneno': [
+    { name: 'Coctel Veneno', kind: 'coctel', price: '28000.00', pct: '50.00' },
+    { name: 'Botella entera', kind: 'botella', price: '180000.00', pct: '10.00' },
+  ],
+  'terraza-chipre': [
+    { name: 'Coctel del mirador', kind: 'coctel', price: '26000.00', pct: '60.00' },
+  ],
+  'bar-la-nona': [
+    { name: 'Mojito Reconstrucción', kind: 'coctel', price: '30000.00', pct: '80.00' },
+    { name: 'Cerveza de la casa', kind: 'cerveza', price: '8000.00', pct: '50.00' },
+  ],
+  // salon-milan se deja SIN CARTA a proposito, y esta publicado: hace falta un
+  // sitio asi para ver en local como se ve uno del que todavia no se puede
+  // pedir nada —pin apagado, sin anillo, sin etiqueta—, que es como nace todo
+  // sitio nuevo. bar-la-nona si lleva carta porque es el sitio con el que se
+  // prueba el flujo de pedido y escaneo punta a punta.
+}
+
+const seedProductos = async (venueIds: Record<string, string>) => {
+  const filas = Object.entries(PRODUCTOS).flatMap(([slug, productos]) =>
+    productos.map((producto) => ({
+      id: createId(ID_PREFIX.venueProduct),
+      venueId: venueIds[slug],
+      slug: producto.name
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, ''),
+      name: producto.name,
+      kind: producto.kind,
+      price: producto.price,
+      donationPercentage: producto.pct,
+      status: 'published',
+      publishedAt: new Date('2026-08-20'),
+    }))
+  )
+
+  await db.insert(venueProduct).values(filas).onConflictDoNothing()
+  console.log(`  ${filas.length} products across ${Object.keys(PRODUCTOS).length} venues`)
+}
+
 async function main() {
   console.log('Seeding Tumbenla sample data...')
 
@@ -295,6 +335,9 @@ async function main() {
     })
   }
   console.log(`  ${purchases.length} purchases with items and one receipt each`)
+
+  const filas = await db.select({ id: venue.id, slug: venue.slug }).from(venue)
+  await seedProductos(Object.fromEntries(filas.map((f) => [f.slug, f.id])))
 
   console.log('Done.')
 }

@@ -43,29 +43,6 @@ export const ensureUniqueSlug = async (base: string, excludeId?: string): Promis
   return `${root}-${Date.now()}`
 }
 
-/**
- * Drizzle wants decimal columns as strings on the way in, the same way it hands
- * them back. Passing a number here throws at runtime.
- */
-const toPledgeColumns = (input: VenueInput) =>
-  input.pledgeType === 'percentage'
-    ? {
-        pledgeType: 'percentage' as const,
-        pledgePercentage: input.pledgePercentage.toString(),
-        pledgeAmount: null,
-        pledgeUnit: null,
-        pledgeBasis: input.pledgeBasis ?? null,
-        pledgeNote: input.pledgeNote,
-      }
-    : {
-        pledgeType: 'fixed_per_unit' as const,
-        pledgePercentage: null,
-        pledgeAmount: input.pledgeAmount.toString(),
-        pledgeUnit: input.pledgeUnit,
-        pledgeBasis: null,
-        pledgeNote: input.pledgeNote,
-      }
-
 const toColumns = (input: VenueInput, slug: string) => ({
   slug,
   name: input.name,
@@ -98,7 +75,6 @@ const toColumns = (input: VenueInput, slug: string) => ({
   verifiedNote: input.verifiedNote,
   status: input.status,
 
-  ...toPledgeColumns(input),
 })
 
 export const createVenue = async (input: VenueInput): Promise<VenueAdminRow> => {

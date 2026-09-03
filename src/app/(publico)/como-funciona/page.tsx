@@ -192,7 +192,7 @@ export default function NuestraCausaPage() {
           </ol>
 
           <Link
-            href="/quiero-poner"
+            href="/registrar-sitio"
             className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90"
           >
             Quiero poner

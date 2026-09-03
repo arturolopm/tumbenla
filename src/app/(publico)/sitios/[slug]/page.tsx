@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { PledgeDetail } from '@/components/sitios/pledge-badge'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
 import { CartaPublica } from '@/components/comercio/carta-publica'
 import { listarCartaPublica } from '@/lib/comercio/queries'
@@ -11,7 +10,6 @@ import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
 import { formatCOP, formatDate } from '@/lib/utils/format'
 import { getVerifiedTotal, listVerifiedContributions } from '@/lib/venues/contributions'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
-import { pledgeLabel } from '@/components/sitios/pledge-badge'
 
 export const revalidate = 300
 
@@ -55,7 +53,11 @@ export async function generateMetadata({
 
   return buildMetadata({
     title: `${venue.name}, ${venue.city}`,
-    description: `${venue.name} pone ${pledgeLabel(venue.pledge)} en material de construcción.`,
+    // Una frase estable y cierta, sin cifras. generateMetadata solo carga el
+    // sitio, no su carta, y meterle una segunda consulta para poner pesos en
+    // una meta description que ademas se cachea seria pagar dos veces por algo
+    // que envejece mal.
+    description: `${venue.name} pone parte de cada trago en material de construcción.`,
     canonical: `/sitios/${venue.slug}`,
   })
 }
@@ -84,6 +86,12 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
   // Es de las mas visitadas del sitio y meterle algo que dependa de quien mira
   // la volveria dinamica y despertaria la base en cada visita.
   const carta = await listarCartaPublica(venue.id)
+
+  // El PISO de lo que pone un trago, no el del trago mas barato: un trago caro
+  // con un porcentaje alto puede poner menos que uno barato con uno bajo, y
+  // "desde" es una afirmacion de piso. Es la misma regla que usa el chip de la
+  // tarjeta en listPublishedVenues.
+  const materialDesde = carta.length > 0 ? Math.min(...carta.map((p) => p.material)) : null
 
   const contactLinks = [
     venue.instagram
@@ -127,7 +135,16 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           ) : null}
         </div>
 
-        <PledgeDetail pledge={venue.pledge} />
+        {/* Lo que se puede pedir AHORA, en pesos. Sale de `carta`, que esta
+            pagina ya carga, asi que no hay consulta nueva y el ISR sigue en
+            pie. Lo entregado no se repite aca: vive mas abajo, en "Lo que ya
+            entregó", y decir el mismo numero dos veces en una pantalla no lo
+            hace mas cierto. */}
+        {materialDesde !== null ? (
+          <p className='rounded-xl border-2 border-lime px-4 py-3 font-display text-label-lg text-lime uppercase'>
+            Desde {formatCOP(materialDesde)} en material por trago
+          </p>
+        ) : null}
       </header>
 
       {venue.coverImageUrl ? (

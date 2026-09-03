@@ -8,31 +8,32 @@ export type VenueType = (typeof VENUE_TYPES)[number]
 export const VENUE_STATUSES = ['draft', 'published', 'paused', 'archived'] as const
 export type VenueStatus = (typeof VENUE_STATUSES)[number]
 
-export const PLEDGE_UNITS = ['botella', 'trago', 'cerveza', 'coctel', 'entrada'] as const
-export type PledgeUnit = (typeof PLEDGE_UNITS)[number]
-
-export const PLEDGE_BASES = ['ventas_totales', 'ventas_licor', 'cover'] as const
-export type PledgeBasis = (typeof PLEDGE_BASES)[number]
-
 /**
- * A discriminated union so the UI cannot forget a case. The database stores this
- * as a `pledge_type` text column plus two nullable value columns; mappers.ts is
- * what turns that back into a shape TypeScript can check exhaustively.
+ * What the card and the map pin say about a venue, now that a venue itself
+ * promises nothing (decision 34).
+ *
+ * Two numbers, and which one gets shown is a real product decision rather than
+ * a fallback for missing data:
+ *
+ * `entregado` is what this venue has actually put in — verified, settled,
+ * cross-checkable against a published receipt. When it is there, it is the
+ * strongest thing we can say about a bar, so it wins.
+ *
+ * `materialDesde` is the floor of what one drink puts in right now. It is what
+ * EVERY newly approved venue shows, because nobody has delivered anything on
+ * day one — so it is the common case, not the edge case, and it has to read as
+ * well as the other.
+ *
+ * Both can be absent: a published venue that has delivered nothing and has no
+ * carta yet. That renders NO chip at all. "$0 puestos" reads as an accusation
+ * against a bar that has simply not been invoiced yet.
  */
-export type Pledge =
-  | {
-      type: 'percentage'
-      percentage: number
-      basis: PledgeBasis | null
-      note: string | null
-    }
-  | {
-      type: 'fixed_per_unit'
-      amount: number
-      unit: string
-      currency: string
-      note: string | null
-    }
+export type VenueChip = {
+  /** Verificado y entregado. 0 = todavia nada. */
+  entregado: number
+  /** El material del trago mas barato publicado. null = todavia no vende. */
+  materialDesde: number | null
+}
 
 /** What a card in the list and a pin on the map both need. */
 export type VenueSummary = {
@@ -49,7 +50,7 @@ export type VenueSummary = {
   lat: number
   lng: number
   coverImageUrl: string | null
-  pledge: Pledge
+  chip: VenueChip
   featured: boolean
   verified: boolean
 }
@@ -67,8 +68,6 @@ export type Venue = VenueSummary & {
   verifiedNote: string | null
   /** Numero o null. Nunca 0: ver el porque en schemas.ts. */
   estimatedPerPersonNight: number | null
-  pledgeStartsAt: Date | null
-  pledgeEndsAt: Date | null
 }
 
 /** The admin table needs the curation columns the public shape hides. */

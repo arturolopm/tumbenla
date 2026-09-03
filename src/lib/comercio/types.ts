@@ -3,10 +3,13 @@
  * etiquetas en español.
  *
  * EL VALOR GUARDADO VA EN ASCII; LA ETIQUETA LLEVA SU TILDE (`PRODUCT.md`,
- * decision 25). Es el mismo patron que `UNIT_LABEL` en
- * `src/components/sitios/pledge-badge.tsx`: asi un acento nunca llega a una
- * URL, a una consulta ni a una migracion, y aun asi lo que la gente lee esta
- * bien escrito.
+ * decision 25). Asi un acento nunca llega a una URL, a una consulta ni a una
+ * migracion, y aun asi lo que la gente lee esta bien escrito.
+ *
+ * `KIND_LABEL` es el ejemplo canonico de la regla, y la decision 25 apunta
+ * aca. Lo era `UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`, que se
+ * borro con el compromiso general (decision 34) y ademas tenia una sola
+ * entrada; este mapa cubre sus seis valores.
  */
 
 export const KINDS_DE_PRODUCTO = [

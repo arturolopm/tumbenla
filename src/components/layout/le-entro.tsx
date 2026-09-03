@@ -62,7 +62,7 @@ export function LeEntro() {
             </p>
 
             <Link
-              href="/quiero-poner"
+              href="/registrar-sitio"
               className="mt-8 inline-block self-start rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
             >
               Quiero poner

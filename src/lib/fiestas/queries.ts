@@ -4,6 +4,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
 import { partyNight, partyPhoto, photoClaim, photoReport, venue } from '@/database/schema'
+import { MONEDA } from '@/lib/utils/format'
 import type { ClaimedPhoto, HistorySummary, PartyNight, PartyPhoto } from './types'
 
 /**
@@ -118,7 +119,6 @@ export const getHistorySummary = async (userId: string): Promise<HistorySummary>
       nightId: partyNight.id,
       venueId: venue.id,
       estimated: venue.estimatedPerPersonNight,
-      currency: venue.pledgeCurrency,
     })
     .from(photoClaim)
     .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
@@ -152,7 +152,10 @@ export const getHistorySummary = async (userId: string): Promise<HistorySummary>
     venues: venues.size,
     photos,
     estimatedAmount,
-    currency: rows[0]?.currency ?? 'COP',
+    // Antes salia de venue.pledge_currency, que murio con el compromiso general
+    // (decision 34). No se pierde nada: nadie escribia esa columna nunca y esta
+    // misma linea ya caia a 'COP' cuando venia vacia.
+    currency: MONEDA,
     estimateIsPartial: nightsWithoutEstimate > 0,
     nightsWithoutEstimate,
   }

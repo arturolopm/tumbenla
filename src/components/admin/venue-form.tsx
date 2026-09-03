@@ -19,7 +19,7 @@ import { AddressSearch } from '@/components/mapa/address-search'
 import type { PickedLocation } from '@/components/mapa/location-picker'
 import { cn } from '@/lib/utils/css'
 import type { VenueAdminRow } from '@/lib/venues/types'
-import { PLEDGE_BASES, PLEDGE_UNITS, VENUE_STATUSES, VENUE_TYPES } from '@/lib/venues/types'
+import { VENUE_STATUSES, VENUE_TYPES } from '@/lib/venues/types'
 
 const LocationPicker = dynamic(
   () => import('@/components/mapa/location-picker').then((m) => m.LocationPicker),
@@ -47,31 +47,17 @@ const STATUS_LABEL: Record<string, string> = {
   archived: 'Archivado',
 }
 
-const UNIT_LABEL: Record<string, string> = {
-  botella: 'por botella',
-  trago: 'por trago',
-  cerveza: 'por cerveza',
-  coctel: 'por cóctel',
-  entrada: 'por entrada',
-}
-
-const BASIS_LABEL: Record<string, string> = {
-  ventas_totales: 'de las ventas totales',
-  ventas_licor: 'de las ventas de licor',
-  cover: 'del cover',
-}
-
 const initialState: ActionState = { status: 'idle' }
 
 /**
  * El formulario largo de un sitio, para los DOS PANELES Y NADA MAS.
  *
  * NO SE LE MUESTRA A QUIEN SE REGISTRA. Estuvo colgado en /registrar-sitio/nuevo
- * y era la peor pantalla del producto: le pedia el compromiso completo y un pin
- * en el mapa a alguien con quien todavia no habiamos hablado, y encima su
- * buscador de direcciones llama a /api/geocode, que exige ser operador y le
- * respondia 404. El alta ahora es una solicitud corta; esto lo llena un
- * operador cuando ya confirmo el compromiso.
+ * y era la peor pantalla del producto: le pedia un pin en el mapa —y en su
+ * momento un compromiso entero— a alguien con quien todavia no habiamos
+ * hablado, y encima su buscador de direcciones llama a /api/geocode, que exige
+ * ser operador y le respondia 404. El alta son cuatro campos (decision 35);
+ * esto lo llena un operador cuando ya verifico el DM.
  *
  * `modo='panel'` esconde el selector de Estado, porque publicar es de la
  * plataforma. ESCONDERLO NO ES LA PROTECCION: la proteccion es que
@@ -110,9 +96,9 @@ export function VenueForm({
   /**
    * Lo que el sitio ya dijo en su solicitud de alta.
    *
-   * Trae todo MENOS las dos cosas que el formulario de alta no pide: el punto
-   * en el mapa y el compromiso. Son justamente las dos que el operador acaba de
-   * confirmar hablando, y las que lo traen a esta pantalla.
+   * Desde la decision 35 trae CUATRO cosas: nombre, Instagram, correo y
+   * WhatsApp. El tipo, la direccion y el pin los pone el operador aca, que es
+   * el mismo trato que el pin ya tenia y la razon de que esta pantalla exista.
    */
   prefill?: PrefillSolicitud
 }) {
@@ -122,9 +108,6 @@ export function VenueForm({
     initialState
   )
 
-  const [pledgeType, setPledgeType] = useState<'percentage' | 'fixed_per_unit'>(
-    venue?.pledge.type ?? 'percentage'
-  )
   const [location, setLocation] = useState<PickedLocation | null>(
     venue ? { lat: venue.lat, lng: venue.lng } : null
   )
@@ -327,106 +310,18 @@ export function VenueForm({
         <input type="hidden" name="longitude" value={location?.lng ?? ''} />
       </Section>
 
-      <Section title="El compromiso" hint="Esto es lo que sale en la tarjeta del sitio.">
-        <div className="flex flex-wrap gap-2">
-          {(['percentage', 'fixed_per_unit'] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setPledgeType(option)}
-              aria-pressed={pledgeType === option}
-              className={cn(
-                'rounded-md border px-3 py-1.5 text-sm transition-colors',
-                pledgeType === option
-                  ? 'border-primary bg-primary/10 text-primary-text'
-                  : 'border-border text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {option === 'percentage' ? 'Un porcentaje' : 'Un monto fijo'}
-            </button>
-          ))}
-        </div>
-        <input type="hidden" name="pledgeType" value={pledgeType} />
+      <Section
+        title="Lo que declara el sitio"
+        hint="Un estimado, no un recibo. El reparto de verdad va en cada trago de la carta."
+      >
+        {/* Aca vivia "El compromiso": un porcentaje de las ventas, o un monto
+            fijo por unidad. Se retiro entero (decision 34). Un porcentaje
+            sobre una caja que no auditamos habia que creerlo; el reparto ahora
+            va por producto, donde tiene precio, orden y escaneo detras.
 
-        {pledgeType === 'percentage' ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Porcentaje" error={fieldError('pledgePercentage')}>
-              <input
-                name="pledgePercentage"
-                type="number"
-                step="0.1"
-                min="0.1"
-                max="100"
-                defaultValue={
-                  venue?.pledge.type === 'percentage' ? venue.pledge.percentage : undefined
-                }
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Sobre qué">
-              <select
-                name="pledgeBasis"
-                defaultValue={
-                  venue?.pledge.type === 'percentage'
-                    ? (venue.pledge.basis ?? 'ventas_totales')
-                    : 'ventas_totales'
-                }
-                className={inputClass}
-              >
-                {PLEDGE_BASES.map((basis) => (
-                  <option key={basis} value={basis}>
-                    {BASIS_LABEL[basis]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Monto en pesos" error={fieldError('pledgeAmount')}>
-              <input
-                name="pledgeAmount"
-                type="number"
-                step="100"
-                min="100"
-                defaultValue={
-                  venue?.pledge.type === 'fixed_per_unit' ? venue.pledge.amount : undefined
-                }
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Por cada">
-              <select
-                name="pledgeUnit"
-                defaultValue={
-                  venue?.pledge.type === 'fixed_per_unit' ? venue.pledge.unit : 'botella'
-                }
-                className={inputClass}
-              >
-                {PLEDGE_UNITS.map((unit) => (
-                  <option key={unit} value={unit}>
-                    {UNIT_LABEL[unit]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-        )}
-
-        <Field label="Nota del compromiso" hint="En las palabras del sitio, si las dieron.">
-          <textarea
-            name="pledgeNote"
-            defaultValue={venue?.pledge.note ?? ''}
-            rows={2}
-            className={cn(inputClass, 'h-auto py-2')}
-          />
-        </Field>
-
-        {/* Va aca abajo y no junto al compromiso a proposito: son dos cosas
-            distintas y confundirlas es el riesgo de toda esta pantalla. El
-            compromiso es lo que el sitio se obliga a poner; esto es una
-            estimacion de lo que sale por cada persona en una noche, y en
-            /mi-historia se rotula "estimado" en todas partes. */}
+            Lo que queda es el estimado por persona, que NUNCA fue el
+            compromiso y por eso sobrevive: es lo que /mi-historia multiplica
+            por cada noche guardada, siempre rotulado "estimado". */}
         <Field
           label="Aporte estimado por persona, por noche"
           hint="Opcional. En pesos. Es un ESTIMADO que declara el sitio, no un recibo: se multiplica por cada noche que alguien guarde. Déjalo vacío si no hay una cifra que el sitio respalde; vacío muestra las noches sin pesos, que es mejor que un número inventado."
