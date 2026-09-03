@@ -35,22 +35,46 @@ import { isEmailVerificationEnabled } from '@/config/feature-flags'
  * chequeo de origen existe para impedir.
  */
 const origenesPropios = (): string[] => {
-  const candidatos = [
-    getBaseUrl(),
-    env.VERCEL_URL?.trim(),
-    env.VERCEL_BRANCH_URL?.trim(),
-  ].filter((valor): valor is string => Boolean(valor))
+  const candidatos = [getBaseUrl(), env.VERCEL_URL?.trim(), env.VERCEL_BRANCH_URL?.trim()].filter(
+    (valor): valor is string => Boolean(valor)
+  )
 
   return [
-    ...new Set(
-      candidatos.map((valor) => (valor.startsWith('http') ? valor : `https://${valor}`))
-    ),
+    ...new Set(candidatos.map((valor) => (valor.startsWith('http') ? valor : `https://${valor}`))),
   ]
 }
 
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
   trustedOrigins: origenesPropios(),
+
+  /**
+   * Server-side auth logging.
+   *
+   * WHY IT EXISTS: when signing in fails, the browser is the worst place to
+   * find out why. Better-Auth answers with a deliberately vague
+   * "Invalid email or password" — correct, because telling an attacker which
+   * half was wrong hands them a way to enumerate accounts — and the client
+   * error object serialises to `{}` in the console. So the person debugging
+   * sees nothing at all.
+   *
+   * This puts the real reason on the SERVER, where only we read it. Verbose in
+   * development; in production it stays at `error` so a login failure does not
+   * write one line per attempt.
+   *
+   * It never logs the password, and never logs enough for the log itself to
+   * become the leak the vague message exists to prevent.
+   */
+  logger: {
+    disabled: false,
+    level: isProd ? 'error' : 'debug',
+    log: (level, message, ...args) => {
+      const prefix = `[auth:${level}]`
+      if (level === 'error') console.error(prefix, message, ...args)
+      else if (level === 'warn') console.warn(prefix, message, ...args)
+      else console.log(prefix, message, ...args)
+    },
+  },
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
@@ -196,8 +220,7 @@ export const auth = betterAuth({
           })
 
           const otpWasLoggedOnly =
-            getActiveProviderName() === 'log' ||
-            result.message.toLowerCase().includes('logged')
+            getActiveProviderName() === 'log' || result.message.toLowerCase().includes('logged')
 
           if (!isProd || otpWasLoggedOnly) {
             console.info('🔑 VERIFICATION CODE FOR LOGIN/SIGNUP', {

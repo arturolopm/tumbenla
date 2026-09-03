@@ -125,7 +125,14 @@ export default function LoginPage({
         },
         {
           onError: (ctx) => {
-            console.error('Login error:', ctx.error)
+            // `console.error(ctx.error)` printed `{}`: the fields are not
+            // enumerable, so the object logged empty and told nobody anything.
+            console.error('[login] fallo', {
+              status: ctx.error?.status,
+              statusText: ctx.error?.statusText,
+              code: ctx.error?.code,
+              message: ctx.error?.message,
+            })
 
             if (
               ctx.error.code?.includes('EMAIL_NOT_VERIFIED') ||
@@ -145,39 +152,44 @@ export default function LoginPage({
               return
             }
 
-            const errorMessage: string[] = ['Correo o contraseña incorrectos']
-            if (
-              ctx.error.code?.includes('BAD_REQUEST') ||
-              ctx.error.message?.includes('Email and password sign in is not enabled')
-            ) {
-              errorMessage.push('Entrar con correo esta desactivado ahora mismo.')
+            // The message is chosen, not accumulated. It used to start as
+            // 'Correo o contraseña incorrectos' and then append a second line,
+            // so EVERY failure — a dropped connection included — accused the
+            // person of typing their password wrong. That is worse than saying
+            // nothing: it sends them to reset a password that was fine.
+            const code = ctx.error.code ?? ''
+            const raw = ctx.error.message ?? ''
+
+            let message = 'No se pudo entrar. Intenta de nuevo.'
+
+            if (code.includes('MISSING_CREDENTIALS')) {
+              message = 'Faltan el correo o la contraseña.'
             } else if (
-              ctx.error.code?.includes('INVALID_CREDENTIALS') ||
-              ctx.error.message?.includes('invalid password')
+              code.includes('EMAIL_PASSWORD_DISABLED') ||
+              raw.includes('Email and password sign in is not enabled')
             ) {
-              errorMessage.push('Correo o contraseña incorrectos. Intenta de nuevo.')
+              message = 'Entrar con correo y contraseña está desactivado ahora mismo.'
+            } else if (code.includes('too many attempts') || raw.includes('rate limit')) {
+              message = 'Demasiados intentos. Espera un momento.'
+            } else if (code.includes('account locked')) {
+              message = 'Tu cuenta quedó bloqueada por seguridad. Cambia tu contraseña.'
+            } else if (code.includes('FAILED_TO_CREATE_SESSION')) {
+              message = 'No se pudo abrir la sesión. Intenta más tarde.'
             } else if (
-              ctx.error.code?.includes('USER_NOT_FOUND') ||
-              ctx.error.message?.includes('not found')
+              code.includes('INVALID_EMAIL_OR_PASSWORD') ||
+              code.includes('INVALID_CREDENTIALS') ||
+              code.includes('USER_NOT_FOUND') ||
+              raw.includes('Invalid email or password')
             ) {
-              errorMessage.push('No hay ninguna cuenta con ese correo. Crea una primero.')
-            } else if (ctx.error.code?.includes('MISSING_CREDENTIALS')) {
-              errorMessage.push('Faltan el correo o la contraseña.')
-            } else if (ctx.error.code?.includes('EMAIL_PASSWORD_DISABLED')) {
-              errorMessage.push('Entrar con correo y contraseña esta desactivado.')
-            } else if (ctx.error.code?.includes('FAILED_TO_CREATE_SESSION')) {
-              errorMessage.push('No se pudo abrir la sesion. Intenta mas tarde.')
-            } else if (ctx.error.code?.includes('too many attempts')) {
-              errorMessage.push('Demasiados intentos. Espera un rato o cambia tu contraseña.')
-            } else if (ctx.error.code?.includes('account locked')) {
-              errorMessage.push('Tu cuenta quedo bloqueada por seguridad. Cambia tu contraseña.')
-            } else if (ctx.error.code?.includes('network')) {
-              errorMessage.push('Falló la conexion. Revisa tu internet e intenta de nuevo.')
-            } else if (ctx.error.message?.includes('rate limit')) {
-              errorMessage.push('Demasiadas peticiones. Espera un momento.')
+              // The server says which half was wrong to NOBODY, on purpose:
+              // that is how account enumeration works. The real reason is in
+              // the server log, in development.
+              message = 'Correo o contraseña incorrectos.'
+            } else if (ctx.error.status === 0 || !ctx.error.status) {
+              message = mensajeDeError(ctx.error, 'No se pudo conectar. Revisa tu internet.')
             }
 
-            setError('root', { message: errorMessage.join(' ') })
+            setError('root', { message })
           },
         }
       )
