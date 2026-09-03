@@ -17,9 +17,11 @@ export type Solicitud = {
   id: string
   status: string
   name: string
-  type: string
-  city: string
-  addressLine: string
+  // Nullable desde la decision 35: el formulario de cuatro campos no los pide y
+  // los pone el operador al aprobar. Las solicitudes viejas si los traen.
+  type: string | null
+  city: string | null
+  addressLine: string | null
   neighborhood: string | null
   instagram: string
   contactEmail: string
@@ -35,8 +37,10 @@ export type Solicitud = {
   venueId: string | null
   venueSlug: string | null
   venueNombre: string | null
-  solicitante: string
-  solicitanteEmail: string
+  /** null = todavia nadie creo la cuenta. No se puede aprobar asi. */
+  userId: string | null
+  solicitante: string | null
+  solicitanteEmail: string | null
 }
 
 export function SolicitudesCola({

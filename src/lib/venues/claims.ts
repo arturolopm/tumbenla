@@ -116,14 +116,26 @@ export const listApplications = async () => {
       venueId: venueApplication.venueId,
       venueSlug: venue.slug,
       venueNombre: venue.name,
+      // Si ya hay cuenta amarrada. El operador la necesita para saber si puede
+      // aprobar: sin cuenta no hay a quien darle la propiedad.
+      userId: venueApplication.userId,
       // La cuenta que aplica: quien queda de dueno si se aprueba. Va aparte del
       // contactEmail a proposito, porque son dos cosas distintas y el operador
-      // tiene que poder compararlas.
+      // tiene que poder compararlas. NULL mientras la solicitud no tenga dueno.
       solicitante: user.name,
       solicitanteEmail: user.email,
     })
     .from(venueApplication)
-    .innerJoin(user, eq(venueApplication.userId, user.id))
+    /**
+     * leftJoin, y NO innerJoin.
+     *
+     * Desde la decision 35 una solicitud puede no tener cuenta todavia. Con el
+     * innerJoin que habia aca, esas filas DESAPARECIAN de /admin/solicitudes
+     * sin ruido: alguien manda la solicitud, no vuelve a saber de nosotros, y
+     * del lado de operacion no existe. Es el peor modo de falla de esta
+     * pantalla, porque no se ve — la cola simplemente se ve corta.
+     */
+    .leftJoin(user, eq(venueApplication.userId, user.id))
     .leftJoin(venue, eq(venueApplication.venueId, venue.id))
     .orderBy(asc(venueApplication.createdAt))
 }

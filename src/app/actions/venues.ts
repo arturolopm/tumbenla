@@ -101,6 +101,32 @@ export const saveVenueAction = async (
     return { status: 'error', error: 'Ese sitio ya tiene dueño.' }
   }
 
+  /**
+   * Sin cuenta amarrada no se aprueba, y el orden importa.
+   *
+   * Desde la decision 35 una solicitud nace sin dueno y se amarra cuando esa
+   * persona entra con el correo verificado. Aprobar es el acto que entrega la
+   * propiedad, asi que sin cuenta no hay a quien entregarsela.
+   *
+   * VA ANTES DE CREAR EL SITIO, no despues. Si se revisara despues, el insert
+   * de venue_member violaria su NOT NULL, caeria en el catch de mas abajo y
+   * dejaria "el sitio quedo creado, pero no se pudo asignar al dueno": un sitio
+   * huerfano y una solicitud todavia abierta, que es exactamente el estado
+   * intermedio que el comentario de arriba dice que no puede existir.
+   */
+  if (solicitud && !solicitud.userId) {
+    return {
+      status: 'error',
+      error:
+        'Esa solicitud todavía no tiene cuenta. Pídele que la cree con el correo de contacto y el panel se le amarra solo al entrar.',
+    }
+  }
+
+  // Se saca a una const aca, y no se lee de `solicitud` mas abajo, porque el
+  // estrechamiento del guard de arriba no sobrevive a los `await` que vienen en
+  // medio. Ademas deja dicho en una linea quien queda de dueno.
+  const duenoId = solicitud?.userId ?? null
+
   let row: Awaited<ReturnType<typeof createVenue>>
   try {
     row =
@@ -111,11 +137,11 @@ export const saveVenueAction = async (
     return { status: 'error', error: 'No se pudo guardar el sitio. Intenta de nuevo.' }
   }
 
-  if (solicitud) {
+  if (solicitud && duenoId) {
     try {
       await db
         .insert(venueMember)
-        .values({ venueId: row.id, userId: solicitud.userId, role: 'owner' })
+        .values({ venueId: row.id, userId: duenoId, role: 'owner' })
         .onConflictDoNothing()
 
       await db

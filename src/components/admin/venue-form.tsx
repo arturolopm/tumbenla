@@ -81,9 +81,12 @@ const initialState: ActionState = { status: 'idle' }
 export type PrefillSolicitud = {
   solicitudId: string
   name: string
-  type: string
-  city: string
-  addressLine: string
+  // Nullable desde la decision 35. Una solicitud nueva trae nombre, Instagram,
+  // correo y WhatsApp, y nada mas: el tipo y la direccion los pone el operador
+  // aca mismo, que es el mismo trato que ya tenian el pin y el departamento.
+  type: string | null
+  city: string | null
+  addressLine: string | null
   neighborhood: string | null
   instagram: string | null
   tiktok: string | null

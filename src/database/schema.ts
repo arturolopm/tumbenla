@@ -222,21 +222,38 @@ export const venue = pgTable(
     coverImageUrl: text('cover_image_url'),
     logoUrl: text('logo_url'),
 
-    // The pledge lives inline rather than in its own table because a venue has
-    // exactly one live commitment in this phase. That keeps /sitios a single
-    // table scan with no join and the admin screen a single form. If pledge
-    // HISTORY is ever needed, add venue_pledge with these same columns plus
-    // venueId and supersededAt, backfill from here, and leave these as a cache
-    // of the active pledge. No rewrite either way.
-    //
-    // 'percentage' | 'fixed_per_unit'
-    pledgeType: text('pledge_type').notNull(),
+    /**
+     * DEAD. All nine `pledge*` columns below, and `venue_pledgeType_idx`.
+     *
+     * The general commitment — "this bar puts 10% of its sales in" — was
+     * retired (decision 34) in favour of the per-product split. Nothing writes
+     * or reads these any more.
+     *
+     * THEY ARE STILL HERE ON PURPOSE, and dropping them early is the bug.
+     * `vercel.json` runs `bun run migrate && bun run build`, so the new schema
+     * is live seconds before the new code, and Drizzle's `db.select()` names
+     * every column explicitly rather than emitting `select *`. Dropping them in
+     * this deploy makes the version still serving /sitios ask for
+     * `venue.pledge_type` and get an error. Same rule as `order_redemption
+     * .code_hash`, and it is written down in PRODUCT.md, "Migraciones".
+     *
+     * `pledge_type` only loses its NOT NULL here, because createVenue stops
+     * supplying it. The DROPs go in the deploy after this one.
+     */
+    pledgeType: text('pledge_type'),
     // Set when pledgeType is 'percentage'.
     pledgePercentage: decimal('pledge_percentage', { precision: 5, scale: 2 }),
     // Set when pledgeType is 'fixed_per_unit'.
     pledgeAmount: decimal('pledge_amount', { precision: 10, scale: 2 }),
     // 'botella' | 'trago' | 'cerveza' | 'coctel' | 'entrada'
     pledgeUnit: text('pledge_unit'),
+    // Dead like the rest, and it was never really the pledge's: it was read as
+    // the currency of `estimated_per_person_night` below. Nothing has ever
+    // WRITTEN it — not the seed, not toColumns, not the admin form — and
+    // getHistorySummary already fell back to 'COP' when it came back empty. So
+    // it is a default wearing a column's clothes, and the code now uses the
+    // MONEDA constant. Renaming it to `currency` would have been the same
+    // deploy-window break as a DROP; PRODUCT.md names renames explicitly.
     pledgeCurrency: text('pledge_currency').default('COP').notNull(),
     // 'ventas_totales' | 'ventas_licor' | 'cover'   (percentage only)
     pledgeBasis: text('pledge_basis'),
@@ -733,19 +750,43 @@ export const venueApplication = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId(ID_PREFIX.venueApplication)),
-    /** Quien aplica, y quien queda de dueno si se aprueba. Sale de la sesion,
-     *  nunca de un campo del formulario. */
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    /**
+     * Quien aplica, y quien queda de dueno si se aprueba.
+     *
+     * NULLABLE A PROPOSITO (decision 35). El formulario ya no exige sesion: la
+     * solicitud la crea quien llene cuatro campos, y se amarra a una cuenta
+     * despues, cuando esa persona entra con el correo VERIFICADO que coincide
+     * —el mismo mecanismo de los pedidos de invitado, decision 29b—. Exigir
+     * cuenta primero ponia el paso mas caro, registrarse y verificar, delante
+     * del mas barato.
+     *
+     * Una solicitud sin dueno NO SE PUEDE APROBAR: aprobar es lo que entrega la
+     * propiedad y no hay a quien entregarsela. Se hace cumplir en
+     * saveVenueAction, no solo escondiendo el boton en la cola.
+     */
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
     /** Solo cuando reclama un sitio que ya existe. Null = propone uno nuevo. */
     venueId: text('venue_id').references(() => venue.id, { onDelete: 'cascade' }),
 
+    /**
+     * Por donde vuelve a su solicitud quien la mando SIN cuenta.
+     *
+     * Nullable porque las filas viejas no lo tienen y agregar una columna
+     * NOT NULL revienta la migracion. Es un enlace al portador, con el mismo
+     * modelo de confianza que `product_order.public_token`: quien tiene la URL
+     * ve la solicitud. Por eso la pantalla que lo usa va `noindex` y NO deja
+     * editar nada; corregir datos sigue pidiendo sesion.
+     */
+    publicToken: text('public_token'),
+
     // La propuesta. Lo obligatorio es el minimo para poder verificar.
     name: text('name').notNull(),
-    type: text('type').notNull(),
-    city: text('city').notNull(),
-    addressLine: text('address_line').notNull(),
+    // Estos tres pasan a nullable: el formulario de cuatro campos (decision 35)
+    // ya no los pide, y los pone operacion al aprobar. Sin esto, cada insert
+    // del formulario nuevo falla.
+    type: text('type'),
+    city: text('city'),
+    addressLine: text('address_line'),
     /** El instrumento de verificacion: sin cuenta oficial no hay DM que
      *  comprobar, y sin eso este MVP no sabe quien es quien. */
     instagram: text('instagram').notNull(),
@@ -792,9 +833,30 @@ export const venueApplication = pgTable(
     uniqueIndex('venue_application_instagram_vivas_key')
       .on(sql`lower(${table.instagram})`)
       .where(sql`${table.status} in ('pending', 'verifying')`),
+    /**
+     * Y una sola VIVA por correo de contacto.
+     *
+     * Es lo que reemplaza al limite que antes daba la sesion gratis: una
+     * solicitud viva por cuenta. Sin cuenta de por medio, cada fila basura
+     * cuesta un Instagram distinto Y un correo distinto, y aun asi no compra
+     * nada sin el DM. Deliberadamente NO se agrega un limitador por IP: pide
+     * estado que este proyecto no tiene, gasta CU-horas de Neon en cada POST
+     * anonimo, y si algun dia la cola se inunda la palanca correcta es el
+     * firewall de Vercel, que es configuracion y no codigo.
+     */
+    uniqueIndex('venue_application_email_vivas_key')
+      .on(sql`lower(${table.contactEmail})`)
+      .where(sql`${table.status} in ('pending', 'verifying')`),
+    uniqueIndex('venue_application_publicToken_key').on(table.publicToken),
     index('venue_application_status_idx').on(table.status),
     index('venue_application_userId_idx').on(table.userId),
     index('venue_application_venueId_idx').on(table.venueId),
+    // Por aca entra el amarre cuando el dueno de una solicitud de invitado
+    // inicia sesion. Corre en /entrar, o sea en CADA inicio de sesion, asi que
+    // no puede ser un scan. Parcial: solo interesan las que no tienen dueno.
+    index('venue_application_contactEmail_idx')
+      .on(sql`lower(${table.contactEmail})`)
+      .where(sql`${table.userId} is null`),
   ]
 )
 
