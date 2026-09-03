@@ -7,9 +7,9 @@
 
 ## Que es
 
-Bares y discotecas de **Manizales, Colombia** que ponen una parte de sus ventas
-en material de construccion despues del sismo. Nosotros compramos el material y
-publicamos la factura.
+Bares y discotecas de **Manizales, Colombia** que ponen un trago en la carta con
+una parte de su precio destinada a material de construccion, despues del sismo.
+Nosotros compramos el material y publicamos la factura.
 
 El camino principal es **vender un trago**: el sitio arma un producto (un coctel
 nuevo, o una cerveza, un combo o una botella de su carta) y dice en la
@@ -21,9 +21,15 @@ no hay suscripcion, no hay MRR, no hay trial, no hay prueba gratis y no hay nada
 que "empiece desde $X al mes". Ninguna skill de SaaS aplica en esa parte. Lo
 unico que tenemos sigue siendo la confianza.
 
-El compromiso por porcentaje de ventas (el sitio reporta lo que entrego y nos
-manda el recibo) sigue existiendo como opcional y verificado a mano. Ya no es el
-camino usual, asi que no es el titular de ninguna pieza.
+El compromiso por porcentaje de ventas —"este bar pone el 10% de sus ventas"—
+**se retiro** (`PRODUCT.md`, decision 34). No es un camino opcional ni un
+titular de respaldo: **no existe.** Un porcentaje sobre una caja que no
+auditamos habia que creerlo; un trago con su reparto escrito deja rastro.
+
+En una pieza eso quiere decir: nunca "este bar pone una parte de sus ventas",
+siempre **"de este trago de $30.000, $24.000 se van en material"**. En pesos y
+sobre un producto concreto, que es lo unico que despues se puede cruzar contra
+una factura publicada.
 
 ## Los dos publicos (mercado de dos lados)
 
@@ -38,9 +44,10 @@ camino usual, asi que no es el titular de ninguna pieza.
 Ninguno de los dos lados vale solo. Un sitio sin gente pidiendo no tiene por que
 armar la carta; gente pidiendo en un sitio que no escanea se va y no vuelve.
 
-El aporte por porcentaje sigue siendo un camino valido, pero **no es el que se
-promociona**: pedirle a un bar que calcule y reporte es pedirle tres actos de
-voluntad despues de la venta. Armar un producto es uno solo y ocurre durante.
+El aporte por porcentaje de ventas **ya no es un camino**: pedirle a un bar que
+calcule y reporte eran tres actos de voluntad despues de la venta, todos
+opcionales y ninguno verificable. Armar un producto es uno solo, ocurre durante
+la venta, y deja una orden y un escaneo detras.
 
 ## Voz
 

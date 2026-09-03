@@ -1,11 +1,11 @@
 # Tumbenla — producto
 
-Bares y discotecas que ponen una parte de sus ventas en material de
-construccion. La gente sale como sale siempre; nosotros compramos el material y
-publicamos la factura. Se ven los dos eslabones: lo que entro por cada sitio y
-en que lo gastamos.
+Bares y discotecas que ponen un trago en su carta con una parte del precio
+destinada a material de construccion. La gente sale como sale siempre; nosotros
+compramos el material y publicamos la factura. Se ven los dos eslabones: lo que
+entro por cada sitio y en que lo gastamos.
 
-El camino principal es **vender un trago**: el sitio arma un producto (un coctel
+El camino, y es uno solo, es **vender un trago**: el sitio arma un producto (un coctel
 nuevo, o una cerveza, un combo o una botella que ya tenia en su carta) y dice en
 la descripcion como se reparte cada peso. La persona lo pide, lo paga —en la app
 o en la barra— y le sale un QR; el mesero lo escanea para entregarlo. Ese
@@ -18,9 +18,11 @@ tenemos sigue siendo la confianza, y por eso casi todas las decisiones de abajo
 se resuelven a favor de no afirmar mas de lo que sabemos.
 
 El **compromiso por porcentaje de ventas** —el modelo viejo, en el que el sitio
-reportaba lo que entrego y nos mandaba el recibo— sigue existiendo, sigue siendo
-manual y verificado a mano, y deja de ser el camino usual. No se quito: se corrio
-a un lado.
+prometia una parte de "sus ventas", reportaba lo que entrego y nos mandaba el
+recibo— **se retiro** (decision 34). No quedo como camino alterno: un porcentaje
+sobre una caja que no auditamos habia que creerlo, y un trago con su reparto
+escrito deja rastro. Lo que un sitio puso es, desde ahora, lo que vendio su
+carta.
 
 Prueba de concepto: **Manizales**. Mas ciudades despues.
 
@@ -42,7 +44,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Sistema de diseno Stitch "Calor de Barrio" | Construido |
 | Mapa MapLibre con pines, tooltip y leyenda | Construido |
 | Panel de admin: sitios, estados, selector de pin, geocoding | Construido |
-| `/quiero-poner` con correo pre-redactado | Construido |
+| `/quiero-poner` con correo pre-redactado | **Retirado** (decision 36) |
 | Seccion "Le entro" con las dos entradas | Construido |
 | `/mi-historia`: resumen, estimado, galeria | Construido |
 | Esquema de fiestas: `party_night`, `party_photo`, `photo_claim` | Construido |
@@ -51,7 +53,9 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
 | Alta de sitio: solicitud corta verificada por DM | Construido |
 | Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
-| Aportes del sitio: reporte, recibo y verificacion | Construido |
+| Aportes del sitio: reporte, recibo y verificacion | **El auto-reporte se retiro** (decision 34); la cola de verificacion queda |
+| Alta en 4 campos, sin cuenta por delante | Por construir (decisiones 35 y 36) |
+| Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | **A medias** |
 | **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido, probado en local. **Falta la pasarela de verdad** (hoy corre con una de mentira) y probarlo en preview |
@@ -62,12 +66,12 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 
 | Actor | Como se decide | Donde vive | Que puede |
 |---|---|---|---|
-| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios y aportes, moderar cualquier foto de la red, comprar material |
-| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | noches y fotos, aprobar lo que sube la gente, reportar lo que entrego. Solo el dueno maneja el equipo |
+| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios, aprobar cada producto, liquidar saldos, moderar cualquier foto de la red, comprar material |
+| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | armar la carta y **escanear** cada entrega, noches y fotos, aprobar lo que sube la gente. Solo el dueno maneja el equipo y ve la cuenta |
 | **Rumbero** | cualquier sesion | publico + `/mi-historia` | reclamar sus fotos, subir las suyas, reportar una en la que sale |
 
-Nadie publica su propio sitio y nadie verifica su propio aporte. Esas dos son de
-la plataforma y son lo unico que respalda lo que el mapa afirma.
+Nadie publica su propio sitio y nadie aprueba su propio producto. Esas dos son
+de la plataforma y son lo unico que respalda lo que el mapa afirma.
 
 ---
 
@@ -84,8 +88,8 @@ Estan aca para no volver a discutirlas cada dos semanas.
    **Por que se reabrio:** el modelo viejo pedia que el sitio decidiera poner,
    calculara cuanto, y despues nos mandara el recibo — tres actos de voluntad
    despues de la venta, todos opcionales, todos manuales. Este pide uno solo y
-   ocurre durante la venta. El viejo sobrevive como opcional (decision 19), no
-   se elimino.
+   ocurre durante la venta. *(El viejo primero se corrio a un lado y despues se
+   retiro del todo; ver decision 34.)*
    **Lo que NO cambia:** no hay planes ni suscripcion, no guardamos tarjetas, y
    ninguna cifra se afirma sin respaldo. Cobrar no nos da licencia para decir
    mas de lo que sabemos; nos da mas cosas que tenemos que poder probar.
@@ -142,17 +146,24 @@ Estan aca para no volver a discutirlas cada dos semanas.
     tiene facturacion, ni sub-equipos, ni cambio de contexto. `auth.ts:200` ya
     explicaba por que se habia quitado; se queda quitado. El costo aceptado fue
     escribir nosotros el flujo de invitacion.
-19. **El sitio reporta, nosotros verificamos, nosotros compramos.** Un aporte
-    `submitted` no existe para el publico. Publicar una cifra que nos dieron sin
-    comprobarla seria afirmar bajo nuestro nombre algo que no comprobamos.
+19. **Nosotros verificamos, nosotros compramos.** *(Antes empezaba con "El sitio
+    reporta". Ese primer acto se murio con la decision 34: el sitio ya no
+    reporta nada, porque lo que puso sale del libro, no de un formulario que
+    llena el.)* Un aporte que no hayamos verificado no existe para el publico.
+    Publicar una cifra que nos dieron sin comprobarla seria afirmar bajo nuestro
+    nombre algo que no comprobamos. Lo que se verifica hoy es **la compra del
+    material** —la factura contra la que se publica en `/transparencia`—, no el
+    reporte de un bar.
 20. **Una solicitud de alta NO crea el sitio.** *(Reemplaza a la version
     anterior de esta decision, que daba la propiedad en el acto al registrar.)*
-    El formulario ya no pide ni el compromiso ni las coordenadas, y
-    `venue.pledge_type`, `latitude` y `longitude` son `NOT NULL`: no hay fila
-    que insertar. El sitio nace cuando un operador aprueba y completa lo que
-    falta. De paso tapa un hueco real: con propiedad inmediata, cualquiera
-    apartaba el nombre de un bar ajeno y el buscador le decia al dueno de
-    verdad "ya tiene dueno".
+    El formulario no pide las coordenadas, y `latitude` y `longitude` son
+    `NOT NULL`: no hay fila que insertar. El sitio nace cuando un operador
+    aprueba y completa lo que falta. De paso tapa un hueco real: con propiedad
+    inmediata, cualquiera apartaba el nombre de un bar ajeno y el buscador le
+    decia al dueno de verdad "ya tiene dueno".
+    *(El guardarrail eran tres columnas `NOT NULL`, no dos: `pledge_type` era la
+    tercera y se fue con la decision 34. Lat/lng bastan, pero conviene saber que
+    el margen se angosto.)*
 20b. **El DM verifica la CUENTA; el correo citado verifica a la PERSONA.**
     Que el mensaje llegue desde el Instagram del bar prueba que quien escribe
     controla esa cuenta, no que sea quien lleno el formulario. Por eso el DM
@@ -182,8 +193,11 @@ Estan aca para no volver a discutirlas cada dos semanas.
     lee lleva su acento y su enye. Los comentarios, los nombres de variable y
     los valores de enum guardados en la base (`coctel`, `terminos`) se quedan en
     ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
-    (`UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`). Asi un acento
-    nunca llega a una URL, a una consulta ni a una migracion.
+    (`KIND_LABEL` en `src/lib/comercio/types.ts`). Asi un acento nunca llega a
+    una URL, a una consulta ni a una migracion.
+    *(El ejemplo canonico era `UNIT_LABEL` en `pledge-badge.tsx`, que se borro
+    con la decision 34. `KIND_LABEL` es ademas mejor ejemplo: cubre sus seis
+    valores, mientras que `UNIT_LABEL` tenia una sola entrada.)*
 26. **Toda orden lleva QR, y el mesero no sabe cual esta pagada hasta despues de
     escanear.** Es el mecanismo entero, no un detalle de implementacion. Un
     mesero que cobra en la barra y nos dice que nunca entrego se queda con todo;
@@ -255,6 +269,39 @@ Estan aca para no volver a discutirlas cada dos semanas.
     esa pantalla se paga en la barra, y la decision 26 depende de que escanear
     sea lo comodo: si no escanear es mas facil que escanear, el mecanismo del QR
     indistinguible se cae solo.
+34. **Un bar no promete un porcentaje de sus ventas: pone un trago con su
+    reparto escrito.** *(Retira el compromiso general, que era el modelo
+    fundacional. Enmienda las decisiones 1, 19 y 20.)* Se van las columnas
+    `venue.pledge_*` y todo lo que las pintaba.
+    **Por que:** un porcentaje sobre "las ventas" no lo puede verificar nadie.
+    No auditamos la caja de ningun bar —`/terminos` ya lo admitia por escrito— y
+    el numero que salia en la tarjeta habia que creerlo. Un trago no: tiene
+    precio, tiene reparto declarado antes de pagar, tiene una orden y tiene un
+    escaneo. Se cambio una promesa que se cree por una que deja rastro, y eso es
+    lo unico coherente con la decision 5.
+    **Consecuencia que no es obvia:** lo que un sitio "ha puesto" deja de ser
+    algo que el sitio nos dice y pasa a ser algo que el libro calcula. Por eso
+    tambien se borra el auto-reporte de aportes: no habia como reportar sin
+    contradecir esto.
+35. **El formulario de alta solo pregunta lo que prueba que quien escribe es el
+    dueno, y la cuenta va al final.** Cuatro campos: nombre, Instagram, correo y
+    WhatsApp. Ni tipo, ni ciudad, ni direccion, ni los ocho opcionales. Todo eso
+    lo pone operacion al aprobar, o el bar despues en su panel, cuando ya tiene
+    algo que ganar llenandolo.
+    **Y no se pide cuenta para verlo.** Antes habia que registrarse Y verificar
+    el correo antes de ver el formulario: el paso mas caro iba de primero. Es la
+    decision 29 aplicada al otro lado del mercado —iniciar sesion AGREGA, nunca
+    restringe— y se amarra igual, por correo verificado, con el mismo mecanismo
+    de la decision 29b.
+    **El DM no desaparece, se corre de lugar.** La decision 20b sigue mandando:
+    sin el DM no se aprueba. Pero se cuenta DESPUES de enviar, no como una lista
+    de pasos futuros encima de un formulario vacio.
+36. **Una sola puerta para el dueno de un bar.** `/quiero-poner` se retira. Era
+    la puerta principal desde la portada y era un `mailto:` que no escribia nada
+    en la base, mientras el formulario de verdad no aparecia ni en la portada ni
+    en la barra de navegacion. O sea que el camino principal para registrar un
+    bar era redactar un correo a mano y esperar. Ahora la puerta es
+    `/registrar-sitio` y esta en la barra.
 
 ---
 
@@ -262,25 +309,31 @@ Estan aca para no volver a discutirlas cada dos semanas.
 
 **Obligatorio.** Es el minimo para poder verificar y despues publicar.
 
+Son **cuatro**, y la prueba de que son el minimo es que cada uno hace falta para
+verificar o para responder (decision 35). No hay campos opcionales: un campo
+opcional en esta pantalla es una pregunta que alguien lee y sopesa antes de
+poder seguir.
+
 | Campo | Por que es el minimo |
 |---|---|
 | Nombre del sitio | Es lo que buscamos en Instagram para confirmar que existe |
-| Tipo | Un toque, y sin el no se puede pintar la tarjeta del mapa |
-| Ciudad | Solo estamos en Manizales; es la primera pregunta que hay que resolver |
-| Direccion (texto) | Distingue un bar real de un nombre, y de ahi sale el pin despues |
 | **Instagram del sitio** | **Es el instrumento de verificacion.** Sin cuenta oficial no hay DM que comprobar |
-| **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar. Se rellena con el correo de la cuenta |
+| **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar |
+| WhatsApp | Como se persigue una solicitud que se quedo quieta. Es el canal por el que de verdad contesta un bar en Manizales |
 
-Quien queda de dueno sale de la SESION, no del correo escrito: hay que entrar
-antes de aplicar. El correo de contacto es el del SITIO y tiene su propia razon
-de ser obligatorio (ver decision 20b), que no es la de identificar al dueno.
+**Quien queda de dueno sale del CORREO VERIFICADO, no de la sesion.** Ya no hay
+que entrar antes de aplicar (decision 35): la solicitud nace sin dueno, y se
+amarra cuando esa persona entra con ese correo verificado, con el mismo
+mecanismo de los pedidos de invitado (decision 29b).
 
-**Opcional:** TikTok, WhatsApp, telefono, barrio, sitio web, horario,
-descripcion, y "que tienes en mente para poner" —texto libre, rotulado como
-idea y que no toca ninguna columna `pledge_*`.
+**Ya no se piden** —y esta es la lista de lo que se quito, no de lo que falta—:
+tipo, ciudad, direccion, TikTok, telefono, barrio, sitio web, horario,
+descripcion, y "que tienes en mente para poner", que era el compromiso general
+disfrazado de idea y murio con la decision 34.
 
-**No se pide, lo llena un operador al aprobar:** coordenadas, el compromiso,
-`estimatedPerPersonNight`, `verifiedNote`, portada y logo.
+**Lo llena un operador al aprobar, o el bar despues en su panel:** tipo,
+direccion, coordenadas, `estimatedPerPersonNight`, `verifiedNote`, portada y
+logo.
 
 ### Casos de borde
 
@@ -290,8 +343,9 @@ idea y que no toca ninguna columna `pledge_*`.
 | Solo tiene TikTok | TikTok es opcional y no reemplaza a Instagram en el formulario, pero el operador **si** puede aprobar contra un DM de TikTok y dejarlo en `reviewNote` |
 | El DM lo manda alguien distinto de quien aplico | Por eso el DM cita el correo de la solicitud. Si no coincide, no se aprueba |
 | Dos personas piden el mismo bar | Indice unico PARCIAL sobre `lower(instagram)` con `status in ('pending','verifying')`: una sola solicitud viva a la vez, y aun asi se puede volver a aplicar tras un rechazo |
-| El bar ya esta en el directorio | El buscador lo encuentra y la solicitud llega con `venueId`; aprobar solo asigna dueno |
-| El sitio ya tiene dueno | El buscador lo marca y no ofrece pedirlo |
+| El bar ya esta en el directorio | Lo cruza OPERACION al revisar, no un buscador antes del formulario: el buscador "¿Ya lo tenemos cargado?" se quito porque cobraba una decision antes de la primera letra |
+| El sitio ya tiene dueno | Lo ve el operador en la cola y rechaza con nota |
+| Aplica y nunca crea la cuenta | La solicitud queda sin dueno. **No se puede aprobar**: aprobar es lo que entrega la propiedad y no hay a quien entregarsela. La cola lo dice y deshabilita el boton |
 | El DM nunca llega | Se queda en `verifying`. Sin caducidad: la cola es corta y una solicitud vieja es alguien esperando |
 | Se equivoco en los datos | Vuelve a mandar el formulario y se actualiza mientras siga viva |
 | La ciudad no es Manizales | Se acepta y se guarda; es la lista de espera para abrir ciudad |
