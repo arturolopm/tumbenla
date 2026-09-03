@@ -21,7 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/redirect'
-import { type LoginInput, emailOnlySchema, loginSchema } from '@/lib/auth/schemas'
+import { type LoginInput, emailOnlySchema, loginSchema, normalizeEmail } from '@/lib/auth/schemas'
 import { cn, getBaseUrl } from '@/lib/utils'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
@@ -61,12 +61,16 @@ export default function LoginPage({
   const {
     register,
     handleSubmit,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     mode: 'onBlur',
   })
+
+  // Registered once so the blur wrapper can still call RHF's own handler.
+  const emailField = register('email')
   const [_mounted, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
@@ -235,7 +239,10 @@ export default function LoginPage({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: forgotPasswordEmail,
+          // The PARSED value, not the raw state: the schema is what trims and
+          // lowercases it. Validating one string and sending a different one is
+          // how " Ana@X.com " reaches the server with its spaces intact.
+          email: parsed.data.email,
           redirectTo: `${getBaseUrl()}/reset-password`,
         }),
       })
@@ -310,7 +317,16 @@ export default function LoginPage({
               autoComplete='email'
               autoCorrect='off'
               aria-invalid={Boolean(errors.email)}
-              {...register('email')}
+              {...emailField}
+              onBlur={(event) => {
+                // Rewrites the box, not just the submitted value: seeing the
+                // spaces disappear is how you know the field took it.
+                const clean = normalizeEmail(event.target.value)
+                if (clean !== event.target.value) {
+                  setValue('email', clean, { shouldValidate: true })
+                }
+                void emailField.onBlur(event)
+              }}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                 errors.email &&
@@ -473,6 +489,7 @@ export default function LoginPage({
                 id='reset-email'
                 value={forgotPasswordEmail}
                 onChange={(event) => setForgotPasswordEmail(event.target.value)}
+                onBlur={(event) => setForgotPasswordEmail(normalizeEmail(event.target.value))}
                 placeholder='tu@correo.com'
                 size={'lg'}
                 type='email'

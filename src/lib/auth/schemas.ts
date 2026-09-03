@@ -72,3 +72,18 @@ export const newPasswordSchema = z
     path: ['confirmPassword'],
   })
 export type NewPasswordInput = z.infer<typeof newPasswordSchema>
+
+/**
+ * Normalises an email field on blur so the box shows what will actually be
+ * sent.
+ *
+ * The schema already trims and lowercases on submit, so the value reaching the
+ * server was never wrong. What WAS wrong is that the input kept showing
+ * "  Ana@X.com  ": react-hook-form does not rewrite the DOM, so the person sees
+ * their spaces, cannot tell whether they matter, and has no way to know the
+ * field was accepted.
+ *
+ * Trailing spaces in an email are not a rare typo — they come from pasting and
+ * from mobile keyboards that add a space after autocompleting a word.
+ */
+export const normalizeEmail = (value: string): string => value.trim().toLowerCase()

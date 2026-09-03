@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, leerDestino } from '@/lib/auth/redirect'
-import { type RegisterInput, registerSchema } from '@/lib/auth/schemas'
+import { type RegisterInput, normalizeEmail, registerSchema } from '@/lib/auth/schemas'
 import { cn } from '@/lib/utils'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
@@ -106,6 +106,9 @@ export default function RegisterForm({
     resolver: zodResolver(registerSchema),
     mode: 'onBlur',
   })
+
+  // Registered once so the blur wrapper can still call RHF's own handler.
+  const emailField = register('email')
   const [, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
@@ -235,7 +238,16 @@ export default function RegisterForm({
               autoCorrect='off'
               size='lg'
               aria-invalid={Boolean(errors.email)}
-              {...register('email')}
+              {...emailField}
+              onBlur={(event) => {
+                // Rewrites the box, not just the submitted value: seeing the
+                // spaces disappear is how you know the field took it.
+                const clean = normalizeEmail(event.target.value)
+                if (clean !== event.target.value) {
+                  setValue('email', clean, { shouldValidate: true })
+                }
+                void emailField.onBlur(event)
+              }}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
                 errors.email &&
