@@ -1,7 +1,7 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
-import { DESTINO_POR_DEFECTO, leerDestino } from '@/lib/auth/redirect'
+import { leerDestino } from '@/lib/auth/redirect'
 import { type RegisterInput, normalizeEmail, registerSchema } from '@/lib/auth/schemas'
 import { cn } from '@/lib/utils'
 import { SocialLoginButtons } from '../components/social-login-buttons'
@@ -95,6 +95,17 @@ export default function RegisterForm({
   const searchParams = useSearchParams()
 
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isButtonHovered, setIsButtonHovered] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+
+  // Both are pure functions of the URL and both are needed on the first render,
+  // so they are computed, not mirrored into state by an effect. The email
+  // prefill in particular MATTERS: someone arriving from an order already typed
+  // it once, standing in a bar, and it is what ties that order to the account —
+  // a different address here and their history is born incomplete.
+  const callbackUrl = useMemo(() => leerDestino(searchParams), [searchParams])
+  const prefilledEmail = searchParams?.get('correo') ?? ''
 
   const {
     register,
@@ -105,29 +116,11 @@ export default function RegisterForm({
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     mode: 'onBlur',
+    defaultValues: { email: prefilledEmail },
   })
 
   // Registered once so the blur wrapper can still call RHF's own handler.
   const emailField = register('email')
-  const [, setMounted] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [isButtonHovered, setIsButtonHovered] = useState(false)
-
-  const [submitError, setSubmitError] = useState('')
-
-  const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
-
-  useEffect(() => {
-    setMounted(true)
-    setCallbackUrl(leerDestino(searchParams))
-
-    // Quien llega desde un pedido ya escribio su correo una vez, de pie y en un
-    // bar. Volver a pedirselo es la friccion que hace que no termine la cuenta,
-    // y ademas es lo que AMARRA el pedido que acaba de hacer: si escribe otro
-    // correo, su historia nace incompleta y no hay como repararla despues.
-    const prefilledEmail = searchParams?.get('correo')
-    if (prefilledEmail) setValue('email', prefilledEmail)
-  }, [searchParams, setValue])
 
   // RHF delivers data already parsed by the schema: name trimmed, email
   // lowercased, password length checked. No FormData reading and no manual

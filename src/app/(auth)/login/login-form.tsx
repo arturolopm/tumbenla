@@ -1,30 +1,22 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogPanel,
-  DialogPopup,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/redirect'
-import { type LoginInput, emailOnlySchema, loginSchema, normalizeEmail } from '@/lib/auth/schemas'
-import { cn, getBaseUrl } from '@/lib/utils'
+import { type LoginInput, loginSchema, normalizeEmail } from '@/lib/auth/schemas'
+import { cn } from '@/lib/utils'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
+import { ForgotPasswordDialog } from './forgot-password-dialog'
 
 /**
  * Validation lives in `@/lib/auth/schemas` and is applied by react-hook-form
@@ -36,6 +28,10 @@ import { mensajeDeError } from '../fallo-de-red'
  * That machinery is what let the real bug through — the email was read from the
  * DOM and the password from React state, so browser autofill submitted an empty
  * password while the field showed dots.
+ *
+ * The forgot-password dialog moved into its own file (`./forgot-password-dialog`):
+ * it was ~120 lines of embedded state plus a `keydown` window listener standing
+ * in for a `<form onSubmit>`, and it called a Better-Auth route that 1.4 removed.
  */
 export default function LoginPage({
   githubAvailable,
@@ -53,6 +49,13 @@ export default function LoginPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [isButtonHovered, setIsButtonHovered] = useState(false)
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
+
+  // Read, don't mirror into state through an effect: the value is a pure
+  // function of the URL and is needed on the first render anyway.
+  const callbackUrl = useMemo(() => leerDestino(searchParams), [searchParams])
 
   // One hook replaces the per-field state, the error arrays and the
   // "show error" flags. `register` binds the input to the form, so what gets
@@ -71,43 +74,6 @@ export default function LoginPage({
 
   // Registered once so the blur wrapper can still call RHF's own handler.
   const emailField = register('email')
-  const [_mounted, setMounted] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [isButtonHovered, setIsButtonHovered] = useState(false)
-
-  const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
-
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
-  const [isSubmittingReset, setIsSubmittingReset] = useState(false)
-  const [isResetButtonHovered, setIsResetButtonHovered] = useState(false)
-  const [resetStatus, setResetStatus] = useState<{
-    type: 'success' | 'error' | null
-    message: string
-  }>({ type: null, message: '' })
-
-  useEffect(() => {
-    setMounted(true)
-
-    if (!searchParams) {
-      return
-    }
-
-    setCallbackUrl(leerDestino(searchParams))
-  }, [searchParams])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && forgotPasswordOpen) {
-        handleForgotPassword()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [forgotPasswordEmail, forgotPasswordOpen])
 
   // RHF hands over data already parsed by the schema: trimmed, lowercased and
   // guaranteed present. No FormData reading, no manual validation pass.
@@ -220,86 +186,6 @@ export default function LoginPage({
       setIsLoading(false)
     }
   })
-
-  const handleForgotPassword = async () => {
-    if (!forgotPasswordEmail) {
-      setResetStatus({
-        type: 'error',
-        message: 'Escribe tu correo',
-      })
-      return
-    }
-
-    // Same schema the form uses, so "valid email" means one thing in this file
-    // and not two.
-    const parsed = emailOnlySchema.safeParse({ email: forgotPasswordEmail })
-    if (!parsed.success) {
-      setResetStatus({
-        type: 'error',
-        message: parsed.error.issues[0]?.message ?? 'Ese correo no se ve bien.',
-      })
-      return
-    }
-
-    try {
-      setIsSubmittingReset(true)
-      setResetStatus({ type: null, message: '' })
-
-      const response = await fetch('/api/auth/forget-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          // The PARSED value, not the raw state: the schema is what trims and
-          // lowercases it. Validating one string and sending a different one is
-          // how " Ana@X.com " reaches the server with its spaces intact.
-          email: parsed.data.email,
-          redirectTo: `${getBaseUrl()}/reset-password`,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        let errorMessage = errorData.message || 'No se pudo pedir el cambio de contraseña'
-
-        if (
-          errorMessage.includes('Invalid body parameters') ||
-          errorMessage.includes('invalid email')
-        ) {
-          errorMessage = 'Ese correo no parece valido'
-        } else if (errorMessage.includes('Email is required')) {
-          errorMessage = 'Escribe tu correo'
-        } else if (
-          errorMessage.includes('user not found') ||
-          errorMessage.includes('User not found')
-        ) {
-          errorMessage = 'No hay ninguna cuenta con ese correo'
-        }
-
-        throw new Error(errorMessage)
-      }
-
-      setResetStatus({
-        type: 'success',
-        message: 'Te mandamos un enlace para cambiarla.',
-      })
-
-      setTimeout(() => {
-        setForgotPasswordOpen(false)
-        setResetStatus({ type: null, message: '' })
-      }, 2000)
-    } catch (error) {
-      console.error('Error requesting password reset:', { error })
-      setResetStatus({
-        type: 'error',
-        message:
-          error instanceof Error ? error.message : 'No se pudo pedir el cambio de contraseña.',
-      })
-    } finally {
-      setIsSubmittingReset(false)
-    }
-  }
 
   // Los cuatro, no solo dos: con solo Microsoft configurado el divisor
   // desaparecia y los botones sociales igual se pintaban debajo.
@@ -481,71 +367,7 @@ export default function LoginPage({
         </Link>
       </div>
 
-      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
-        <DialogPopup>
-          <DialogHeader>
-            <DialogTitle className='font-display font-bold text-headline-md uppercase'>
-              Recuperar la contraseña
-            </DialogTitle>
-            <DialogDescription className='text-body-md text-muted-foreground'>
-              Escribe tu correo. Si hay una cuenta con ese correo, te llega un enlace para ponerle
-              una contraseña nueva.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel className='space-y-4'>
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label htmlFor='reset-email'>Correo</Label>
-              </div>
-              <Input
-                id='reset-email'
-                value={forgotPasswordEmail}
-                onChange={(event) => setForgotPasswordEmail(event.target.value)}
-                onBlur={(event) => setForgotPasswordEmail(normalizeEmail(event.target.value))}
-                placeholder='tu@correo.com'
-                size={'lg'}
-                type='email'
-                className={cn(
-                  'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                  resetStatus.type === 'error' &&
-                    'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
-                )}
-              />
-              {resetStatus.type === 'error' && (
-                <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                  <p>{resetStatus.message}</p>
-                </div>
-              )}
-            </div>
-            {resetStatus.type === 'success' && (
-              <div className='mt-1 space-y-1 text-xs text-success-foreground'>
-                <p>{resetStatus.message}</p>
-              </div>
-            )}
-          </DialogPanel>
-          <DialogFooter>
-            <Button
-              type='button'
-              onClick={handleForgotPassword}
-              onMouseEnter={() => setIsResetButtonHovered(true)}
-              onMouseLeave={() => setIsResetButtonHovered(false)}
-              className='group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
-              disabled={isSubmittingReset}
-            >
-              <span className='flex items-center gap-1'>
-                {isSubmittingReset ? 'Mandando…' : 'Mandar el enlace'}
-                <span className='inline-flex transition-transform duration-200 group-hover:translate-x-0.5'>
-                  {isResetButtonHovered ? (
-                    <ArrowRight className='h-4 w-4' aria-hidden='true' />
-                  ) : (
-                    <ChevronRight className='h-4 w-4' aria-hidden='true' />
-                  )}
-                </span>
-              </span>
-            </Button>
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
+      <ForgotPasswordDialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen} />
     </>
   )
 }
