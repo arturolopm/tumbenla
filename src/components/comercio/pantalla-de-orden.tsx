@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 
 import { formatearCodigo } from '@/lib/comercio/codigos-cliente'
 import { PAY_METHOD_LABEL, type PayMethod } from '@/lib/comercio/types'
@@ -37,21 +38,18 @@ type Orden = {
 }
 
 /**
- * La cadencia del sondeo.
+ * Polling cadence.
  *
- * El escaneo pasa casi siempre en el primer minuto —la persona ya esta parada
- * en la barra— y despues la pantalla solo espera. Un segundo fijo durante quince
- * minutos serian mil peticiones por una que importa; un tick lento se siente
- * roto justo en el momento que decide todo.
+ * The scan almost always happens in the first minute — the person is already
+ * standing at the bar — and after that the screen is just waiting. A flat
+ * 1s for fifteen minutes would be a thousand requests for the one that matters;
+ * a slow tick feels broken at the exact moment that decides everything.
  */
-const CADENCIA = [
-  { hasta: 90_000, cada: 1_000 },
-  { hasta: 300_000, cada: 3_000 },
-  { hasta: 900_000, cada: 10_000 },
-] as const
+const FAST_WINDOW_MS = 90_000
+const SLOW_WINDOW_MS = 300_000
+const GIVE_UP_MS = 900_000
 
-const intervaloPara = (transcurrido: number): number | null =>
-  CADENCIA.find((t) => transcurrido < t.hasta)?.cada ?? null
+type OrderStatus = { estado: string; entregadas: number; total: number }
 
 export function PantallaDeOrden({
   orden,
@@ -64,69 +62,55 @@ export function PantallaDeOrden({
   ofrecerCuenta?: boolean
   correo?: string
 }) {
-  const [estado, setEstado] = useState<Codigo[]>(codigos)
-  const [entregadas, setEntregadas] = useState(
-    codigos.filter((c) => c.estado === 'redeemed').length
-  )
-  const [parado, setParado] = useState(false)
-  const desde = useRef(Date.now())
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [startedAt] = useState(() => Date.now())
 
+  /**
+   * React Query owns the polling.
+   *
+   * This used to be a hand-rolled setTimeout chain with its own cadence table,
+   * its own `visibilitychange` listener, its own "stopped" flag and its own
+   * try/catch. All of that is `refetchInterval` plus the defaults: Query
+   * already pauses when the tab is hidden and refetches on focus, which is
+   * exactly the behaviour that matters here — a phone that dimmed while the
+   * bartender scanned shows "Listo" the instant it wakes, without waiting for
+   * the next tick.
+   */
+  const { data, refetch } = useQuery<OrderStatus>({
+    queryKey: ['order-status', orden.publicToken],
+    queryFn: async () => {
+      const response = await fetch(`/api/orden/${orden.publicToken}/estado`, {
+        cache: 'no-store',
+      })
+      if (!response.ok) throw new Error('no se pudo consultar el pedido')
+      return response.json()
+    },
+    initialData: {
+      estado: orden.estado,
+      entregadas: codigos.filter((c) => c.estado === 'redeemed').length,
+      total: orden.cantidad,
+    },
+    refetchInterval: (query) => {
+      const delivered = query.state.data?.entregadas ?? 0
+      if (delivered >= orden.cantidad) return false
+
+      const elapsed = Date.now() - startedAt
+      if (elapsed < FAST_WINDOW_MS) return 1_000
+      if (elapsed < SLOW_WINDOW_MS) return 3_000
+      if (elapsed < GIVE_UP_MS) return 10_000
+      return false
+    },
+    // No noise on a dead spot in a basement: it retries on the next tick and
+    // the person could not act on the error anyway.
+    retry: false,
+  })
+
+  const entregadas = data?.entregadas ?? 0
   const todasEntregadas = entregadas >= orden.cantidad
+  const detenido = !todasEntregadas && Date.now() - startedAt >= GIVE_UP_MS
 
-  const consultar = useCallback(async () => {
-    try {
-      const r = await fetch(`/api/orden/${orden.publicToken}/estado`, { cache: 'no-store' })
-      if (!r.ok) return
-      const datos = (await r.json()) as { entregadas: number; estado: string }
-      setEntregadas(datos.entregadas)
-      if (datos.entregadas > 0) {
-        // Se marcan en orden: la respuesta barata solo trae CUANTAS, no cuales,
-        // y para lo que la pantalla tiene que decir alcanza.
-        setEstado((previo) =>
-          previo.map((c, i) => (i < datos.entregadas ? { ...c, estado: 'redeemed' } : c))
-        )
-      }
-    } catch {
-      // Sin senal en un sotano. Se reintenta en el siguiente tick y no se le
-      // pinta un error a alguien que no puede hacer nada al respecto.
-    }
-  }, [orden.publicToken])
-
-  useEffect(() => {
-    if (todasEntregadas || parado) return
-
-    const programar = () => {
-      const transcurrido = Date.now() - desde.current
-      const cada = intervaloPara(transcurrido)
-      if (cada === null) {
-        setParado(true)
-        return
-      }
-      timer.current = setTimeout(async () => {
-        // Con la pantalla apagada o la pestaña en segundo plano no se consulta:
-        // nadie esta mirando y el telefono esta en un bolsillo.
-        if (document.visibilityState === 'visible') await consultar()
-        programar()
-      }, cada)
-    }
-
-    programar()
-    return () => {
-      if (timer.current) clearTimeout(timer.current)
-    }
-  }, [consultar, todasEntregadas, parado])
-
-  // Al volver a la pantalla se consulta DE UNA. Si el telefono se atenuo
-  // mientras el mesero escaneaba, al prenderlo tiene que decir "listo" sin
-  // esperar el siguiente tick, que es justo cuando la persona esta mirando.
-  useEffect(() => {
-    const alVolver = () => {
-      if (document.visibilityState === 'visible' && !todasEntregadas) void consultar()
-    }
-    document.addEventListener('visibilitychange', alVolver)
-    return () => document.removeEventListener('visibilitychange', alVolver)
-  }, [consultar, todasEntregadas])
+  // The cheap endpoint only says HOW MANY were delivered, not which, and for
+  // what the screen has to show that is enough.
+  const estado = codigos.map((c, i) => (i < entregadas ? { ...c, estado: 'redeemed' } : c))
 
   const pagaEnBarra = orden.payMethod === 'bar'
 
@@ -229,14 +213,10 @@ export function PantallaDeOrden({
         })}
       </ul>
 
-      {parado && !todasEntregadas ? (
+      {detenido ? (
         <button
           type='button'
-          onClick={() => {
-            desde.current = Date.now()
-            setParado(false)
-            void consultar()
-          }}
+          onClick={() => void refetch()}
           className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase'
         >
           Revisar otra vez

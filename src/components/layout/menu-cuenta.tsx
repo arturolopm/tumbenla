@@ -3,6 +3,7 @@
 import { LogOutIcon, UserIcon } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import { useState, useTransition } from 'react'
 
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
@@ -32,8 +33,28 @@ export function MenuCuenta({ variant = 'barra' }: { variant?: 'barra' | 'movil' 
   const pathname = usePathname()
   const router = useRouter()
   const { data: session, isPending } = useSession()
-  const [acceso, setAcceso] = useState<Acceso | null>(null)
+  const [abierto, setAbierto] = useState(false)
   const [saliendo, startSalir] = useTransition()
+
+  // primera vez que se ABRE el menu y no en cada carga de pagina, porque la
+  // barra sale en todo el sitio y casi nadie abre el menu.
+  //
+  // React Query, `enabled` off until the menu opens: it handles the caching, so
+  // the second open costs nothing, and it will not fire twice if two menus
+  // (bar and mobile) mount at once.
+  const { data: acceso } = useQuery<Acceso>({
+    queryKey: ['mi-acceso'],
+    queryFn: async () => {
+      const response = await fetch('/api/mi-acceso')
+      if (!response.ok) throw new Error('no se pudo leer el acceso')
+      return response.json()
+    },
+    enabled: abierto,
+    // A failure here only means a menu without the operator shortcuts. It is
+    // not a reason to break the navbar, and retrying will not fix it.
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  })
 
   // Mientras no se sabe, un hueco del ancho del control. Ver la nota de arriba.
   if (isPending) {
@@ -68,17 +89,8 @@ export function MenuCuenta({ variant = 'barra' }: { variant?: 'barra' | 'movil' 
   }
 
   // El rol no viene en la sesion: ADMIN_EMAILS es del servidor. Se pregunta la
-  // primera vez que se ABRE el menu y no en cada carga de pagina, porque la
-  // barra sale en todo el sitio y casi nadie abre el menu.
   const handleOpen = (open: boolean) => {
-    if (!open || acceso) return
-    fetch('/api/mi-acceso')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: Acceso | null) => data && setAcceso(data))
-      .catch(() => {
-        // Que falle sólo significa un menú sin los atajos de operador. No es
-        // motivo para romper la barra.
-      })
+    if (open) setAbierto(true)
   }
 
   return (
@@ -89,12 +101,12 @@ export function MenuCuenta({ variant = 'barra' }: { variant?: 'barra' | 'movil' 
           variant === 'movil' && 'mt-2 w-full justify-center'
         )}
       >
-        <UserIcon className="size-4" />
-        <span className="max-w-32 truncate">{nombre}</span>
+        <UserIcon className='size-4' />
+        <span className='max-w-32 truncate'>{nombre}</span>
       </MenuTrigger>
 
-      <MenuPopup align="end" sideOffset={8} className="min-w-52">
-        <MenuItem render={<Link href="/mi-historia">Mi historia</Link>} />
+      <MenuPopup align='end' sideOffset={8} className='min-w-52'>
+        <MenuItem render={<Link href='/mi-historia'>Mi historia</Link>} />
 
         {acceso?.sitios.map((sitio) => (
           <MenuItem
@@ -103,11 +115,11 @@ export function MenuCuenta({ variant = 'barra' }: { variant?: 'barra' | 'movil' 
           />
         ))}
 
-        {acceso?.admin ? <MenuItem render={<Link href="/admin">Panel de operación</Link>} /> : null}
+        {acceso?.admin ? <MenuItem render={<Link href='/admin'>Panel de operación</Link>} /> : null}
 
         <MenuSeparator />
 
-        <MenuItem variant="destructive" disabled={saliendo} onClick={handleSalir}>
+        <MenuItem variant='destructive' disabled={saliendo} onClick={handleSalir}>
           <LogOutIcon />
           {saliendo ? 'Saliendo…' : 'Salir'}
         </MenuItem>
