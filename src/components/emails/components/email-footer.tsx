@@ -1,4 +1,4 @@
-import { Container, Img, Link, Section } from '@react-email/components'
+import { Container, Section } from '@react-email/components'
 
 import { baseStyles, colors, spacing, typography } from '@/components/emails/_styles'
 import { getBrandConfig } from '@/config/branding'
@@ -16,8 +16,20 @@ interface EmailFooterProps {
 }
 
 /**
- * Email footer component styled to match Stripe's email design.
- * Sits in the gray area below the main white card.
+ * Pie de los correos.
+ *
+ * ESTABA EN INGLES Y CON ENLACES DE OTRO PRODUCTO. Traia "Questions?",
+ * "Privacy Policy", "Terms of Service", "Unsubscribe", y una fila de iconos
+ * sociales que apuntaban a `x.com/elon_musk`, un `discord.gg` al azar y
+ * `github.com/revokslab` —restos del boilerplate—. En un producto que es solo
+ * en español (decision 7) eso le llega tal cual a la persona.
+ *
+ * Los enlaces de politicas ademas iban a `/privacy` y `/terms`, que no existen:
+ * las rutas son `/privacidad` y `/terminos`.
+ *
+ * Las redes se quitan hasta que haya una cuenta oficial que poner en
+ * `config/branding.ts`; una fila de iconos que llevan a ninguna parte es peor
+ * que no tenerla.
  */
 export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: EmailFooterProps) {
   const brand = getBrandConfig()
@@ -28,6 +40,11 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
     fontWeight: 'normal' as const,
     fontFamily: typography.fontFamily,
   }
+
+  const unsubscribeHref =
+    unsubscribe?.unsubscribeToken && unsubscribe?.email
+      ? `${baseUrl}/unsubscribe?token=${unsubscribe.unsubscribeToken}&email=${encodeURIComponent(unsubscribe.email)}`
+      : `mailto:${brand.supportEmail}?subject=${encodeURIComponent('Quiero salir de la lista')}`
 
   return (
     <Section
@@ -47,60 +64,6 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
           <tbody>
             <tr>
               <td style={baseStyles.spacer} height={32}>
-                &nbsp;
-              </td>
-            </tr>
-
-            {/* Social links row */}
-            <tr>
-              <td style={baseStyles.gutter} width={spacing.gutter}>
-                &nbsp;
-              </td>
-              <td>
-                <table cellPadding={0} cellSpacing={0} style={{ border: 0 }}>
-                  <tbody>
-                    <tr>
-                      <td align='left' style={{ padding: '0 8px 0 0' }}>
-                        <Link href='https://x.com/elon_musk' rel='noopener noreferrer'>
-                          <Img
-                            src={`${baseUrl}/static/x-icon.png`}
-                            width='20'
-                            height='20'
-                            alt='X'
-                          />
-                        </Link>
-                      </td>
-                      <td align='left' style={{ padding: '0 8px' }}>
-                        <Link href='https://discord.gg/g5wsxR2nXN' rel='noopener noreferrer'>
-                          <Img
-                            src={`${baseUrl}/static/discord-icon.png`}
-                            width='20'
-                            height='20'
-                            alt='Discord'
-                          />
-                        </Link>
-                      </td>
-                      <td align='left' style={{ padding: '0 8px' }}>
-                        <Link href='https://github.com/revokslab' rel='noopener noreferrer'>
-                          <Img
-                            src={`${baseUrl}/static/github-icon.png`}
-                            width='20'
-                            height='20'
-                            alt='GitHub'
-                          />
-                        </Link>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-              <td style={baseStyles.gutter} width={spacing.gutter}>
-                &nbsp;
-              </td>
-            </tr>
-
-            <tr>
-              <td style={baseStyles.spacer} height={16}>
                 &nbsp;
               </td>
             </tr>
@@ -128,7 +91,7 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
                 &nbsp;
               </td>
               <td style={baseStyles.footerText}>
-                Questions?{' '}
+                ¿Dudas? Respóndenos a este correo o escribe a{' '}
                 <a href={`mailto:${brand.supportEmail}`} style={footerLinkStyle}>
                   {brand.supportEmail}
                 </a>
@@ -152,7 +115,7 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
                     &nbsp;
                   </td>
                   <td style={baseStyles.footerText}>
-                    Need to refer to this message? Use this ID: {messageId}
+                    Para referirte a este mensaje, usa este ID: {messageId}
                   </td>
                   <td style={baseStyles.gutter} width={spacing.gutter}>
                     &nbsp;
@@ -172,24 +135,20 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
                 &nbsp;
               </td>
               <td style={baseStyles.footerText}>
-                <a href={`${baseUrl}/privacy`} style={footerLinkStyle} rel='noopener noreferrer'>
-                  Privacy Policy
-                </a>{' '}
-                •{' '}
-                <a href={`${baseUrl}/terms`} style={footerLinkStyle} rel='noopener noreferrer'>
-                  Terms of Service
-                </a>{' '}
-                •{' '}
                 <a
-                  href={
-                    unsubscribe?.unsubscribeToken && unsubscribe?.email
-                      ? `${baseUrl}/unsubscribe?token=${unsubscribe.unsubscribeToken}&email=${encodeURIComponent(unsubscribe.email)}`
-                      : `mailto:${brand.supportEmail}?subject=Unsubscribe%20Request&body=Please%20unsubscribe%20me%20from%20all%20emails.`
-                  }
+                  href={`${baseUrl}/privacidad`}
                   style={footerLinkStyle}
                   rel='noopener noreferrer'
                 >
-                  Unsubscribe
+                  Privacidad
+                </a>{' '}
+                •{' '}
+                <a href={`${baseUrl}/terminos`} style={footerLinkStyle} rel='noopener noreferrer'>
+                  Términos
+                </a>{' '}
+                •{' '}
+                <a href={unsubscribeHref} style={footerLinkStyle} rel='noopener noreferrer'>
+                  Salir de la lista
                 </a>
               </td>
               <td style={baseStyles.gutter} width={spacing.gutter}>
@@ -208,7 +167,7 @@ export function EmailFooter({ baseUrl = getBaseUrl(), unsubscribe, messageId }: 
                 &nbsp;
               </td>
               <td style={baseStyles.footerText}>
-                © {new Date().getFullYear()} {brand.name}, All Rights Reserved
+                © {new Date().getFullYear()} {brand.name}
               </td>
               <td style={baseStyles.gutter} width={spacing.gutter}>
                 &nbsp;
