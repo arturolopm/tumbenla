@@ -1,6 +1,8 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -10,8 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, leerDestino } from '@/lib/auth/redirect'
+import { type RegisterInput, registerSchema } from '@/lib/auth/schemas'
 import { cn } from '@/lib/utils'
-import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
 
@@ -70,39 +72,12 @@ async function prepareSignupEmail(email: string): Promise<PrepareSignupEmailResu
   return 'failed'
 }
 
-const validateEmailField = (emailValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!emailValue || !emailValue.trim()) {
-    errors.push('Escribe tu correo.')
-    return errors
-  }
-
-  const validation = quickValidateEmail(emailValue.trim().toLowerCase())
-  if (!validation.isValid) {
-    errors.push(validation.reason || 'Ese correo no parece valido.')
-  }
-
-  return errors
-}
-
-const PASSWORD_VALIDATIONS = {
-  minLength: {
-    test: (value: string) => value.length >= 8,
-    message: 'La contraseña necesita al menos 8 caracteres.',
-  },
-}
-
-const validatePassword = (passwordValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!PASSWORD_VALIDATIONS.minLength.test(passwordValue)) {
-    errors.push(PASSWORD_VALIDATIONS.minLength.message)
-  }
-
-  return errors
-}
-
+/**
+ * Validation lives in `@/lib/auth/schemas`, applied by react-hook-form's zod
+ * resolver. See the note in the login form: the two files used to define
+ * conflicting `PASSWORD_VALIDATIONS` objects, and reading the password from
+ * React state instead of the form was a real bug under browser autofill.
+ */
 export default function RegisterForm({
   githubAvailable,
   googleAvailable,
@@ -120,20 +95,21 @@ export default function RegisterForm({
   const searchParams = useSearchParams()
 
   const [isLoading, setIsLoading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    formState: { errors },
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema),
+    mode: 'onBlur',
+  })
   const [, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [showValidationError, setShowValidationError] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
 
-  const [name, setName] = useState('')
-  const [nameErrors, setNameErrors] = useState<string[]>([])
-  const [showNameValidationError, setShowNameValidationError] = useState(false)
-
-  const [email, setEmail] = useState('')
-  const [emailErrors, setEmailErrors] = useState<string[]>([])
-  const [showEmailValidationError, setShowEmailValidationError] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
   const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
@@ -146,129 +122,65 @@ export default function RegisterForm({
     // bar. Volver a pedirselo es la friccion que hace que no termine la cuenta,
     // y ademas es lo que AMARRA el pedido que acaba de hacer: si escribe otro
     // correo, su historia nace incompleta y no hay como repararla despues.
-    const correo = searchParams?.get('correo')
-    if (correo) setEmail(correo)
-  }, [searchParams])
+    const prefilledEmail = searchParams?.get('correo')
+    if (prefilledEmail) setValue('email', prefilledEmail)
+  }, [searchParams, setValue])
 
-  const handleNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value
-    setName(value)
+  // RHF delivers data already parsed by the schema: name trimmed, email
+  // lowercased, password length checked. No FormData reading and no manual
+  // validation pass, so the value validated is the value submitted.
+  const onSubmit = handleSubmit(
+    async ({ name: nameValue, email: emailValue, password: passwordValue }) => {
+      setIsLoading(true)
+      setSubmitError('')
 
-    const trimmed = value.trim()
-    const errors: string[] = []
+      try {
+        const prep = await prepareSignupEmail(emailValue)
 
-    if (!trimmed) {
-      errors.push('Escribe tu nombre.')
-    }
+        if (prep === 'verified_exists') {
+          setSubmitError(getSignUpErrorMessage({ code: 'USER_ALREADY_EXISTS' }))
+          setIsLoading(false)
+          return
+        }
 
-    setNameErrors(errors)
-    setShowNameValidationError(false)
-  }
+        if (prep === 'failed') {
+          setSubmitError('No se pudo empezar el registro. Intenta de nuevo.')
+          setIsLoading(false)
+          return
+        }
 
-  const handleEmailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = event.target.value
-    setEmail(newEmail)
+        const response = await client.signUp.email(
+          {
+            email: emailValue,
+            password: passwordValue,
+            name: nameValue,
+          },
+          {}
+        )
 
-    const errors = validateEmailField(newEmail)
-    setEmailErrors(errors)
-    setShowEmailValidationError(false)
-  }
+        if (!response || response.error) {
+          setSubmitError(getSignUpErrorMessage(response?.error))
+          setIsLoading(false)
+          return
+        }
 
-  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = event.target.value
-    setPassword(newPassword)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('verificationEmail', emailValue)
+        }
 
-    const errors = validatePassword(newPassword)
-    setPasswordErrors(errors)
-    setShowValidationError(false)
-  }
-
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setIsLoading(true)
-    setSubmitError('')
-
-    const formData = new FormData(event.currentTarget)
-    const emailRaw = formData.get('email') as string
-    const emailValue = emailRaw.trim().toLowerCase()
-    // Del FORMULARIO, no del estado de React. Igual que en el login: un gestor
-    // de contraseñas escribe el valor en el DOM sin disparar el onChange, y la
-    // contraseña salia vacia con los puntos a la vista. El estado se queda para
-    // la validacion en vivo mientras se escribe.
-    const passwordDelFormulario = (formData.get('password') as string | null) ?? ''
-    const passwordValue = passwordDelFormulario.length > 0 ? passwordDelFormulario : password
-    const nameValue = (formData.get('name') as string).trim()
-
-    const nameValidationErrors: string[] = []
-    if (!nameValue) {
-      nameValidationErrors.push('Escribe tu nombre.')
-    }
-    setNameErrors(nameValidationErrors)
-    setShowNameValidationError(nameValidationErrors.length > 0)
-
-    const emailValidationErrors = validateEmailField(emailValue)
-    setEmailErrors(emailValidationErrors)
-    setShowEmailValidationError(emailValidationErrors.length > 0)
-
-    const passwordValidationErrors = validatePassword(passwordValue)
-    setPasswordErrors(passwordValidationErrors)
-    setShowValidationError(passwordValidationErrors.length > 0)
-
-    if (
-      nameValidationErrors.length > 0 ||
-      emailValidationErrors.length > 0 ||
-      passwordValidationErrors.length > 0
-    ) {
-      setIsLoading(false)
-      return
-    }
-
-    try {
-      const prep = await prepareSignupEmail(emailValue)
-
-      if (prep === 'verified_exists') {
-        setSubmitError(getSignUpErrorMessage({ code: 'USER_ALREADY_EXISTS' }))
+        router.push(`/verify?fromSignup=true&redirectAfter=${encodeURIComponent(callbackUrl)}`)
+      } catch (error) {
+        console.error('Signup error:', error)
+        // Estaba en ingles en una app que es toda en espanol, y decia lo mismo
+        // tanto si el servidor rechazo el registro como si la peticion nunca
+        // salio del navegador. Son dos problemas distintos y solo uno se
+        // arregla reintentando.
+        setSubmitError(mensajeDeError(error, 'No se pudo crear tu cuenta. Intenta de nuevo.'))
+      } finally {
         setIsLoading(false)
-        return
       }
-
-      if (prep === 'failed') {
-        setSubmitError('No se pudo empezar el registro. Intenta de nuevo.')
-        setIsLoading(false)
-        return
-      }
-
-      const response = await client.signUp.email(
-        {
-          email: emailValue,
-          password: passwordValue,
-          name: nameValue,
-        },
-        {}
-      )
-
-      if (!response || response.error) {
-        setSubmitError(getSignUpErrorMessage(response?.error))
-        setIsLoading(false)
-        return
-      }
-
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('verificationEmail', emailValue)
-      }
-
-      router.push(`/verify?fromSignup=true&redirectAfter=${encodeURIComponent(callbackUrl)}`)
-    } catch (error) {
-      console.error('Signup error:', error)
-      // Estaba en ingles en una app que es toda en espanol, y decia lo mismo
-      // tanto si el servidor rechazo el registro como si la peticion nunca
-      // salio del navegador. Son dos problemas distintos y solo uno se
-      // arregla reintentando.
-      setSubmitError(mensajeDeError(error, 'No se pudo crear tu cuenta. Intenta de nuevo.'))
-    } finally {
-      setIsLoading(false)
     }
-  }
+  )
 
   const hasSocial = githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
   const showDivider = hasSocial
@@ -284,7 +196,7 @@ export default function RegisterForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className='mt-8 space-y-8'>
+      <form onSubmit={onSubmit} className='mt-8 space-y-8'>
         <div className='space-y-6'>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
@@ -292,27 +204,23 @@ export default function RegisterForm({
             </div>
             <Input
               id='name'
-              name='name'
               placeholder='Como te dicen'
               autoCapitalize='words'
               autoComplete='name'
-              value={name}
-              onChange={handleNameChange}
               size='lg'
+              aria-invalid={Boolean(errors.name)}
+              {...register('name')}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                showNameValidationError &&
-                  nameErrors.length > 0 &&
+                errors.name &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
-            {showNameValidationError && nameErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {nameErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.name ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.name.message}
+              </p>
+            ) : null}
           </div>
 
           <div className='space-y-2'>
@@ -321,29 +229,24 @@ export default function RegisterForm({
             </div>
             <Input
               id='email'
-              name='email'
               placeholder='tu@correo.com'
-              required
               autoCapitalize='none'
               autoComplete='email'
               autoCorrect='off'
-              value={email}
-              onChange={handleEmailChange}
               size='lg'
+              aria-invalid={Boolean(errors.email)}
+              {...register('email')}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                showEmailValidationError &&
-                  emailErrors.length > 0 &&
+                errors.email &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
-            {showEmailValidationError && emailErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {emailErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.email ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.email.message}
+              </p>
+            ) : null}
           </div>
 
           <div className='space-y-2'>
@@ -353,20 +256,17 @@ export default function RegisterForm({
             <div className='relative'>
               <Input
                 id='password'
-                name='password'
-                required
                 type={showPassword ? 'text' : 'password'}
                 autoCapitalize='none'
                 autoComplete='new-password'
                 autoCorrect='off'
                 placeholder='Al menos 8 caracteres'
-                value={password}
                 size='lg'
-                onChange={handlePasswordChange}
+                aria-invalid={Boolean(errors.password)}
+                {...register('password')}
                 className={cn(
                   'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                  showValidationError &&
-                    passwordErrors.length > 0 &&
+                  errors.password &&
                     'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
@@ -379,13 +279,11 @@ export default function RegisterForm({
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {showValidationError && passwordErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {passwordErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.password ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.password.message}
+              </p>
+            ) : null}
           </div>
         </div>
 

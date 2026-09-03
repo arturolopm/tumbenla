@@ -1,6 +1,8 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -19,54 +21,22 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/redirect'
+import { type LoginInput, emailOnlySchema, loginSchema } from '@/lib/auth/schemas'
 import { cn, getBaseUrl } from '@/lib/utils'
-import { quickValidateEmail } from '@/lib/messaging/email/validation'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
 
-const validateEmailField = (emailValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!emailValue || !emailValue.trim()) {
-    errors.push('Escribe tu correo.')
-    return errors
-  }
-
-  const validation = quickValidateEmail(emailValue.trim().toLowerCase())
-  if (!validation.isValid) {
-    errors.push(validation.reason || 'Ese correo no parece valido.')
-  }
-
-  return errors
-}
-
-const PASSWORD_VALIDATIONS = {
-  required: {
-    test: (value: string) => Boolean(value && typeof value === 'string'),
-    message: 'Escribe tu contraseña.',
-  },
-  notEmpty: {
-    test: (value: string) => value.trim().length > 0,
-    message: 'La contraseña no puede ir vacia.',
-  },
-}
-
-const validatePassword = (passwordValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!PASSWORD_VALIDATIONS.required.test(passwordValue)) {
-    errors.push(PASSWORD_VALIDATIONS.required.message)
-    return errors
-  }
-
-  if (!PASSWORD_VALIDATIONS.notEmpty.test(passwordValue)) {
-    errors.push(PASSWORD_VALIDATIONS.notEmpty.message)
-    return errors
-  }
-
-  return errors
-}
-
+/**
+ * Validation lives in `@/lib/auth/schemas` and is applied by react-hook-form
+ * through its zod resolver.
+ *
+ * What used to be here: two hand-written validators, a `PASSWORD_VALIDATIONS`
+ * object that disagreed with the register form's object of the same name, and
+ * one `useState` per field plus an error array plus a "show error" flag each.
+ * That machinery is what let the real bug through — the email was read from the
+ * DOM and the password from React state, so browser autofill submitted an empty
+ * password while the field showed dots.
+ */
 export default function LoginPage({
   githubAvailable,
   googleAvailable,
@@ -83,11 +53,22 @@ export default function LoginPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
+
+  // One hook replaces the per-field state, the error arrays and the
+  // "show error" flags. `register` binds the input to the form, so what gets
+  // validated and what gets submitted are the same value by construction —
+  // browser autofill included.
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+  })
   const [_mounted, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [showValidationError, setShowValidationError] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
 
   const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
@@ -100,10 +81,6 @@ export default function LoginPage({
     type: 'success' | 'error' | null
     message: string
   }>({ type: null, message: '' })
-
-  const [email, setEmail] = useState('')
-  const [emailErrors, setEmailErrors] = useState<string[]>([])
-  const [showEmailValidationError, setShowEmailValidationError] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -128,58 +105,10 @@ export default function LoginPage({
     }
   }, [forgotPasswordEmail, forgotPasswordOpen])
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value
-    setEmail(newEmail)
-
-    const errors = validateEmailField(newEmail)
-    setEmailErrors(errors)
-    setShowEmailValidationError(false)
-  }
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value
-    setPassword(newPassword)
-
-    const errors = validatePassword(newPassword)
-    setPasswordErrors(errors)
-    setShowValidationError(false)
-  }
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  // RHF hands over data already parsed by the schema: trimmed, lowercased and
+  // guaranteed present. No FormData reading, no manual validation pass.
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     setIsLoading(true)
-
-    const formData = new FormData(e.currentTarget)
-    const emailRaw = formData.get('email') as string
-    const email = emailRaw.trim().toLowerCase()
-
-    // LA CONTRASEÑA SE LEE DEL FORMULARIO, NO DEL ESTADO DE REACT.
-    //
-    // Antes el correo salia del FormData y la contraseña del estado, y esa
-    // asimetria es un fallo de verdad: cuando un gestor de contraseñas o el
-    // autocompletar del navegador rellena los campos, escribe el valor en el
-    // DOM sin disparar el onChange de React. El correo llegaba (se lee del DOM)
-    // y la contraseña iba VACIA, asi que la respuesta era "correo o contraseña
-    // incorrecto" con los datos correctos en pantalla y los puntos a la vista.
-    //
-    // El estado se conserva para la validacion en vivo mientras se escribe; lo
-    // que se manda es lo que el formulario de verdad tiene.
-    const passwordRaw = (formData.get('password') as string | null) ?? ''
-    const passwordAEnviar = passwordRaw.length > 0 ? passwordRaw : password
-
-    const emailValidationErrors = validateEmailField(email)
-    setEmailErrors(emailValidationErrors)
-    setShowEmailValidationError(emailValidationErrors.length > 0)
-
-    const passwordValidationErrors = validatePassword(passwordAEnviar)
-    setPasswordErrors(passwordValidationErrors)
-    setShowValidationError(passwordValidationErrors.length > 0)
-
-    if (emailValidationErrors.length > 0 || passwordValidationErrors.length > 0) {
-      setIsLoading(false)
-      return
-    }
 
     try {
       const safeCallbackUrl = esDestinoValido(callbackUrl) ? callbackUrl : DESTINO_POR_DEFECTO
@@ -187,7 +116,7 @@ export default function LoginPage({
       const result = await client.signIn.email(
         {
           email,
-          password: passwordAEnviar,
+          password,
           callbackURL: safeCallbackUrl,
         },
         {
@@ -244,8 +173,7 @@ export default function LoginPage({
               errorMessage.push('Demasiadas peticiones. Espera un momento.')
             }
 
-            setPasswordErrors(errorMessage)
-            setShowValidationError(true)
+            setError('root', { message: errorMessage.join(' ') })
           },
         }
       )
@@ -267,12 +195,15 @@ export default function LoginPage({
       // rechazado— y antes solo se registraba en la consola: el formulario se
       // desbloqueaba sin decir nada y parecia que el boton no servia.
       console.error('Uncaught login error:', err)
-      setPasswordErrors([mensajeDeError(err, 'No se pudo entrar. Intenta de nuevo.')])
-      setShowValidationError(true)
+      // A form-level error, not a field one: nothing is wrong with what they
+      // typed. `root` is RHF's slot for exactly this.
+      setError('root', {
+        message: mensajeDeError(err, 'No se pudo entrar. Intenta de nuevo.'),
+      })
     } finally {
       setIsLoading(false)
     }
-  }
+  })
 
   const handleForgotPassword = async () => {
     if (!forgotPasswordEmail) {
@@ -283,11 +214,13 @@ export default function LoginPage({
       return
     }
 
-    const emailValidation = quickValidateEmail(forgotPasswordEmail.trim().toLowerCase())
-    if (!emailValidation.isValid) {
+    // Same schema the form uses, so "valid email" means one thing in this file
+    // and not two.
+    const parsed = emailOnlySchema.safeParse({ email: forgotPasswordEmail })
+    if (!parsed.success) {
       setResetStatus({
         type: 'error',
-        message: 'Ese correo no parece valido',
+        message: parsed.error.issues[0]?.message ?? 'Ese correo no se ve bien.',
       })
       return
     }
@@ -371,29 +304,24 @@ export default function LoginPage({
             </div>
             <Input
               id='email'
-              name='email'
               placeholder='tu@correo.com'
-              required
               autoCapitalize='none'
               size={'lg'}
               autoComplete='email'
               autoCorrect='off'
-              value={email}
-              onChange={handleEmailChange}
+              aria-invalid={Boolean(errors.email)}
+              {...register('email')}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                showEmailValidationError &&
-                  emailErrors.length > 0 &&
+                errors.email &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
-            {showEmailValidationError && emailErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {emailErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.email ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.email.message}
+              </p>
+            ) : null}
           </div>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
@@ -409,20 +337,17 @@ export default function LoginPage({
             <div className='relative'>
               <Input
                 id='password'
-                name='password'
-                required
                 type={showPassword ? 'text' : 'password'}
                 autoCapitalize='none'
                 autoComplete='current-password'
                 autoCorrect='off'
                 placeholder='Tu contraseña'
-                value={password}
                 size={'lg'}
-                onChange={handlePasswordChange}
+                aria-invalid={Boolean(errors.password)}
+                {...register('password')}
                 className={cn(
                   'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                  showValidationError &&
-                    passwordErrors.length > 0 &&
+                  errors.password &&
                     'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
@@ -435,14 +360,20 @@ export default function LoginPage({
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {showValidationError && passwordErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {passwordErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.password ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.password.message}
+              </p>
+            ) : null}
           </div>
+
+          {/* Whatever is not a field problem: bad credentials, a locked
+              account, a request that never left the browser. */}
+          {errors.root ? (
+            <p role='alert' className='text-body-sm text-destructive-foreground'>
+              {errors.root.message}
+            </p>
+          ) : null}
         </div>
 
         <Button

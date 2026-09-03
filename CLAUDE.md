@@ -131,6 +131,51 @@ ShipFree/
 
 ## Code Style
 
+### El idioma del codigo es INGLES. El español es solo lo que el usuario lee
+
+**Identificadores, tipos, nombres de archivo y COMENTARIOS van en ingles.** Sin
+excepcion y sin mezclar: `redeemOrder`, no `redimirOrden`; `ledgerEntry`, no
+`asientoDelLibro`. Un comentario en español dentro de una funcion con nombre en
+ingles es la peor de las dos opciones.
+
+**En español va unicamente lo que aparece en pantalla:** el texto de una
+etiqueta, un mensaje de error que lee una persona, el copy de un correo, una
+URL. Esos siguen con sus tildes (decision 25) y siguen mandando `VOZ.md`.
+
+```ts
+// bien
+const MOTIVO_TEXTO = { ya_redimido: 'Ese trago ya se entregó.' }  // NO
+const REASON_TEXT = { already_redeemed: 'Ese trago ya se entregó.' }  // si
+```
+
+Por que: el producto es solo de Manizales, pero el codigo lo lee cualquiera que
+entre al repo, y media libreria del stack ya esta en ingles. Un `venueId` al
+lado de un `saldoDeSitio` obliga a traducir mentalmente en cada linea.
+
+**Hay deuda de esto en el repo** (ver `PRODUCT.md`, "Deuda y hallazgos"): parte
+de `src/lib/comercio/`, varias acciones y `venues/invitations.ts` nacieron en
+español. Lo que se toque se pasa a ingles al tocarlo; no se abre un PR de puro
+renombrar.
+
+### No se escribe a mano lo que ya resuelve una libreria
+
+**Formularios: `react-hook-form` + `zod` por el resolver.** Nada de un `useState`
+por campo, arreglos de errores y banderas de "mostrar error". Esa maraña ya
+costo un fallo real: el login leia el correo del DOM y la contraseña del estado
+de React, y con el autocompletado del navegador la contraseña iba vacia.
+
+**Peticiones desde el cliente: `@tanstack/react-query`**, que ya esta instalado.
+Nada de `fetch` dentro de un `useEffect` con su propio `useState` de carga, su
+propio error y su propio bucle de sondeo.
+
+**La excepcion son las server actions.** Un `<form action={...}>` con
+`useActionState` NO es codigo escrito a mano: es la primitiva de React para
+esto, valida en el servidor —que es donde tiene que validar— y lee del FormData,
+asi que es inmune al problema del autocompletado. Esos formularios se quedan
+como estan.
+
+En general: antes de escribir un helper, mirar si el stack ya lo trae.
+
 ### TypeScript
 
 - **Strict mode**: Enabled

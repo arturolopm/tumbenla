@@ -101,7 +101,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
@@ -110,7 +111,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
@@ -119,7 +121,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
@@ -128,7 +131,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
@@ -137,7 +141,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                   <InputOTPSlot
@@ -146,7 +151,8 @@ function VerificationForm({
                       'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
                       'border-border hover:border-primary',
                       'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp && 'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      isInvalidOtp &&
+                        'border-destructive focus:border-destructive focus:ring-destructive/30'
                     )}
                   />
                 </InputOTPGroup>
