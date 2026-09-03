@@ -86,6 +86,37 @@ export const getLiveApplication = async (userId: string, id?: string) => {
 }
 
 /**
+ * Una solicitud por su token publico, para quien la mando SIN cuenta.
+ *
+ * VA APARTE de getLiveApplication a proposito. La propiedad de seguridad de esa
+ * funcion es que SIEMPRE filtra por userId; meterle una rama "o por token" la
+ * volveria condicional, y una condicion de seguridad que a veces aplica es la
+ * clase de cosa que alguien borra sin darse cuenta seis meses despues.
+ *
+ * El token es un enlace al portador, mismo modelo que /orden/[token]: quien
+ * tiene la URL ve la solicitud. Por eso la pantalla que lo usa va noindex y NO
+ * DEJA EDITAR NADA — corregir datos sigue pidiendo sesion, porque un token que
+ * ademas reescribe es un hueco mas grande que un barrio mal escrito.
+ */
+export const getApplicationByToken = async (token: string) => {
+  const [fila] = await db
+    .select({
+      id: venueApplication.id,
+      status: venueApplication.status,
+      name: venueApplication.name,
+      instagram: venueApplication.instagram,
+      contactEmail: venueApplication.contactEmail,
+      city: venueApplication.city,
+      userId: venueApplication.userId,
+    })
+    .from(venueApplication)
+    .where(eq(venueApplication.publicToken, token))
+    .limit(1)
+
+  return fila ?? null
+}
+
+/**
  * La cola del operador. Lo mas viejo arriba: una solicitud vieja es alguien
  * esperando hace mas tiempo.
  *
@@ -93,51 +124,53 @@ export const getLiveApplication = async (userId: string, id?: string) => {
  * que ya esta en el directorio.
  */
 export const listApplications = async () => {
-  return db
-    .select({
-      id: venueApplication.id,
-      status: venueApplication.status,
-      name: venueApplication.name,
-      type: venueApplication.type,
-      city: venueApplication.city,
-      addressLine: venueApplication.addressLine,
-      neighborhood: venueApplication.neighborhood,
-      instagram: venueApplication.instagram,
-      contactEmail: venueApplication.contactEmail,
-      tiktok: venueApplication.tiktok,
-      whatsapp: venueApplication.whatsapp,
-      phone: venueApplication.phone,
-      website: venueApplication.website,
-      openingHours: venueApplication.openingHours,
-      description: venueApplication.description,
-      pledgeIdea: venueApplication.pledgeIdea,
-      reviewNote: venueApplication.reviewNote,
-      createdAt: venueApplication.createdAt,
-      venueId: venueApplication.venueId,
-      venueSlug: venue.slug,
-      venueNombre: venue.name,
-      // Si ya hay cuenta amarrada. El operador la necesita para saber si puede
-      // aprobar: sin cuenta no hay a quien darle la propiedad.
-      userId: venueApplication.userId,
-      // La cuenta que aplica: quien queda de dueno si se aprueba. Va aparte del
-      // contactEmail a proposito, porque son dos cosas distintas y el operador
-      // tiene que poder compararlas. NULL mientras la solicitud no tenga dueno.
-      solicitante: user.name,
-      solicitanteEmail: user.email,
-    })
-    .from(venueApplication)
-    /**
-     * leftJoin, y NO innerJoin.
-     *
-     * Desde la decision 35 una solicitud puede no tener cuenta todavia. Con el
-     * innerJoin que habia aca, esas filas DESAPARECIAN de /admin/solicitudes
-     * sin ruido: alguien manda la solicitud, no vuelve a saber de nosotros, y
-     * del lado de operacion no existe. Es el peor modo de falla de esta
-     * pantalla, porque no se ve — la cola simplemente se ve corta.
-     */
-    .leftJoin(user, eq(venueApplication.userId, user.id))
-    .leftJoin(venue, eq(venueApplication.venueId, venue.id))
-    .orderBy(asc(venueApplication.createdAt))
+  return (
+    db
+      .select({
+        id: venueApplication.id,
+        status: venueApplication.status,
+        name: venueApplication.name,
+        type: venueApplication.type,
+        city: venueApplication.city,
+        addressLine: venueApplication.addressLine,
+        neighborhood: venueApplication.neighborhood,
+        instagram: venueApplication.instagram,
+        contactEmail: venueApplication.contactEmail,
+        tiktok: venueApplication.tiktok,
+        whatsapp: venueApplication.whatsapp,
+        phone: venueApplication.phone,
+        website: venueApplication.website,
+        openingHours: venueApplication.openingHours,
+        description: venueApplication.description,
+        pledgeIdea: venueApplication.pledgeIdea,
+        reviewNote: venueApplication.reviewNote,
+        createdAt: venueApplication.createdAt,
+        venueId: venueApplication.venueId,
+        venueSlug: venue.slug,
+        venueNombre: venue.name,
+        // Si ya hay cuenta amarrada. El operador la necesita para saber si puede
+        // aprobar: sin cuenta no hay a quien darle la propiedad.
+        userId: venueApplication.userId,
+        // La cuenta que aplica: quien queda de dueno si se aprueba. Va aparte del
+        // contactEmail a proposito, porque son dos cosas distintas y el operador
+        // tiene que poder compararlas. NULL mientras la solicitud no tenga dueno.
+        solicitante: user.name,
+        solicitanteEmail: user.email,
+      })
+      .from(venueApplication)
+      /**
+       * leftJoin, y NO innerJoin.
+       *
+       * Desde la decision 35 una solicitud puede no tener cuenta todavia. Con el
+       * innerJoin que habia aca, esas filas DESAPARECIAN de /admin/solicitudes
+       * sin ruido: alguien manda la solicitud, no vuelve a saber de nosotros, y
+       * del lado de operacion no existe. Es el peor modo de falla de esta
+       * pantalla, porque no se ve — la cola simplemente se ve corta.
+       */
+      .leftJoin(user, eq(venueApplication.userId, user.id))
+      .leftJoin(venue, eq(venueApplication.venueId, venue.id))
+      .orderBy(asc(venueApplication.createdAt))
+  )
 }
 
 /** Una solicitud, para prellenar el formulario de creacion del sitio. */

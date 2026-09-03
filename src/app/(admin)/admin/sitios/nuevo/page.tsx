@@ -53,40 +53,61 @@ export default async function NuevoSitioPage({
           </p>
           <p className='mt-2 text-body-md text-muted-foreground'>
             Falta lo que la solicitud no pide:{' '}
-            <strong className='text-street-white'>el punto en el mapa</strong> y{' '}
-            <strong className='text-street-white'>el compromiso</strong>. Al guardar, el sitio queda
-            creado y el panel queda a nombre de quien lo pidió.
+            <strong className='text-street-white'>
+              el tipo, la dirección y el punto en el mapa
+            </strong>
+            . Sácalos del Instagram del bar, que es donde ya estás mirando para verificar el DM. Al
+            guardar, el sitio queda creado y el panel queda a nombre de quien lo pidió.
           </p>
-          {solicitud.pledgeIdea ? (
-            <p className='mt-2 text-body-md text-muted-foreground'>
-              Lo que tenía en mente: “{solicitud.pledgeIdea}” — es una idea suya, no un compromiso.
-            </p>
-          ) : null}
         </div>
       ) : null}
 
-      <VenueForm
-        prefill={
-          solicitud
-            ? {
-                solicitudId: solicitud.id,
-                name: solicitud.name,
-                type: solicitud.type,
-                city: solicitud.city,
-                addressLine: solicitud.addressLine,
-                neighborhood: solicitud.neighborhood,
-                instagram: solicitud.instagram,
-                tiktok: solicitud.tiktok,
-                email: solicitud.contactEmail,
-                whatsapp: solicitud.whatsapp,
-                phone: solicitud.phone,
-                website: solicitud.website,
-                openingHours: solicitud.openingHours,
-                description: solicitud.description,
-              }
-            : undefined
-        }
-      />
+      {/* Sin cuenta amarrada, el formulario NO se pinta. saveVenueAction lo
+          rechaza igual —esa es la proteccion de verdad—, pero dejar el
+          formulario a la vista significaria llenar veinte campos para que te lo
+          boten al guardar. */}
+      {solicitud && !solicitud.userId ? (
+        <div className='rounded-xl border-2 border-primary border-dashed p-6'>
+          <p className='font-display font-bold text-headline-md uppercase'>
+            Esta solicitud todavía no tiene cuenta
+          </p>
+          <p className='mt-2 text-body-md text-muted-foreground'>
+            Aprobar es lo que entrega la propiedad del sitio, y aquí no hay a quién entregársela. Se
+            amarra sola cuando esa persona cree la cuenta con{' '}
+            <strong className='text-street-white'>{solicitud.contactEmail}</strong> y verifique el
+            correo. Pásale{' '}
+            <span className='text-primary-text'>/register?correo={solicitud.contactEmail}</span>{' '}
+            cuando le contestes el DM.
+          </p>
+          <p className='mt-2 text-body-md text-muted-foreground'>
+            Si nunca la crea y el bar igual quiere entrar: crea el sitio con “Agregar un sitio”, sin
+            solicitud, e invita al dueño por correo desde el panel del sitio.
+          </p>
+        </div>
+      ) : (
+        <VenueForm
+          prefill={
+            solicitud
+              ? {
+                  solicitudId: solicitud.id,
+                  name: solicitud.name,
+                  type: solicitud.type,
+                  city: solicitud.city,
+                  addressLine: solicitud.addressLine,
+                  neighborhood: solicitud.neighborhood,
+                  instagram: solicitud.instagram,
+                  tiktok: solicitud.tiktok,
+                  email: solicitud.contactEmail,
+                  whatsapp: solicitud.whatsapp,
+                  phone: solicitud.phone,
+                  website: solicitud.website,
+                  openingHours: solicitud.openingHours,
+                  description: solicitud.description,
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   )
 }

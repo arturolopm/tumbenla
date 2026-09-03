@@ -5,6 +5,7 @@ import { isAdminEmail } from '@/lib/auth/admin'
 import { auth } from '@/lib/auth/auth'
 import { listMyVenues } from '@/lib/auth/venue-access'
 import { vincularPedidosDeInvitado } from '@/lib/comercio/vincular'
+import { vincularSolicitudesDeInvitado } from '@/lib/venues/vincular'
 
 /**
  * El despachador por rol. No pinta nada: lee la sesion y redirige.
@@ -36,11 +37,17 @@ export default async function EntrarPage() {
   // es idempotente: un UPDATE con `user_id is null` en el WHERE. Ponerlo solo
   // en /mi-historia dejaria sin amarrar al dueño de un bar que tambien sale de
   // rumba, que es la misma persona con dos sombreros.
-  await vincularPedidosDeInvitado({
+  const invitado = {
     id: session.user.id,
     email: session.user.email,
     emailVerified: session.user.emailVerified,
-  })
+  }
+  await vincularPedidosDeInvitado(invitado)
+  // Y lo mismo con las solicitudes de alta, que desde la decision 35 tambien
+  // pueden nacer sin dueno. Mismo punto, misma regla y mismo requisito de
+  // correo verificado; ver src/lib/venues/vincular.ts sobre por que son dos
+  // funciones gemelas y no una sola parametrizada.
+  await vincularSolicitudesDeInvitado(invitado)
 
   if (isAdminEmail(session.user.email, session.user.emailVerified)) {
     redirect('/admin')

@@ -22,7 +22,8 @@
     "db:reset": "docker compose down -v && docker compose up -d --wait && bun run migrate:local",
     "db:logs": "docker compose logs -f db",
     "db:psql": "docker compose exec db psql -U postgres -d shipfree",
-    "setup": "bun run db:up && bun run migrate:local"
+    "setup": "bun run db:up && bun run migrate:local",
+    "prueba:alta": "bun --conditions react-server ./scripts/prueba-vincular.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
