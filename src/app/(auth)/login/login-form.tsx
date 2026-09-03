@@ -154,11 +154,25 @@ export default function LoginPage({
     const emailRaw = formData.get('email') as string
     const email = emailRaw.trim().toLowerCase()
 
+    // LA CONTRASEÑA SE LEE DEL FORMULARIO, NO DEL ESTADO DE REACT.
+    //
+    // Antes el correo salia del FormData y la contraseña del estado, y esa
+    // asimetria es un fallo de verdad: cuando un gestor de contraseñas o el
+    // autocompletar del navegador rellena los campos, escribe el valor en el
+    // DOM sin disparar el onChange de React. El correo llegaba (se lee del DOM)
+    // y la contraseña iba VACIA, asi que la respuesta era "correo o contraseña
+    // incorrecto" con los datos correctos en pantalla y los puntos a la vista.
+    //
+    // El estado se conserva para la validacion en vivo mientras se escribe; lo
+    // que se manda es lo que el formulario de verdad tiene.
+    const passwordRaw = (formData.get('password') as string | null) ?? ''
+    const passwordAEnviar = passwordRaw.length > 0 ? passwordRaw : password
+
     const emailValidationErrors = validateEmailField(email)
     setEmailErrors(emailValidationErrors)
     setShowEmailValidationError(emailValidationErrors.length > 0)
 
-    const passwordValidationErrors = validatePassword(password)
+    const passwordValidationErrors = validatePassword(passwordAEnviar)
     setPasswordErrors(passwordValidationErrors)
     setShowValidationError(passwordValidationErrors.length > 0)
 
@@ -173,7 +187,7 @@ export default function LoginPage({
       const result = await client.signIn.email(
         {
           email,
-          password,
+          password: passwordAEnviar,
           callbackURL: safeCallbackUrl,
         },
         {
@@ -221,13 +235,9 @@ export default function LoginPage({
             } else if (ctx.error.code?.includes('FAILED_TO_CREATE_SESSION')) {
               errorMessage.push('No se pudo abrir la sesion. Intenta mas tarde.')
             } else if (ctx.error.code?.includes('too many attempts')) {
-              errorMessage.push(
-                'Demasiados intentos. Espera un rato o cambia tu contraseña.'
-              )
+              errorMessage.push('Demasiados intentos. Espera un rato o cambia tu contraseña.')
             } else if (ctx.error.code?.includes('account locked')) {
-              errorMessage.push(
-                'Tu cuenta quedo bloqueada por seguridad. Cambia tu contraseña.'
-              )
+              errorMessage.push('Tu cuenta quedo bloqueada por seguridad. Cambia tu contraseña.')
             } else if (ctx.error.code?.includes('network')) {
               errorMessage.push('Falló la conexion. Revisa tu internet e intenta de nuevo.')
             } else if (ctx.error.message?.includes('rate limit')) {
@@ -341,8 +351,7 @@ export default function LoginPage({
 
   // Los cuatro, no solo dos: con solo Microsoft configurado el divisor
   // desaparecia y los botones sociales igual se pintaban debajo.
-  const hasSocial =
-    githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
+  const hasSocial = githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
   const showDivider = hasSocial
 
   return (
@@ -351,9 +360,7 @@ export default function LoginPage({
         <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
           Entra
         </h1>
-        <p className='text-body-md text-muted-foreground'>
-          Para ver tus noches y lo que pusieron.
-        </p>
+        <p className='text-body-md text-muted-foreground'>Para ver tus noches y lo que pusieron.</p>
       </div>
 
       <form onSubmit={onSubmit} className={`mt-8 space-y-8`}>
@@ -522,8 +529,8 @@ export default function LoginPage({
               Recuperar la contraseña
             </DialogTitle>
             <DialogDescription className='text-body-md text-muted-foreground'>
-              Escribe tu correo. Si hay una cuenta con ese correo, te llega un enlace para
-              ponerle una contraseña nueva.
+              Escribe tu correo. Si hay una cuenta con ese correo, te llega un enlace para ponerle
+              una contraseña nueva.
             </DialogDescription>
           </DialogHeader>
           <DialogPanel className='space-y-4'>

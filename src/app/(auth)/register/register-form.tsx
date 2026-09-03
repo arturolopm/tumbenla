@@ -191,7 +191,12 @@ export default function RegisterForm({
     const formData = new FormData(event.currentTarget)
     const emailRaw = formData.get('email') as string
     const emailValue = emailRaw.trim().toLowerCase()
-    const passwordValue = password
+    // Del FORMULARIO, no del estado de React. Igual que en el login: un gestor
+    // de contraseñas escribe el valor en el DOM sin disparar el onChange, y la
+    // contraseña salia vacia con los puntos a la vista. El estado se queda para
+    // la validacion en vivo mientras se escribe.
+    const passwordDelFormulario = (formData.get('password') as string | null) ?? ''
+    const passwordValue = passwordDelFormulario.length > 0 ? passwordDelFormulario : password
     const nameValue = (formData.get('name') as string).trim()
 
     const nameValidationErrors: string[] = []
