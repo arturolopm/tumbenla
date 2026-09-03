@@ -1,12 +1,21 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp'
+import { useCountdown } from '@/hooks/use-countdown'
 import { cn } from '@/lib/utils'
 import { useVerification } from './use-verification'
+
+const RESEND_COOLDOWN_SECONDS = 30
+
+const OTP_SLOT_CLASS = cn(
+  'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
+  'border-border hover:border-primary',
+  'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30'
+)
 
 interface VerifyContentProps {
   isProduction: boolean
@@ -34,25 +43,15 @@ function VerificationForm({
     handleOtpChange,
   } = useVerification({ isProduction, initialEmail })
 
-  const [countdown, setCountdown] = useState(0)
-  const [isResendDisabled, setIsResendDisabled] = useState(false)
-
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
-      return () => clearTimeout(timer)
-    }
-    if (countdown === 0 && isResendDisabled) {
-      setIsResendDisabled(false)
-    }
-  }, [countdown, isResendDisabled])
-
+  // One hook for the "pide otro en Ns" wait. `isRunning` is the only gate —
+  // the separate `isResendDisabled` flag it used to carry alongside `countdown`
+  // was always exactly `countdown > 0`.
+  const { remaining, isRunning, start } = useCountdown()
   const router = useRouter()
 
   const handleResend = () => {
     resendCode()
-    setIsResendDisabled(true)
-    setCountdown(30)
+    start(RESEND_COOLDOWN_SECONDS)
   }
 
   if (!isContextReady) {
@@ -95,66 +94,18 @@ function VerificationForm({
                 className={cn('gap-2', isInvalidOtp && 'border-destructive')}
               >
                 <InputOTPGroup className='gap-2 [&>div]:rounded-[10px]'>
-                  <InputOTPSlot
-                    index={0}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
-                  <InputOTPSlot
-                    index={1}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
-                  <InputOTPSlot
-                    index={2}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
-                  <InputOTPSlot
-                    index={3}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
-                  <InputOTPSlot
-                    index={4}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
-                  <InputOTPSlot
-                    index={5}
-                    className={cn(
-                      'h-12 w-12 rounded-[10px] border bg-card text-center font-medium text-lg shadow-sm transition-all duration-200',
-                      'border-border hover:border-primary',
-                      'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30',
-                      isInvalidOtp &&
-                        'border-destructive focus:border-destructive focus:ring-destructive/30'
-                    )}
-                  />
+                  {/* Six identical slots, one source of truth for the class. */}
+                  {[0, 1, 2, 3, 4, 5].map((index) => (
+                    <InputOTPSlot
+                      key={index}
+                      index={index}
+                      className={cn(
+                        OTP_SLOT_CLASS,
+                        isInvalidOtp &&
+                          'border-destructive focus:border-destructive focus:ring-destructive/30'
+                      )}
+                    />
+                  ))}
                 </InputOTPGroup>
               </InputOTP>
             </div>
@@ -178,16 +129,16 @@ function VerificationForm({
           <div className='text-center'>
             <p className='text-muted-foreground text-sm'>
               ¿No te llegó?{' '}
-              {countdown > 0 ? (
+              {isRunning ? (
                 <span>
                   Puedes pedir otro en{' '}
-                  <span className='font-medium text-foreground'>{countdown}s</span>
+                  <span className='font-medium text-foreground'>{remaining}s</span>
                 </span>
               ) : (
                 <button
                   className='font-medium text-primary-text underline-offset-4 transition hover:underline'
                   onClick={handleResend}
-                  disabled={isLoading || isResendDisabled}
+                  disabled={isLoading}
                 >
                   Mándalo otra vez
                 </button>
