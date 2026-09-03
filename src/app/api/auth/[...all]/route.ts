@@ -49,6 +49,28 @@ export async function POST(request: Request) {
   const response = await handlers.POST(request)
 
   if (isSignIn && email && response.status >= 400) {
+    // WHAT KIND of failure this is, before saying anything about it.
+    //
+    // The first version of this assumed any 4xx on sign-in was a credentials
+    // problem, so an INVALID_ORIGIN 403 got reported as "the password does not
+    // match" — sending whoever read it to debug the wrong thing entirely. That
+    // is the same lie the client message used to tell, reproduced in the log
+    // that exists to correct it.
+    let code = ''
+    try {
+      code = (await response.clone().json())?.code ?? ''
+    } catch {
+      // Not JSON; fall through to the account checks.
+    }
+
+    if (code && code !== 'INVALID_EMAIL_OR_PASSWORD' && code !== 'INVALID_EMAIL') {
+      console.warn(
+        `[auth:signin] FALLO — ${code} (HTTP ${response.status}). ` +
+          'No es un problema de credenciales; mira la linea [auth:error] de arriba.'
+      )
+      return response
+    }
+
     const normalised = email.trim().toLowerCase()
     const [found] = await db
       .select({ id: user.id, emailVerified: user.emailVerified })

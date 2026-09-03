@@ -39,8 +39,28 @@ const origenesPropios = (): string[] => {
     (valor): valor is string => Boolean(valor)
   )
 
+  // EN DESARROLLO, ADEMAS, EL LOOPBACK.
+  //
+  // Probar en el telefono obliga a poner NEXT_PUBLIC_APP_URL con la IP de la
+  // red, y en ese momento `localhost` deja de estar en la lista: el Mac abre la
+  // app por localhost, el chequeo de origen la rechaza, y sale un 403
+  // INVALID_ORIGIN que en pantalla se lee como "correo o contraseña
+  // incorrectos". Es exactamente la trampa que ya esta documentada en
+  // PRODUCT.md, y morderla cuesta media hora de buscar donde no es.
+  //
+  // Que esto sea SOLO de desarrollo no es un detalle: en produccion confiar en
+  // localhost le abriria la puerta a cualquier pagina servida desde la maquina
+  // de quien visita.
+  const locales = isProd
+    ? []
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://0.0.0.0:3000']
+
   return [
-    ...new Set(candidatos.map((valor) => (valor.startsWith('http') ? valor : `https://${valor}`))),
+    ...new Set(
+      [...candidatos, ...locales].map((valor) =>
+        valor.startsWith('http') ? valor : `https://${valor}`
+      )
+    ),
   ]
 }
 
