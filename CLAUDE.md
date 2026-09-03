@@ -152,10 +152,15 @@ Por que: el producto es solo de Manizales, pero el codigo lo lee cualquiera que
 entre al repo, y media libreria del stack ya esta en ingles. Un `venueId` al
 lado de un `saldoDeSitio` obliga a traducir mentalmente en cada linea.
 
-**Hay deuda de esto en el repo** (ver `PRODUCT.md`, "Deuda y hallazgos"): parte
-de `src/lib/comercio/`, varias acciones y `venues/invitations.ts` nacieron en
-español. Lo que se toque se pasa a ingles al tocarlo; no se abre un PR de puro
-renombrar.
+**Hay deuda de esto y se paga EN EL CAMINO.** Son 57 archivos y 81 exports con
+nombre en español (el inventario esta en `PRODUCT.md`, "Deuda y hallazgos"). La
+regla: **el archivo que toques para otra cosa, lo pasas a ingles en ese mismo
+PR.** No se abre un PR de puro renombrar —cruza medio arbol de importaciones y
+no hay quien lo revise— salvo que se dedique una sesion entera a eso.
+
+O sea: si vas a editar `src/lib/comercio/libro.ts` por cualquier motivo,
+aprovechas y traduces sus nombres y comentarios. Si no lo ibas a tocar, lo dejas
+quieto.
 
 ### No se escribe a mano lo que ya resuelve una libreria
 

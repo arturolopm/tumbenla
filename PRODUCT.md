@@ -409,6 +409,36 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   se promete la trazabilidad exacta. Rastrearla pedido a pedido pide amarrar
   `product_order` a `material_purchase`, y eso es un cambio de esquema.
 
+### El codigo esta a medias en español
+
+`CLAUDE.md` fija la regla: **identificadores y comentarios en ingles, español
+solo para lo que el usuario lee.** El repo todavia no cumple.
+
+**Cuanto:** 57 archivos con comentarios en español y **81 exports con nombre en
+español**. Los mas cargados:
+
+| Archivo | Exports |
+|---|---|
+| `src/lib/comercio/queries.ts` | 13 |
+| `src/lib/comercio/types.ts` | 9 |
+| `src/lib/comercio/libro.ts` | 8 |
+| `src/app/actions/carta.ts` | 7 |
+| `src/lib/comercio/dinero.ts` | 5 |
+| `src/lib/venues/invitations.ts` | 4 |
+
+Casi todo `src/lib/comercio/` y las acciones de "vender el trago" nacieron asi
+en esta tanda; `venues/invitations.ts`, `venues/claims.ts` y `config/ciudades.ts`
+son anteriores.
+
+**Como se paga: EN EL CAMINO.** El archivo que se toque para otra cosa se pasa a
+ingles en ese mismo PR. **No se abre un PR de puro renombrar** —81 exports
+cruzan medio arbol de importaciones y un diff asi no lo revisa nadie—, salvo que
+se dedique una sesion entera a eso a proposito.
+
+**Cuando muerde:** cuando entre alguien nuevo al repo, o cuando un `venueId`
+quede al lado de un `saldoDeSitio` en la misma funcion y haya que traducir
+mentalmente en cada linea. Hoy no rompe nada; solo cuesta leerlo.
+
 ### Sin verificar
 
 - **`revalidatePath` nunca se probo contra un deploy real.** Es el primero del
