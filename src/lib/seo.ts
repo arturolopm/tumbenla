@@ -198,7 +198,7 @@ export const getOrganizationSchema = () => {
     name: siteConfig.name,
     description: siteConfig.description,
     url: siteConfig.url,
-    logo: getAbsoluteUrl('/logo.png'),
+    logo: getAbsoluteUrl('/tumbenla-logo-512.png'),
     sameAs: ['https://github.com/revokslab', 'https://x.com/codedoesdev'],
   }
 }
@@ -268,7 +268,7 @@ export const getArticleSchema = (options: {
       name: siteConfig.name,
       logo: {
         '@type': 'ImageObject',
-        url: getAbsoluteUrl('/image.png'),
+        url: getAbsoluteUrl('/tumbenla-logo-512.png'),
       },
     },
     mainEntityOfPage: {
@@ -315,7 +315,7 @@ export const getBlogSchema = (options: {
       name: siteConfig.name,
       logo: {
         '@type': 'ImageObject',
-        url: getAbsoluteUrl('/image.png'),
+        url: getAbsoluteUrl('/tumbenla-logo-512.png'),
       },
     },
   }
