@@ -38,25 +38,33 @@ function ResetPasswordContent() {
     // Through the SDK, not a hardcoded `fetch('/api/auth/reset-password')`: the
     // sibling forgot-password call was pinned to a path Better-Auth 1.4 removed
     // and silently 404'd for weeks. Letting the client own the path is the fix.
-    const { error } = await client.resetPassword({ newPassword: password, token })
+    try {
+      const { error } = await client.resetPassword({ newPassword: password, token })
 
-    if (error) {
-      const invalid =
-        error.code?.includes('INVALID_TOKEN') || error.message?.toLowerCase().includes('token')
+      if (error) {
+        const invalid =
+          error.code?.includes('INVALID_TOKEN') || error.message?.toLowerCase().includes('token')
+        setStatusMessage({
+          type: 'error',
+          text: invalid
+            ? ENLACE_ROTO
+            : mensajeDeError(error, 'No se pudo cambiar la contraseña. Intenta de nuevo.'),
+        })
+        setIsSubmitting(false)
+        return
+      }
+
+      setStatusMessage({ type: 'success', text: '¡Listo! Te llevamos a entrar con la nueva…' })
+      setTimeout(() => {
+        router.push('/login?resetSuccess=true')
+      }, 1500)
+    } catch (error) {
       setStatusMessage({
         type: 'error',
-        text: invalid
-          ? ENLACE_ROTO
-          : mensajeDeError(error, 'No se pudo cambiar la contraseña. Intenta de nuevo.'),
+        text: mensajeDeError(error, 'No se pudo cambiar la contraseña. Intenta de nuevo.'),
       })
       setIsSubmitting(false)
-      return
     }
-
-    setStatusMessage({ type: 'success', text: '¡Listo! Te llevamos a entrar con la nueva…' })
-    setTimeout(() => {
-      router.push('/login?resetSuccess=true')
-    }, 1500)
   }
 
   return (

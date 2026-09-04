@@ -1,6 +1,6 @@
 'use server'
 
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { z } from 'zod'
 
@@ -279,7 +279,12 @@ export const confirmarPago = async (
           paidAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(productOrder.id, orderId))
+        // The status condition is the concurrency gate. Two webhooks can both
+        // read `pending` before either transaction writes; without it the
+        // second one updates the already-paid row and emits a second batch of
+        // redemption codes. Keeping this condition in the SQL statement means
+        // exactly one transaction wins after PostgreSQL resolves the row lock.
+        .where(and(eq(productOrder.id, orderId), eq(productOrder.status, 'pending')))
         .returning({ id: productOrder.id })
 
       // Otro proceso la marco entre el select y el update.

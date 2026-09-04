@@ -68,22 +68,31 @@ export function ForgotPasswordDialog({
   const onSubmit = handleSubmit(async ({ email }) => {
     setSent(false)
 
-    const { error } = await client.requestPasswordReset({
-      email,
-      redirectTo: `${getBaseUrl()}/reset-password`,
-    })
+    try {
+      const { error } = await client.requestPasswordReset({
+        email,
+        redirectTo: `${getBaseUrl()}/reset-password`,
+      })
 
-    if (error) {
+      if (error) {
+        setError('root', {
+          message: mensajeDeError(
+            error,
+            'No se pudo pedir el cambio de contraseña. Intenta de nuevo.'
+          ),
+        })
+        return
+      }
+
+      setSent(true)
+    } catch (error) {
       setError('root', {
         message: mensajeDeError(
           error,
           'No se pudo pedir el cambio de contraseña. Intenta de nuevo.'
         ),
       })
-      return
     }
-
-    setSent(true)
   })
 
   const handleOpenChange = (next: boolean) => {
