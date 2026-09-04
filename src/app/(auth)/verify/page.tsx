@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation'
 
 import { auth } from '@/lib/auth/auth'
 import { DESTINO_POR_DEFECTO, esDestinoValido } from '@/lib/auth/redirect'
-import { isProd } from '@/lib/constants'
 import { generateMetadata } from '@/lib/seo'
 import { VerifyContent } from './verify-content'
 
@@ -30,5 +29,5 @@ export default async function VerifyPage({
     redirect(destino && esDestinoValido(destino) ? destino : DESTINO_POR_DEFECTO)
   }
 
-  return <VerifyContent isProduction={isProd} initialEmail={session?.user.email ?? null} />
+  return <VerifyContent initialEmail={session?.user.email ?? null} />
 }

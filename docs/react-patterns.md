@@ -105,10 +105,7 @@ un hook con recuento de referencias, no copiado en cada uno.
 
 ## Deuda conocida
 
-- `src/app/(auth)/verify/use-verification.ts` todavía encadena tres efectos y un
-  `setTimeout` de auto-envío. Funciona; reescribirlo pide probar el flujo de OTP
-  en un navegador de verdad.
 - El pase de contenedor/presentación en `panel/`, `admin/` y `fiestas/` está a
-  medias: `aportes-panel`, `noches-panel`, `cola-de-fotos` y
-  `galeria-de-la-noche` siguen siendo una función con un `.map` largo y handlers
-  en línea. No están rotos —usan el patrón de datos correcto— pero se leen mal.
+  medias: `aportes-panel` y `galeria-de-la-noche` siguen siendo una función con
+  un `.map` largo y handlers en línea. No están rotos —usan el patrón de datos
+  correcto— pero se leen mal.

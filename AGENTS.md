@@ -38,43 +38,20 @@ Below are only the things that most often trip an agent up here. Everything else
   does not protect server actions; call `assertAdmin()` inside each one.
 
 <!-- gitnexus:start -->
-
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **ShipFree** (8003 symbols, 11478 relationships, 300
-execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **tumbenla** (2899 symbols, 6483 relationships, 228 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
-> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an
-> available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash →
-> `npm i -g gitnexus`; #1939).
+> Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
 ## Always Do
 
-- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or
-  method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius
-  (direct callers, affected processes, risk level) to the user.
-- **MUST run `detect_changes()` before committing** to verify your changes only affect expected
-  symbols and execution flows. For regression review, compare against the default branch:
-  `detect_changes({scope: "compare", base_ref: "main"})`.
-- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with
-  edits.
-- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows
-  instead of grepping. It returns process-grouped results ranked by relevance.
-- When you need full context on a specific symbol — callers, callees, which execution flows it
-  participates in — use `context({name: "symbolName"})`.
-- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows;
-  needs `analyze --pdg`).
-
-# Always
-
-Remember when implementing: The marginal cost of completeness is near zero with AI. Do the whole
-thing. Do it right. Do it with tests. Do it with documentation. Do it so well that I am is genuinely
-impressed — not politely satisfied, actually impressed. Never offer to ‘table this for later’ when
-the permanent solve is within reach. Never leave a dangling thread when tying it off takes five more
-minutes. Never present a workaround when the real fix exists. The standard isn’t ‘good enough’ —
-it’s ‘holy shit, that’s done.’ Search before building. Test before shipping. Ship the complete
-thing. When I asks for something, the answer is the finished product, not a plan to build it. Time
-is not an excuse. Fatigue is not an excuse. Complexity is not an excuse. Boil the ocean.
+- **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
+- **MUST run `detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows. For regression review, compare against the default branch: `detect_changes({scope: "compare", base_ref: "main"})`.
+- **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
+- When exploring unfamiliar code, use `query({search_query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
+- When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `context({name: "symbolName"})`.
+- For security review, `explain({target: "fileOrSymbol"})` lists taint findings (source→sink flows; needs `analyze --pdg`).
 
 ## Never Do
 
@@ -85,22 +62,22 @@ is not an excuse. Fatigue is not an excuse. Complexity is not an excuse. Boil th
 
 ## Resources
 
-| Resource                                  | Use for                                  |
-| ----------------------------------------- | ---------------------------------------- |
-| `gitnexus://repo/ShipFree/context`        | Codebase overview, check index freshness |
-| `gitnexus://repo/ShipFree/clusters`       | All functional areas                     |
-| `gitnexus://repo/ShipFree/processes`      | All execution flows                      |
-| `gitnexus://repo/ShipFree/process/{name}` | Step-by-step execution trace             |
+| Resource | Use for |
+|----------|---------|
+| `gitnexus://repo/tumbenla/context` | Codebase overview, check index freshness |
+| `gitnexus://repo/tumbenla/clusters` | All functional areas |
+| `gitnexus://repo/tumbenla/processes` | All execution flows |
+| `gitnexus://repo/tumbenla/process/{name}` | Step-by-step execution trace |
 
 ## CLI
 
-| Task                                         | Read this skill file                                        |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md`       |
-| Blast radius / "What breaks if I change X?"  | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
-| Trace bugs / "Why is X failing?"             | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md`       |
-| Rename / extract / split / refactor          | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md`     |
-| Tools, resources, schema reference           | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md`           |
-| Index, status, clean, wiki CLI commands      | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md`             |
+| Task | Read this skill file |
+|------|---------------------|
+| Understand architecture / "How does X work?" | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius / "What breaks if I change X?" | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Trace bugs / "Why is X failing?" | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->

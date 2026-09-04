@@ -18,17 +18,10 @@ const OTP_SLOT_CLASS = cn(
 )
 
 interface VerifyContentProps {
-  isProduction: boolean
   initialEmail?: string | null
 }
 
-function VerificationForm({
-  isProduction,
-  initialEmail = null,
-}: {
-  isProduction: boolean
-  initialEmail?: string | null
-}) {
+function VerificationForm({ initialEmail = null }: { initialEmail?: string | null }) {
   const {
     otp,
     email,
@@ -41,7 +34,7 @@ function VerificationForm({
     verifyCode,
     resendCode,
     handleOtpChange,
-  } = useVerification({ isProduction, initialEmail })
+  } = useVerification({ initialEmail })
 
   // One hook for the "pide otro en Ns" wait. `isRunning` is the only gate —
   // the separate `isResendDisabled` flag it used to carry alongside `countdown`
@@ -49,9 +42,8 @@ function VerificationForm({
   const { remaining, isRunning, start } = useCountdown()
   const router = useRouter()
 
-  const handleResend = () => {
-    resendCode()
-    start(RESEND_COOLDOWN_SECONDS)
+  const handleResend = async () => {
+    if (await resendCode()) start(RESEND_COOLDOWN_SECONDS)
   }
 
   if (!isContextReady) {
@@ -137,7 +129,7 @@ function VerificationForm({
               ) : (
                 <button
                   className='font-medium text-primary-text underline-offset-4 transition hover:underline'
-                  onClick={handleResend}
+                  onClick={() => void handleResend()}
                   disabled={isLoading}
                 >
                   Mándalo otra vez
@@ -178,10 +170,10 @@ function VerificationFormFallback() {
   )
 }
 
-export function VerifyContent({ isProduction, initialEmail = null }: VerifyContentProps) {
+export function VerifyContent({ initialEmail = null }: VerifyContentProps) {
   return (
     <Suspense fallback={<VerificationFormFallback />}>
-      <VerificationForm isProduction={isProduction} initialEmail={initialEmail} />
+      <VerificationForm initialEmail={initialEmail} />
     </Suspense>
   )
 }
