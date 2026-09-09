@@ -31,6 +31,9 @@ export const KIND_LABEL: Record<KindDeProducto, string> = {
   otro: 'Otro',
 }
 
+export const PORCENTAJE_MINIMO_DE_RECONSTRUCCION = 40
+export const PORCENTAJE_DESTACADO_DE_RECONSTRUCCION = 50
+
 export const ESTADOS_DE_PRODUCTO = [
   'draft',
   'pending_review',
@@ -44,15 +47,15 @@ export type EstadoDeProducto = (typeof ESTADOS_DE_PRODUCTO)[number]
  *  lo unico que quiere saber quien esta esperando. */
 export const ESTADO_LABEL: Record<EstadoDeProducto, string> = {
   draft: 'Borrador',
-  pending_review: 'En revisión',
+  pending_review: 'Listo para publicar',
   published: 'A la venta',
   paused: 'Pausado',
   archived: 'Archivado',
 }
 
 export const ESTADO_AYUDA: Record<EstadoDeProducto, string> = {
-  draft: 'Todavía no lo hemos visto. Mándalo a revisión cuando esté listo.',
-  pending_review: 'Lo estamos mirando. Te avisamos apenas salga.',
+  draft: 'Guárdalo mientras lo terminas. Publícalo cuando esté listo.',
+  pending_review: 'Este producto viene del flujo anterior. Puedes publicarlo cuando esté listo.',
   published: 'Se puede pedir. Aparece en tu página.',
   paused: 'No se puede pedir. Los pedidos que ya existen siguen valiendo.',
   archived: 'Fuera de la carta. Los pedidos que ya existen siguen valiendo.',

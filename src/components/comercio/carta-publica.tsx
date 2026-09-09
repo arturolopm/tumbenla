@@ -1,6 +1,10 @@
 import Link from 'next/link'
 
-import { KIND_LABEL, type KindDeProducto } from '@/lib/comercio/types'
+import {
+  KIND_LABEL,
+  PORCENTAJE_DESTACADO_DE_RECONSTRUCCION,
+  type KindDeProducto,
+} from '@/lib/comercio/types'
 import { formatCOP } from '@/lib/utils/format'
 
 /**
@@ -22,8 +26,10 @@ type Producto = {
   kind: KindDeProducto
   descripcion: string | null
   precio: number
+  porcentajeMaterial: number
   material: number
   sitio: number
+  imagenUrl: string | null
 }
 
 export function CartaPublica({ slug, productos }: { slug: string; productos: Producto[] }) {
@@ -41,6 +47,15 @@ export function CartaPublica({ slug, productos }: { slug: string; productos: Pro
               href={`/sitios/${slug}/pedir/${p.slug}`}
               className='group flex h-full flex-col rounded-xl border-2 border-border bg-card p-5 transition-colors hover:border-party'
             >
+              {p.imagenUrl ? (
+                <div className='mb-4 aspect-video overflow-hidden rounded-lg border border-border bg-muted'>
+                  <img
+                    src={p.imagenUrl}
+                    alt={p.nombre}
+                    className='size-full object-cover transition-transform duration-200 group-hover:scale-105'
+                  />
+                </div>
+              ) : null}
               <div className='flex items-start justify-between gap-3'>
                 <div>
                   <h3 className='font-display font-bold text-lg'>{p.nombre}</h3>
@@ -57,14 +72,19 @@ export function CartaPublica({ slug, productos }: { slug: string; productos: Pro
                 <p className='mt-3 text-body-md text-muted-foreground'>{p.descripcion}</p>
               ) : null}
 
+              {p.porcentajeMaterial >= PORCENTAJE_DESTACADO_DE_RECONSTRUCCION ? (
+                <span className='mt-3 self-start rounded-full border border-lime/50 bg-lime/5 px-2 py-0.5 font-display text-label-sm text-lime uppercase'>
+                  Destacado para reconstruir
+                </span>
+              ) : null}
+
               <p className='mt-4 border-border border-t pt-3 text-body-md'>
-                <span className='text-lime'>{formatCOP(p.material)} se van en material</span>
-                {p.sitio > 0 ? (
-                  <span className='text-muted-foreground'>
-                    {' · '}
-                    {formatCOP(p.sitio)} se quedan acá
-                  </span>
-                ) : null}
+                <span className='text-lime'>
+                  {p.porcentajeMaterial}% ({formatCOP(p.material)}) van para reconstruir.
+                </span>{' '}
+                <span className='text-muted-foreground'>
+                  {100 - p.porcentajeMaterial}% ({formatCOP(p.sitio)}) se quedan acá.
+                </span>
               </p>
 
               <span className='mt-4 font-display text-label-lg text-primary-text uppercase group-hover:underline'>

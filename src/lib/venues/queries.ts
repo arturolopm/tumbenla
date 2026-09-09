@@ -1,9 +1,10 @@
 import 'server-only'
 
-import { and, asc, desc, eq, sql, sum } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, sql, sum } from 'drizzle-orm'
 
 import { db } from '@/database'
 import { venue, venueContribution, venueProduct } from '@/database/schema'
+import { PORCENTAJE_MINIMO_DE_RECONSTRUCCION } from '@/lib/comercio/types'
 import { toVenue, toVenueAdminRow, toVenueChip, toVenueSummary } from './mappers'
 import type { Venue, VenueAdminRow, VenueSummary } from './types'
 
@@ -60,7 +61,12 @@ export const listPublishedVenues = async (): Promise<VenueSummary[]> => {
       pct: venueProduct.donationPercentage,
     })
     .from(venueProduct)
-    .where(eq(venueProduct.status, 'published'))
+    .where(
+      and(
+        eq(venueProduct.status, 'published'),
+        gte(venueProduct.donationPercentage, String(PORCENTAJE_MINIMO_DE_RECONSTRUCCION))
+      )
+    )
     // DISTINCT ON y no tres min(): el precio y el porcentaje tienen que salir
     // de LA MISMA fila. Con `min(precio)` y `min(pct)` por separado se mezclan
     // dos productos distintos — con (10.000, 90%) y (20.000, 20%) daria

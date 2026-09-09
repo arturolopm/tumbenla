@@ -66,7 +66,7 @@ export const saveMyVenueAction = async (
 
   if (!actual) return { status: 'error', error: 'Ese sitio ya no existe.' }
 
-  const acceso = await assertVenueAccess(actual.id)
+  const acceso = await assertVenueAccess(actual.id, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   const parsed = venueInputSchema.safeParse({

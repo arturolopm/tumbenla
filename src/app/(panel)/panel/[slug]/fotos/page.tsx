@@ -18,7 +18,7 @@ export default async function FotosPage({ params }: { params: Promise<{ slug: st
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/fotos`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/fotos`, ['owner'])
 
   const [pendientes, reportes] = await Promise.all([
     listPendingPhotosForVenue(sitio.id),

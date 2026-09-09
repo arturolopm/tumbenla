@@ -13,9 +13,8 @@ export default async function ProductosPage() {
           Productos
         </h1>
         <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
-          Nada se puede pedir hasta que se publique aquí. Lo que se aprueba es el reparto: es una
-          afirmación pública sobre plata que sale bajo nuestro dominio, así que la revisa alguien
-          antes de que exista.
+          Consulta la carta activa de los sitios. Cada dueño publica sus productos directamente;
+          todos deben destinar al menos 40% para reconstruir.
         </p>
       </header>
 

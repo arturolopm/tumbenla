@@ -3,7 +3,6 @@ import type { Metadata } from 'next'
 import { AdminShell } from '@/components/admin/admin-shell'
 import { requireAdmin } from '@/lib/auth/admin'
 import { countOpenApplications } from '@/lib/venues/claims'
-import { contarProductosPorRevisar } from '@/lib/comercio/queries'
 
 /**
  * El gate del panel. requireAdmin() no devuelve para un no-admin: redirige a
@@ -21,17 +20,13 @@ export const metadata: Metadata = {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAdmin()
-  const [solicitudesAbiertas, productosPorRevisar] = await Promise.all([
-    countOpenApplications(),
-    contarProductosPorRevisar(),
-  ])
+  const solicitudesAbiertas = await countOpenApplications()
 
   return (
     <AdminShell
       email={session.user.email}
       pendientes={{
         '/admin/solicitudes': solicitudesAbiertas,
-        '/admin/productos': productosPorRevisar,
       }}
     >
       {children}

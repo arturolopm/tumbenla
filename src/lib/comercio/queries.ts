@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
 import {
@@ -14,12 +14,13 @@ import {
   venueSettlement,
 } from '@/database/schema'
 import { repartir } from '@/lib/comercio/dinero'
-import type {
-  EstadoDeOrden,
-  EstadoDeProducto,
-  EstadoDeRedencion,
-  KindDeProducto,
-  PayMethod,
+import {
+  PORCENTAJE_MINIMO_DE_RECONSTRUCCION,
+  type EstadoDeOrden,
+  type EstadoDeProducto,
+  type EstadoDeRedencion,
+  type KindDeProducto,
+  type PayMethod,
 } from '@/lib/comercio/types'
 
 /**
@@ -107,16 +108,21 @@ export const listarCartaDelPanel = async (venueId: string): Promise<ProductoDTO[
 }
 
 /**
- * Lo que ve el publico. El filtro de `published` va DENTRO de la consulta, no
- * en un `.filter()` despues: un borrador no puede llegar al cliente ni siquiera
- * para ser descartado alli.
+ * Lo que ve el publico. Estado y porcentaje se filtran DENTRO de la consulta:
+ * a browser never receives a draft or a product below the published minimum.
  */
 export const listarCartaPublica = async (venueId: string): Promise<ProductoDTO[]> => {
   const filas = await db
     .select(COLUMNAS)
     .from(venueProduct)
-    .where(and(eq(venueProduct.venueId, venueId), eq(venueProduct.status, 'published')))
-    .orderBy(asc(venueProduct.price))
+    .where(
+      and(
+        eq(venueProduct.venueId, venueId),
+        eq(venueProduct.status, 'published'),
+        gte(venueProduct.donationPercentage, String(PORCENTAJE_MINIMO_DE_RECONSTRUCCION))
+      )
+    )
+    .orderBy(desc(venueProduct.donationPercentage), asc(venueProduct.price))
 
   return filas.map(aProductoDTO)
 }
@@ -145,7 +151,8 @@ export const productoPublicoPorSlug = async (
       and(
         eq(venue.slug, venueSlug),
         eq(venueProduct.slug, productoSlug),
-        eq(venueProduct.status, 'published')
+        eq(venueProduct.status, 'published'),
+        gte(venueProduct.donationPercentage, String(PORCENTAJE_MINIMO_DE_RECONSTRUCCION))
       )
     )
     .limit(1)
@@ -163,8 +170,7 @@ export type ProductoEnRevision = ProductoDTO & {
   venueNombre: string
 }
 
-/** La cola del operador: lo que espera revision primero, y lo mas viejo arriba
- *  (`asc`), que es el orden en que se atiende una cola de verdad. */
+/** The operator's read-only view of active menu products. */
 export const listarProductosParaRevisar = async (): Promise<ProductoEnRevision[]> => {
   const filas = await db
     .select({
@@ -175,11 +181,8 @@ export const listarProductosParaRevisar = async (): Promise<ProductoEnRevision[]
     })
     .from(venueProduct)
     .innerJoin(venue, eq(venueProduct.venueId, venue.id))
-    .where(sql`${venueProduct.status} in ('pending_review', 'published', 'paused')`)
-    .orderBy(
-      sql`case when ${venueProduct.status} = 'pending_review' then 0 else 1 end`,
-      asc(venueProduct.createdAt)
-    )
+    .where(sql`${venueProduct.status} in ('published', 'paused')`)
+    .orderBy(desc(venueProduct.createdAt))
 
   return filas.map((f) => ({
     ...aProductoDTO(f),
@@ -187,14 +190,6 @@ export const listarProductosParaRevisar = async (): Promise<ProductoEnRevision[]
     venueSlug: f.venueSlug,
     venueNombre: f.venueNombre,
   }))
-}
-
-export const contarProductosPorRevisar = async (): Promise<number> => {
-  const filas = await db
-    .select({ id: venueProduct.id })
-    .from(venueProduct)
-    .where(eq(venueProduct.status, 'pending_review'))
-  return filas.length
 }
 
 /** Cuantas ordenes tiene cada producto de un sitio, para la carta del panel. */

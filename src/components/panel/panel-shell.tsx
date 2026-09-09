@@ -38,34 +38,20 @@ import { AccountMenu } from '@/components/layout/account-menu'
 
 type Venue = { slug: string; name: string; role: string }
 
-/**
- * Scanning goes FIRST on purpose, and it is not an aesthetic preference: it is
- * the only screen opened with people waiting at the counter. Everything else is
- * done sitting down and during the day.
- *
- * "Resumen" is OWNER-ONLY, and not because it hides a secret: for staff the
- * summary redirects to the scanner, so leaving the item there paints a link
- * that bounces — which reads as something broken rather than as something
- * deliberate.
- *
- * (These entries used to be listed twice, so the menu painted six extra rows
- * and React complained about duplicate keys, because SidebarMenuItem is indexed
- * by href.)
- */
+/** Staff only scan; owners and platform operators manage the venue. */
 const items = (slug: string, isOwner: boolean) => [
   { href: `/panel/${slug}/escanear`, label: 'Escanear' },
-  ...(isOwner ? [{ href: `/panel/${slug}`, label: 'Resumen', exact: true }] : []),
-  { href: `/panel/${slug}/carta`, label: 'La carta' },
-  // The account is the OWNER's alone, same as the team: a waiter hands over
-  // drinks, and showing them the balance shows them what the bar bills. Gated
-  // here and not only on the page, because a link leading to a 404 is worse
-  // than no link: it looks like something broke.
-  ...(isOwner ? [{ href: `/panel/${slug}/cuenta`, label: 'La cuenta' }] : []),
-  { href: `/panel/${slug}/noches`, label: 'Las noches' },
-  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
-  { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
-  { href: `/panel/${slug}/sitio`, label: 'El sitio' },
-  ...(isOwner ? [{ href: `/panel/${slug}/equipo`, label: 'Equipo' }] : []),
+  ...(isOwner
+    ? [
+        { href: `/panel/${slug}`, label: 'Resumen', exact: true },
+        { href: `/panel/${slug}/carta`, label: 'La carta' },
+        { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
+        { href: `/panel/${slug}/noches`, label: 'Las noches' },
+        { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
+        { href: `/panel/${slug}/sitio`, label: 'El sitio' },
+        { href: `/panel/${slug}/equipo`, label: 'Equipo' },
+      ]
+    : []),
 ]
 
 export function PanelShell({

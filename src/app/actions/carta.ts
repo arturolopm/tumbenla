@@ -6,26 +6,20 @@ import { z } from 'zod'
 
 import { db } from '@/database'
 import { productOrder, venue, venueProduct } from '@/database/schema'
-import { assertAdmin } from '@/lib/auth/admin'
 import { assertVenueAccess } from '@/lib/auth/venue-access'
-import { KINDS_DE_PRODUCTO } from '@/lib/comercio/types'
+import { env } from '@/config/env'
+import { KINDS_DE_PRODUCTO, PORCENTAJE_MINIMO_DE_RECONSTRUCCION } from '@/lib/comercio/types'
+import { storage } from '@/lib/storage'
+import { createId } from '@/lib/utils/id'
 
 /**
  * La carta de un sitio: los productos que vende con su reparto.
  *
- * EL SITIO PROPONE, UN OPERADOR PUBLICA (`PRODUCT.md`, decision 31). El
- * porcentaje que se va en material es una afirmacion publica sobre plata hecha
- * bajo nuestro dominio; si un sitio pudiera publicar solo, estariamos firmando
- * con nuestro nombre un numero que nadie miro. Es la misma forma de la decision
- * 19, donde el sitio reporta y nosotros verificamos.
+ * Venue owners decide when a complete product is public. The server owns the
+ * non-negotiable minimum, rather than trusting the form's range control.
  *
- * EL SITIO NO PUEDE TOCAR status, reviewedAt, reviewNote NI publishedAt. No
- * porque el formulario no los pinte, sino porque estas acciones no los leen del
- * formulario en ningun caso.
- *
- * Y el venueId con el que se comprueba el permiso SIEMPRE sale de la fila leida
- * de la base, nunca del formulario. Un id de otro sitio en un input escondido
- * no da acceso a ese otro sitio: da un rechazo.
+ * The venueId used for permissions always comes from the saved product when
+ * editing, never from a hidden form field.
  */
 
 export type CartaState =
@@ -34,6 +28,30 @@ export type CartaState =
   | { status: 'success'; mensaje: string; id?: string }
 
 const RESERVADOS = new Set(['nuevo', 'editar', 'pedir', 'admin', 'panel', 'api'])
+const PRODUCT_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'] as const
+const PRODUCT_IMAGE_EXTENSIONS: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+}
+const MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024
+
+const httpsImageUrl = z
+  .string()
+  .trim()
+  .url('Pega una URL válida.')
+  .refine(
+    (value) => {
+      try {
+        return new URL(value).protocol === 'https:'
+      } catch {
+        return false
+      }
+    },
+    'La imagen debe usar https.'
+  )
+  .max(600)
 
 const productoSchema = z.object({
   venueId: z.string().min(1),
@@ -49,9 +67,79 @@ const productoSchema = z.object({
     .max(100_000_000),
   donationPercentage: z.coerce
     .number()
-    .min(0, 'El porcentaje va de 0 a 100')
+    .min(
+      PORCENTAJE_MINIMO_DE_RECONSTRUCCION,
+      `El mínimo es ${PORCENTAJE_MINIMO_DE_RECONSTRUCCION}% para reconstruir`
+    )
     .max(100, 'El porcentaje va de 0 a 100'),
+  imageUrl: httpsImageUrl.optional(),
+  storageKey: z.string().trim().max(600).optional(),
 })
+
+type ProductImageSignature =
+  | { ok: true; uploadUrl: string; key: string; publicUrl: string }
+  | { ok: false; error: string }
+
+/** Signs a single menu image for direct browser-to-R2 upload. */
+export const firmarImagenProductoAction = async (
+  venueId: string,
+  contentType: string,
+  bytes: number
+): Promise<ProductImageSignature> => {
+  const access = await assertVenueAccess(venueId, ['owner'])
+  if (!access.ok) return { ok: false, error: access.error }
+
+  if (!PRODUCT_IMAGE_TYPES.includes(contentType as (typeof PRODUCT_IMAGE_TYPES)[number])) {
+    return { ok: false, error: 'Solo imágenes JPG, PNG, WEBP o AVIF.' }
+  }
+
+  if (!Number.isFinite(bytes) || bytes <= 0 || bytes > MAX_PRODUCT_IMAGE_BYTES) {
+    return { ok: false, error: 'La imagen puede pesar máximo 5 MB.' }
+  }
+
+  const publicBaseUrl = env.R2_BUCKET_URL?.replace(/\/$/, '')
+  if (!publicBaseUrl) {
+    return { ok: false, error: 'El almacenamiento de imágenes no está configurado.' }
+  }
+
+  const key = `carta/${venueId}/${createId('vpi')}.${PRODUCT_IMAGE_EXTENSIONS[contentType]}`
+
+  try {
+    const uploadUrl = await storage.getSignedUploadUrl({ key, expiresIn: 600 })
+    return { ok: true, uploadUrl, key, publicUrl: `${publicBaseUrl}/${key}` }
+  } catch {
+    return { ok: false, error: 'No se pudo preparar la subida de la imagen.' }
+  }
+}
+
+const imageForProduct = ({
+  imageUrl,
+  storageKey,
+  venueId,
+  current,
+}: {
+  imageUrl?: string
+  storageKey?: string
+  venueId: string
+  current: { imageUrl: string | null; storageKey: string | null } | null
+}) => {
+  if (!imageUrl) return { imageUrl: null, storageKey: null }
+
+  if (!storageKey) {
+    if (current?.imageUrl === imageUrl) {
+      return { imageUrl: current.imageUrl, storageKey: current.storageKey }
+    }
+    return { imageUrl, storageKey: null }
+  }
+
+  const publicBaseUrl = env.R2_BUCKET_URL?.replace(/\/$/, '')
+  const expectedUrl = publicBaseUrl ? `${publicBaseUrl}/${storageKey}` : null
+  if (!storageKey.startsWith(`carta/${venueId}/`) || imageUrl !== expectedUrl) {
+    return null
+  }
+
+  return { imageUrl, storageKey }
+}
 
 /** Un slug estable a partir del nombre. Sin tildes, que nunca llegan a una URL
  *  (decision 25). */
@@ -73,6 +161,7 @@ const contextoDeProducto = async (id: string) => {
       venueId: venueProduct.venueId,
       slug: venue.slug,
       status: venueProduct.status,
+      donationPercentage: venueProduct.donationPercentage,
       nombre: venueProduct.name,
     })
     .from(venueProduct)
@@ -124,6 +213,8 @@ export const guardarProductoAction = async (
     description: formData.get('description') || undefined,
     price: formData.get('price'),
     donationPercentage: formData.get('donationPercentage'),
+    imageUrl: formData.get('imageUrl') || undefined,
+    storageKey: formData.get('storageKey') || undefined,
   })
 
   if (!parsed.success) {
@@ -139,9 +230,8 @@ export const guardarProductoAction = async (
 
   // El sitio contra el que se comprueba el permiso sale de la BASE. Al editar,
   // de la fila del producto; al crear, de la fila del sitio.
-  const venueId = editando
-    ? ((await contextoDeProducto(idExistente))?.venueId ?? null)
-    : parsed.data.venueId
+  const productoExistente = editando ? await contextoDeProducto(idExistente) : null
+  const venueId = editando ? productoExistente?.venueId ?? null : parsed.data.venueId
 
   if (!venueId) return { status: 'error', error: 'Ese producto ya no existe.' }
 
@@ -153,8 +243,31 @@ export const guardarProductoAction = async (
 
   if (!sitio) return { status: 'error', error: 'Ese sitio ya no existe.' }
 
-  const acceso = await assertVenueAccess(sitio.id)
+  const acceso = await assertVenueAccess(sitio.id, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
+
+  const currentImage = editando
+    ? ((
+        await db
+          .select({ imageUrl: venueProduct.imageUrl, storageKey: venueProduct.storageKey })
+          .from(venueProduct)
+          .where(eq(venueProduct.id, idExistente))
+          .limit(1)
+      )[0] ?? null)
+    : null
+  const image = imageForProduct({
+    imageUrl: parsed.data.imageUrl,
+    storageKey: parsed.data.storageKey,
+    venueId: sitio.id,
+    current: currentImage,
+  })
+  if (!image) {
+    return {
+      status: 'error',
+      error: 'Revisa la imagen.',
+      fieldErrors: { imageUrl: ['Esa imagen no corresponde a este sitio.'] },
+    }
+  }
 
   const datos = {
     name: parsed.data.name,
@@ -162,6 +275,7 @@ export const guardarProductoAction = async (
     description: parsed.data.description ?? null,
     price: parsed.data.price.toFixed(2),
     donationPercentage: parsed.data.donationPercentage.toFixed(2),
+    ...image,
   }
 
   try {
@@ -172,13 +286,6 @@ export const guardarProductoAction = async (
         .set({
           ...datos,
           slug,
-          // Cambiar un producto lo devuelve a revision. El reparto es lo que
-          // respaldamos: si se pudiera editar despues de aprobado, aprobar no
-          // querria decir nada (decision 30).
-          status: 'pending_review',
-          reviewedAt: null,
-          reviewNote: null,
-          publishedAt: null,
           updatedAt: new Date(),
         })
         .where(eq(venueProduct.id, idExistente))
@@ -186,7 +293,12 @@ export const guardarProductoAction = async (
       revalidarCarta(sitio.slug)
       return {
         status: 'success',
-        mensaje: 'Guardado. Vuelve a revisión antes de salir a la carta.',
+        mensaje:
+          productoExistente?.status === 'published'
+            ? 'Guardado. Los cambios ya se ven en la carta.'
+            : productoExistente?.status === 'paused'
+              ? 'Guardado. Sigue pausado hasta que decidas volver a venderlo.'
+              : 'Guardado como borrador. Publícalo cuando esté listo.',
         id: idExistente,
       }
     }
@@ -198,7 +310,6 @@ export const guardarProductoAction = async (
         ...datos,
         venueId: sitio.id,
         slug,
-        // status se queda en su default 'draft'. No se lee del formulario.
       })
       .returning({ id: venueProduct.id })
 
@@ -210,42 +321,58 @@ export const guardarProductoAction = async (
 }
 
 /**
- * El sitio lo manda a revision. No lo publica: eso es de la plataforma.
+ * Kept under its old export name so existing client bundles do not break while
+ * the retired review flow is rolled out. It now publishes directly for owners.
  */
 export const mandarARevisionAction = async (id: string): Promise<CartaState> => {
   const contexto = await contextoDeProducto(id)
   if (!contexto) return { status: 'error', error: 'Ese producto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   if (contexto.status === 'published') {
     return { status: 'error', error: 'Ese producto ya está publicado.' }
   }
+  if (contexto.status === 'archived') {
+    return { status: 'error', error: 'Un producto archivado no se puede publicar.' }
+  }
+  if (Number(contexto.donationPercentage) < PORCENTAJE_MINIMO_DE_RECONSTRUCCION) {
+    return {
+      status: 'error',
+      error: `El mínimo para publicar es ${PORCENTAJE_MINIMO_DE_RECONSTRUCCION}% para reconstruir.`,
+    }
+  }
 
   try {
     await db
       .update(venueProduct)
-      .set({ status: 'pending_review', updatedAt: new Date() })
+      .set({
+        status: 'published',
+        reviewedByUserId: null,
+        reviewedAt: null,
+        reviewNote: null,
+        publishedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(venueProduct.id, id))
   } catch {
-    return { status: 'error', error: 'No se pudo mandar a revisión.' }
+    return { status: 'error', error: 'No se pudo publicar el producto.' }
   }
 
   revalidarCarta(contexto.slug)
-  return { status: 'success', mensaje: 'Mandado a revisión. Te avisamos.' }
+  return { status: 'success', mensaje: 'Publicado. Ya se puede pedir.' }
 }
 
 /**
- * Pausar y reactivar SI son del sitio: es dejar de vender algo que ya se
- * aprobo, no cambiar lo que se afirma. Reactivar no vuelve a pedir revision
- * porque el reparto es el mismo que ya se aprobo.
+ * Owners can pause or resume their own published products. Resuming repeats the
+ * minimum check so a legacy paused product cannot bypass it.
  */
 export const pausarProductoAction = async (id: string, pausar: boolean): Promise<CartaState> => {
   const contexto = await contextoDeProducto(id)
   if (!contexto) return { status: 'error', error: 'Ese producto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   if (pausar && contexto.status !== 'published') {
@@ -253,6 +380,12 @@ export const pausarProductoAction = async (id: string, pausar: boolean): Promise
   }
   if (!pausar && contexto.status !== 'paused') {
     return { status: 'error', error: 'Ese producto no está pausado.' }
+  }
+  if (!pausar && Number(contexto.donationPercentage) < PORCENTAJE_MINIMO_DE_RECONSTRUCCION) {
+    return {
+      status: 'error',
+      error: `El mínimo para volver a vender es ${PORCENTAJE_MINIMO_DE_RECONSTRUCCION}% para reconstruir.`,
+    }
   }
 
   try {
@@ -282,7 +415,7 @@ export const archivarProductoAction = async (id: string): Promise<CartaState> =>
   const contexto = await contextoDeProducto(id)
   if (!contexto) return { status: 'error', error: 'Ese producto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {
@@ -298,52 +431,15 @@ export const archivarProductoAction = async (id: string): Promise<CartaState> =>
   return { status: 'success', mensaje: 'Archivado. Ya no sale en la carta.' }
 }
 
-// -------------------------------------------------------- revision (plataforma)
-
-/**
- * Publicar o rechazar. Solo la plataforma, y es lo unico que pone un producto
- * a la venta.
- */
-export const revisarProductoAction = async (
-  id: string,
-  decision: 'published' | 'rejected',
-  nota?: string
-): Promise<CartaState> => {
-  const admin = await assertAdmin()
-  if (!admin.ok) return { status: 'error', error: admin.error }
-
-  const contexto = await contextoDeProducto(id)
-  if (!contexto) return { status: 'error', error: 'Ese producto ya no existe.' }
-
-  try {
-    await db
-      .update(venueProduct)
-      .set({
-        // Un rechazo vuelve a borrador, no a un estado muerto: el sitio corrige
-        // y lo vuelve a mandar. Con la nota puesta, que es lo que le dice que
-        // corregir.
-        status: decision === 'published' ? 'published' : 'draft',
-        reviewedByUserId: admin.userId,
-        reviewedAt: new Date(),
-        reviewNote: nota?.trim() || null,
-        publishedAt: decision === 'published' ? new Date() : null,
-        updatedAt: new Date(),
-      })
-      .where(eq(venueProduct.id, id))
-  } catch {
-    return { status: 'error', error: 'No se pudo revisar el producto.' }
-  }
-
-  revalidarCarta(contexto.slug)
-  return {
-    status: 'success',
-    mensaje: decision === 'published' ? 'Publicado. Ya se puede pedir.' : 'Devuelto al sitio.',
-  }
-}
-
 /** Cuantas ordenes tiene un producto. Para no dejar archivar a ciegas algo que
  *  la gente esta pidiendo. */
 export const contarOrdenesDeProducto = async (productId: string): Promise<number> => {
+  const context = await contextoDeProducto(productId)
+  if (!context) return 0
+
+  const access = await assertVenueAccess(context.venueId, ['owner'])
+  if (!access.ok) return 0
+
   const filas = await db
     .select({ id: productOrder.id })
     .from(productOrder)

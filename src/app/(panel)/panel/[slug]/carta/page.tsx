@@ -11,7 +11,7 @@ export default async function CartaPage({ params }: { params: Promise<{ slug: st
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/carta`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/carta`, ['owner'])
 
   const [productos, ordenes] = await Promise.all([
     listarCartaDelPanel(sitio.id),
@@ -25,9 +25,9 @@ export default async function CartaPage({ params }: { params: Promise<{ slug: st
           La carta
         </h1>
         <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
-          Lo que vendes con una parte que se va en material. Puede ser un cóctel que te inventes o
-          algo que ya tengas: una cerveza, un combo, una botella. Tú pones el precio y cuánto se va
-          en material; nosotros lo revisamos antes de que se pueda pedir.
+          Lo que vendes con una parte que va para reconstruir. Puede ser un cóctel que te inventes
+          o algo que ya tengas: una cerveza, un combo, una botella. Tú pones el precio y cómo se
+          reparte; nosotros lo revisamos antes de que se pueda pedir.
         </p>
       </header>
 

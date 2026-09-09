@@ -46,32 +46,55 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Panel de admin: sitios, estados, selector de pin, geocoding | Construido |
 | `/quiero-poner` con correo pre-redactado | **Retirado** (decision 36) |
 | Seccion "Le entro" con las dos entradas | Construido |
-| `/mi-historia`: resumen, estimado, galeria | Construido |
+| `/mi-historia`: resumen de pedidos pagados, galeria | Construido |
 | Esquema de fiestas: `party_night`, `party_photo`, `photo_claim` | Construido |
 | Reclamar fotos, punta a punta | Construido |
 | Entrar y salir, y volver a donde estabas | Construido |
 | Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
 | Alta de sitio: solicitud corta verificada por DM | Construido |
 | Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
-| Aportes del sitio: reporte, recibo y verificacion | **El auto-reporte se retiro** (decision 34); la cola de verificacion queda |
+| Liquidación del sitio y transparencia | Construido. El libro la calcula y operación la confirma en Cuentas; no hay auto-reporte. |
 | Alta en 4 campos, sin cuenta por delante | Por construir (decisiones 35 y 36) |
 | Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
-| Gate de ciudad (Manizales si, resto no) | **A medias** |
+| Gate de ciudad (Manizales si, resto no) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
 | **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido, probado en local. **Falta la pasarela de verdad** (hoy corre con una de mentira) y probarlo en preview |
+| Harness local por roles: plataforma, dueño, personal y rumbero | Definido en `docs/validation-harness.md`; falta automatizar el recorrido en navegador |
 
 ---
+
+### Gate de ciudad implementado (2026-09-05)
+
+`src/components/sitios/city-gate.tsx` envuelve `/sitios`: Manizales o ciudad
+sin reconocer muestran el contenido; una ciudad conocida en camino muestra el
+aviso, las ciudades en camino y el enlace a la activa mas cercana. La prioridad
+es `?ciudad=` → eleccion manual en localStorage → cookie de `proxy.ts`. Un override
+vacio o desconocido abre el contenido y persiste como sin detectar; borrar
+`tumbenla:ciudad` de localStorage permite volver a la deteccion por IP.
+El almacenamiento bloqueado o la cookie malformada no impiden abrir el contenido.
+
+La suscripcion cliente a la URL queda dentro de `Suspense`; la pagina conserva
+`revalidate = 300` y no lee cabeceras ni searchParams en el servidor. El HTML
+inicial/fallback muestra el contenido hasta resolver la ciudad en el cliente.
+Pruebas sin dependencias: `bun scripts/test-city-gate.ts`; TypeScript y Biome
+focalizado pasan. `bun run build` completo pasó con PostgreSQL local y confirma
+`/sitios` como ruta estática/ISR a 300 s. Recorrido de navegador local verificado:
+Pereira muestra el gate y CTA; Manizales muestra el explorador; el CTA conserva
+`vista=mapa` y cambia a Manizales. Falta validar en preview la geolocalización
+por IP y la cookie `tumbenla-geo` que `proxy.ts` escribe con las cabeceras de
+Vercel.
 
 ## Los tres actores
 
 | Actor | Como se decide | Donde vive | Que puede |
 |---|---|---|---|
-| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios, aprobar cada producto, liquidar saldos, moderar cualquier foto de la red, comprar material |
+| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios, consultar la carta, liquidar saldos, moderar cualquier foto de la red, comprar material |
 | **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | armar la carta y **escanear** cada entrega, noches y fotos, aprobar lo que sube la gente. Solo el dueno maneja el equipo y ve la cuenta |
 | **Rumbero** | cualquier sesion | publico + `/mi-historia` | reclamar sus fotos, subir las suyas, reportar una en la que sale |
 
-Nadie publica su propio sitio y nadie aprueba su propio producto. Esas dos son
-de la plataforma y son lo unico que respalda lo que el mapa afirma.
+Nadie publica su propio sitio. Esa verificacion es de la plataforma y es lo que
+respalda lo que el mapa afirma. Un sitio ya aprobado publica directamente sus
+productos, siempre que cada uno destine al menos 40% para reconstruir.
 
 ---
 
@@ -240,10 +263,14 @@ Estan aca para no volver a discutirlas cada dos semanas.
     plata se copian al comprar. Si el sitio cambia el precio o el reparto
     manana, la orden vieja conserva lo que la persona vio. Un reparto que se
     puede reescribir despues del hecho no es una promesa, es un adorno.
-31. **Un operador aprueba cada producto antes de que se venda.** El sitio lo
-    crea en borrador; nadie puede pedirlo hasta que se publica. El porcentaje es
-    una afirmacion publica sobre plata hecha bajo nuestro dominio, asi que pasa
-    por el mismo filtro que un aporte (decision 19).
+31. **La plataforma aprueba el sitio, no cada producto.** El dueno guarda sus
+    productos en borrador y los publica directamente cuando estan listos. La
+    regla que no se negocia es **minimo 40% para reconstruir**: la valida el
+    servidor y la base antes de que un producto pueda quedar publicado. Desde
+    50%, el producto aparece primero y destacado en la carta publica; si el
+    sitio puede, dejar 100% para reconstruir recibe la mayor visibilidad. Esto
+    conserva la verificacion que importa —quien es el bar— sin volver la carta
+    una cola de operacion.
 32. **Sin reclamar, caduca a los 45 dias y se va en material; se devuelve a
     quien lo pida.** El sitio no cobra lo que no entrego. El apartado para pedir
     la devolucion existe y esta a la vista, pero cuesta escribir un correo: es a
@@ -401,15 +428,6 @@ se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
 
 ### Ahora
 
-- [ ] **Gate de ciudad.** `src/config/ciudades.ts` y la cookie de `proxy.ts` ya
-      existen; falta el componente que decide que mostrar en `/sitios`.
-      Manizales o sin detectar → el explorador. Otra ciudad conocida → "aun no
-      estamos en X" + ciudades en camino + CTA a la activa mas cercana.
-      **Tiene que fallar hacia el lado bueno:** si la deteccion falla, se muestra
-      el contenido, nunca un muro.
-- [ ] **Override `?ciudad=`.** Es a la vez el cambio manual y la unica forma de
-      probar las ramas en local: las cabeceras `x-vercel-ip-*` no existen fuera
-      de Vercel.
 - [ ] **"Arrancamos en Manizales"** cerca del CTA del inicio, para que el panel
       de "aun no estamos aqui" no sea una sorpresa despues del clic.
 
@@ -422,8 +440,8 @@ se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
       falla en el navegador con un error que no menciona CORS por ninguna parte.
       Hasta entonces, firmar una subida responde "El almacenamiento de fotos no
       esta configurado" y el resto del sitio sigue funcionando.
-- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed, y
-      ahora ademas es el destino al que un operador amarra un aporte verificado.
+- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed; falta
+      la operación para registrar las compras reales de reconstrucción.
 - [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
       que tiene fotos por revisar o un reporte de privacidad abierto: hay que
       entrar al panel a mirar.
@@ -432,15 +450,12 @@ se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
 
 ### Despues
 
-- [ ] Estimado real por recibos de mesa, en vez de promedio por noche.
 - [ ] Perfil publico opcional (las fotos con `showPublicly = true`).
 - [ ] Segunda ciudad. Ver "el filtro de ciudad es de cliente" mas abajo: ese es
       el trabajo que se destapa al abrirla.
 
 ### Algun dia
 
-- [ ] Verificacion automatica de cuanto entrego cada sitio. Hoy se verifica el
-      compromiso, no cada peso, y el sitio lo dice explicitamente.
 - [ ] Extracto `.pmtiles` de Colombia en R2 si los terminos de CARTO incomodan.
 
 ---
@@ -462,6 +477,20 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 
 ### Lo que queda abierto de "vender el trago"
 
+- **El personal puede administrar la carta.** Probado localmente con
+  `mesero@prueba.local`: `/panel/bar-la-nona/carta` muestra agregar, pausar,
+  editar y archivar. `CartaPage` y las acciones de `src/app/actions/carta.ts`
+  llaman `requireVenueAccess` / `assertVenueAccess` sin restringir a `owner`.
+  Contradice el rol que necesita la experiencia simple: el personal solo entrega
+  en `/escanear`; precio y reparto son decisión del dueño. Muerde durante una
+  barra llena, cuando quien debe escanear ve y puede cambiar la oferta.
+- **La portada todavía cuenta el modelo retirado.** `src/components/layout/le-entro.tsx:59`
+  y `src/app/(publico)/como-funciona/page.tsx:182` ofrecen porcentaje de la noche
+  o plata fija por trago; `src/app/(publico)/page.tsx:34` sigue diciendo "parte de
+  lo que te tomas". Contradicen las decisiones 1, 34, 35 y 36: el único camino
+  es un producto con reparto declarado y la puerta de alta es
+  `/registrar-sitio`. Muerde en la primera visita de un dueño o rumbero: promete
+  un producto que ya no existe antes de que puedan llegar al flujo correcto.
 - **La pasarela es de mentira.** `src/lib/comercio/pasarela.ts` da los pagos por
   buenos sin salir a ninguna parte. `obtenerPasarela()` revienta si NODE_ENV es
   production y no hay una real, asi que no se puede desplegar por accidente,
@@ -967,9 +996,11 @@ base desde ahi.
    No publicar magnitud ni damnificados sin fuente oficial (SGC o UNGRD).
 5. **Terminos del proveedor de tiles.** Los basemaps gratuitos de CARTO apuntan a
    uso de bajo volumen. La salida esta descrita arriba.
-6. **El estimado de aporte puede leerse como un recibo.** Hoy el copy lo aclara y
-   avisa cuando esta incompleto. Cualquier rediseno de `/mi-historia` tiene que
-   conservar eso; es la diferencia entre un estimado y una mentira.
+6. **El aporte exacto no es una factura individual.** `/mi-historia` suma la
+   parte congelada de cada pedido pagado, por eso la cifra es exacta. Aun asi no
+   podemos atribuir una compra concreta de reconstrucción a un trago: las
+   liquidaciones se gastan en bloque. La transparencia debe conservar esa
+   distinción.
 7. **Intermediacion de pagos.** Al cobrar en la app recaudamos plata que en
    parte es del sitio, y al cobrar en la barra el sitio recauda plata que en
    parte es nuestra. Son dos figuras distintas: en la primera somos custodios de

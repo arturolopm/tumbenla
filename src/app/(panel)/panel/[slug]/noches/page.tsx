@@ -11,7 +11,7 @@ export default async function NochesPage({ params }: { params: Promise<{ slug: s
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/noches`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/noches`, ['owner'])
   const noches = await listNightsForPanel(sitio.id)
 
   return (

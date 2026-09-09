@@ -40,17 +40,17 @@ const ESTADO_TEXTO: Record<string, string> = {
 export function MisPedidos({ pedidos }: { pedidos: Pedido[] }) {
   if (pedidos.length === 0) return null
 
-  const totalMaterial = pedidos
-    .filter((p) => p.estado !== 'refunded' && p.estado !== 'cancelled')
+  const totalParaReconstruir = pedidos
+    .filter((p) => p.estado === 'paid')
     .reduce((n, p) => n + p.material, 0)
 
   return (
     <section className='mx-auto mt-10 max-w-5xl'>
       <div className='flex flex-wrap items-baseline justify-between gap-2'>
         <h2 className='font-display font-extrabold text-headline-md uppercase'>Lo que pediste</h2>
-        {totalMaterial > 0 ? (
+        {totalParaReconstruir > 0 ? (
           <p className='text-body-md text-muted-foreground'>
-            <span className='text-lime'>{formatCOP(totalMaterial)}</span> en material
+            <span className='text-lime'>{formatCOP(totalParaReconstruir)}</span> para reconstruir
           </p>
         ) : null}
       </div>
@@ -85,13 +85,10 @@ export function MisPedidos({ pedidos }: { pedidos: Pedido[] }) {
         })}
       </ul>
 
-      {/* Lo que se puede afirmar HOY y nada mas. La plata de un pedido entra al
-          fondo de material del sitio, pero todavia no se rastrea hasta la
-          factura exacta que la gasto: el aporte se liquida en bloque, no pedido
-          por pedido. Decirlo asi es la diferencia entre un dato y una promesa
-          que no podemos cumplir (decision 5). */}
+      {/* El aporte se liquida en bloque: podemos afirmar el total de pedidos
+          pagados, pero no asignar todavia una factura concreta a cada trago. */}
       <p className='mt-4 max-w-prose text-body-md text-muted-foreground'>
-        Esa plata entra a lo que el sitio pone en material.{' '}
+        Esa plata va para reconstruir.{' '}
         <Link href='/transparencia' className='text-primary-text hover:underline'>
           En transparencia
         </Link>{' '}

@@ -1,5 +1,13 @@
 # HyperFrames Composition Project
 
+## Codex entry point
+
+Read the root `AGENTS.md` and `docs/agent-workflows.md` (Media) from the repository root.
+Slash-prefixed names below mean skills to locate in the current session catalog and read;
+they are not shell commands. No Claude or brag plugin is required. The existing brief supplies
+the task context; its old private brag paths and router bypass are historical, not prerequisites.
+Keep the CLI pins and creative decisions unchanged unless the task explicitly includes them.
+
 ## Skills — USE THESE FIRST
 
 **Always invoke the relevant skill before writing or modifying compositions.** Skills encode framework-specific patterns (e.g., `window.__timelines` registration, `data-*` attribute semantics, shader-compatible CSS rules) that are NOT in generic web docs. Skipping them produces broken compositions.

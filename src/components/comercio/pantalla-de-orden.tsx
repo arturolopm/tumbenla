@@ -133,12 +133,29 @@ export function PantallaDeOrden({
       </header>
 
       {todasEntregadas ? (
-        <div className='rounded-xl border-2 border-lime bg-lime/10 p-5 text-center'>
-          <p className='font-display font-black text-2xl uppercase text-lime'>Listo</p>
-          <p className='mt-1 text-body-md'>
-            {orden.cantidad > 1 ? 'Te los entregaron.' : 'Te lo entregaron.'} Salud.
-          </p>
-        </div>
+        <>
+          <div className='rounded-xl border-2 border-lime bg-lime/10 p-5 text-center'>
+            <p className='font-display font-black text-2xl uppercase text-lime'>Confirmado</p>
+            <p className='mt-1 text-body-md'>
+              El mesero preparará y te entregará {orden.cantidad > 1 ? 'tus pedidos' : 'tu pedido'}.
+            </p>
+          </div>
+
+          <div className='grid gap-3 sm:grid-cols-2'>
+            <Link
+              href={`/sitios/${orden.venueSlug}`}
+              className='rounded-xl bg-primary px-5 py-3 text-center font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
+            >
+              Pedir otra cosa
+            </Link>
+            <Link
+              href='/mi-historia'
+              className='rounded-xl border border-border px-5 py-3 text-center font-display text-label-lg uppercase transition-colors hover:border-party'
+            >
+              Ver mis pedidos
+            </Link>
+          </div>
+        </>
       ) : (
         <div
           className={cn(
@@ -194,7 +211,14 @@ export function PantallaDeOrden({
               </div>
 
               {entregada ? (
-                <p className='mt-3 font-display font-bold text-lg uppercase text-lime'>Entregado</p>
+                <>
+                  <p className='mt-3 font-display font-bold text-lg uppercase text-lime'>
+                    Pedido confirmado
+                  </p>
+                  <p className='mt-1 text-muted-foreground text-sm'>
+                    Disfruta, baila y celebra. Con este trago ayudas a reconstruir.
+                  </p>
+                </>
               ) : (
                 <>
                   {/* El codigo tecleable no es un adorno: es el respaldo cuando

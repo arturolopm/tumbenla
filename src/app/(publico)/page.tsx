@@ -30,8 +30,8 @@ const PASOS = [
     offset: '',
   },
   {
-    titulo: 'Apoya Aliados',
-    body: 'Consume en los bares y discotecas de la red. Parte de lo que te tomas se convierte en material de construcción.',
+    titulo: 'Pide el trago',
+    body: 'Escoge un producto de la carta. Antes de pedirlo ves el precio y el reparto en pesos: cuánto va a material y cuánto se queda en el sitio.',
     Icon: HandshakeIcon,
     card: 'bg-party text-party-foreground',
     halo: 'bg-background/10',
@@ -84,8 +84,9 @@ export default async function HomePage() {
           </h1>
 
           <p className="mt-8 max-w-2xl text-pretty rounded-xl bg-background/80 p-6 text-body-lg shadow-2xl backdrop-blur-md">
-            Bares y discotecas que ponen una parte de sus ventas en material de construcción.
-            Mira cuáles son, dónde quedan, y en qué se fue la plata.
+            Un trago de la carta, con su precio y su reparto en pesos: cuánto va a material y
+            cuánto se queda en el sitio. Escoge dónde pedirlo y mira las facturas del material
+            que compramos.
           </p>
 
           <div className="mt-12 flex flex-col gap-6 sm:flex-row">

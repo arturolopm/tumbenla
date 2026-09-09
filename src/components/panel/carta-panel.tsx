@@ -1,21 +1,24 @@
 'use client'
 
-import { PauseIcon, PlayIcon, PencilIcon, ArchiveIcon, SendIcon } from 'lucide-react'
+import { ArchiveIcon, ImagePlusIcon, PauseIcon, PencilIcon, PlayIcon, SendIcon, XIcon } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useActionState, useEffect, useMemo, useState, useTransition } from 'react'
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 
 import {
   type CartaState,
   archivarProductoAction,
+  firmarImagenProductoAction,
   guardarProductoAction,
   mandarARevisionAction,
   pausarProductoAction,
 } from '@/app/actions/carta'
 import { toastManager } from '@/components/ui/toast'
-import { repartir, textoDelReparto } from '@/lib/comercio/dinero'
+import { repartir } from '@/lib/comercio/dinero'
 import {
   ESTADO_AYUDA,
   ESTADO_LABEL,
+  PORCENTAJE_DESTACADO_DE_RECONSTRUCCION,
+  PORCENTAJE_MINIMO_DE_RECONSTRUCCION,
   type EstadoDeProducto,
   KINDS_DE_PRODUCTO,
   KIND_LABEL,
@@ -34,6 +37,7 @@ type Producto = {
   porcentajeMaterial: number
   material: number
   sitio: number
+  imagenUrl: string | null
   estado: EstadoDeProducto
   notaDeRevision: string | null
   creadoEn: string
@@ -123,17 +127,26 @@ export function CartaPanel({
           {productos.map((p) => (
             <li key={p.id} className='rounded-xl border border-border bg-card p-5'>
               <div className='flex flex-wrap items-start justify-between gap-3'>
-                <div>
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <h3 className='font-display font-bold text-lg'>{p.nombre}</h3>
-                    <span className='rounded-full border border-border px-2 py-0.5 text-label-sm uppercase'>
-                      {KIND_LABEL[p.kind]}
-                    </span>
-                    <EstadoPill estado={p.estado} />
+                <div className='flex min-w-0 items-start gap-3'>
+                  {p.imagenUrl ? (
+                    <img
+                      src={p.imagenUrl}
+                      alt=''
+                      className='size-14 shrink-0 rounded-lg border border-border object-cover'
+                    />
+                  ) : null}
+                  <div>
+                    <div className='flex flex-wrap items-center gap-2'>
+                      <h3 className='font-display font-bold text-lg'>{p.nombre}</h3>
+                      <span className='rounded-full border border-border px-2 py-0.5 text-label-sm uppercase'>
+                        {KIND_LABEL[p.kind]}
+                      </span>
+                      <EstadoPill estado={p.estado} />
+                    </div>
+                    <p className='mt-1 text-body-md text-muted-foreground'>
+                      {ESTADO_AYUDA[p.estado]}
+                    </p>
                   </div>
-                  <p className='mt-1 text-body-md text-muted-foreground'>
-                    {ESTADO_AYUDA[p.estado]}
-                  </p>
                 </div>
                 <p className='font-display font-black text-2xl'>{formatCOP(p.precio)}</p>
               </div>
@@ -143,18 +156,13 @@ export function CartaPanel({
               ) : null}
 
               <p className='mt-3 text-body-md'>
-                <span className='text-lime'>{formatCOP(p.material)} se van en material.</span>{' '}
+                <span className='text-lime'>
+                  {p.porcentajeMaterial}% ({formatCOP(p.material)}) van para reconstruir.
+                </span>{' '}
                 <span className='text-muted-foreground'>
-                  {p.sitio > 0 ? `${formatCOP(p.sitio)} se quedan en el sitio.` : null}
+                  {100 - p.porcentajeMaterial}% ({formatCOP(p.sitio)}) se quedan en el sitio.
                 </span>
               </p>
-
-              {p.notaDeRevision ? (
-                <p className='mt-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-body-md'>
-                  <strong className='text-primary-text'>Lo que te decimos:</strong>{' '}
-                  {p.notaDeRevision}
-                </p>
-              ) : null}
 
               {(ordenesPorProducto[p.id] ?? 0) > 0 ? (
                 <p className='mt-3 text-muted-foreground text-sm'>
@@ -164,13 +172,13 @@ export function CartaPanel({
               ) : null}
 
               <div className='mt-4 flex flex-wrap gap-2'>
-                {p.estado === 'draft' ? (
+                {p.estado === 'draft' || p.estado === 'pending_review' ? (
                   <Accion
                     onClick={() => correr(() => mandarARevisionAction(p.id))}
                     disabled={pendiente}
                     icono={<SendIcon className='size-4' />}
                   >
-                    Mandar a revisión
+                    Publicar en la carta
                   </Accion>
                 ) : null}
 
@@ -214,12 +222,6 @@ export function CartaPanel({
                 </Accion>
               </div>
 
-              {p.estado === 'published' ? (
-                <p className='mt-3 text-muted-foreground text-sm'>
-                  Si lo editas vuelve a revisión: el reparto es lo que respaldamos, así que
-                  cambiarlo nos obliga a mirarlo otra vez.
-                </p>
-              ) : null}
             </li>
           ))}
         </ul>
@@ -282,20 +284,66 @@ function FormularioDeProducto({
   error: (campo: string) => string | undefined
   onCancelar: () => void
 }) {
-  // El reparto se calcula mientras se escribe. Un porcentaje es abstracto; ver
-  // los pesos moverse es lo que hace que alguien entienda lo que esta ofreciendo
-  // antes de mandarlo, y no despues de que se lo aprueben.
+  // Calculate the split as the owner types. A percentage is abstract; the moving
+  // amounts make the offer understandable before it is sent for review.
   const [precio, setPrecio] = useState(producto ? String(producto.precio) : '')
   const [porcentaje, setPorcentaje] = useState(
     producto ? String(producto.porcentajeMaterial) : '50'
   )
+  const [imagenUrl, setImagenUrl] = useState(producto?.imagenUrl ?? '')
+  const [storageKey, setStorageKey] = useState('')
+  const [subiendoImagen, setSubiendoImagen] = useState(false)
+  const imageInput = useRef<HTMLInputElement>(null)
 
   const vistaPrevia = useMemo(() => {
     const p = Number(precio)
     const pct = Number(porcentaje)
-    if (!Number.isFinite(p) || p <= 0 || !Number.isFinite(pct) || pct < 0 || pct > 100) return null
-    return { texto: textoDelReparto(p, pct), ...repartir(p, pct) }
+    if (
+      !Number.isFinite(p) ||
+      p <= 0 ||
+      !Number.isFinite(pct) ||
+      pct < PORCENTAJE_MINIMO_DE_RECONSTRUCCION ||
+      pct > 100
+    ) {
+      return null
+    }
+    return { percentage: pct, ...repartir(p, pct) }
   }, [precio, porcentaje])
+
+  const subirImagen = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const [file] = Array.from(event.target.files ?? [])
+    if (!file) return
+
+    setSubiendoImagen(true)
+    try {
+      const firma = await firmarImagenProductoAction(venueId, file.type, file.size)
+      if (!firma.ok) {
+        toastManager.add({ title: 'No se pudo subir', description: firma.error, type: 'error' })
+        return
+      }
+
+      const response = await fetch(firma.uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: { 'Content-Type': file.type },
+      }).catch(() => null)
+      if (!response?.ok) {
+        toastManager.add({
+          title: 'No se pudo subir',
+          description: 'Revisa la conexión o la configuración CORS del almacenamiento.',
+          type: 'error',
+        })
+        return
+      }
+
+      setImagenUrl(firma.publicUrl)
+      setStorageKey(firma.key)
+      toastManager.add({ title: 'Imagen lista. Guarda el producto para usarla.', type: 'success' })
+    } finally {
+      setSubiendoImagen(false)
+      if (imageInput.current) imageInput.current.value = ''
+    }
+  }
 
   return (
     <form
@@ -355,33 +403,122 @@ function FormularioDeProducto({
 
       <Campo
         id='donationPercentage'
-        etiqueta='Cuánto se va en material'
+        etiqueta='Qué parte del precio va para reconstruir'
         error={error('donationPercentage')}
-        ayuda='De 0 a 100. Lo que no se va en material se queda en tu caja.'
+        ayuda={`Mínimo ${PORCENTAJE_MINIMO_DE_RECONSTRUCCION}%. Desde ${PORCENTAJE_DESTACADO_DE_RECONSTRUCCION}%, este producto aparece primero y como destacado en la carta pública. Si puedes, deja 100% para reconstruir.`}
         obligatorio
       >
         <div className='flex items-center gap-3'>
           <input
-            id='donationPercentage'
-            name='donationPercentage'
+            id='donationPercentageSlider'
             type='range'
-            min={0}
+            min={PORCENTAJE_MINIMO_DE_RECONSTRUCCION}
             max={100}
-            step={5}
+            step={1}
             value={porcentaje}
             onChange={(e) => setPorcentaje(e.target.value)}
             className='flex-1 accent-lime'
+            aria-label='Ajustar el porcentaje que va para reconstruir'
           />
-          <span className='w-16 text-right font-display font-bold text-lg'>{porcentaje}%</span>
+          <div className='flex w-24 items-center rounded-lg border border-border bg-background px-2 focus-within:border-primary'>
+            <input
+              id='donationPercentage'
+              name='donationPercentage'
+              type='number'
+              min={PORCENTAJE_MINIMO_DE_RECONSTRUCCION}
+              max={100}
+              step={0.01}
+              inputMode='decimal'
+              value={porcentaje}
+              onChange={(event) => setPorcentaje(event.target.value)}
+              className='w-full bg-transparent text-right font-display font-bold text-lg focus:outline-none'
+              aria-label='Porcentaje que va para reconstruir'
+            />
+            <span aria-hidden='true' className='text-muted-foreground'>
+              %
+            </span>
+          </div>
         </div>
       </Campo>
 
       {vistaPrevia ? (
         <div className='rounded-lg border border-lime bg-lime/5 p-4'>
-          <p className='font-display text-label-lg uppercase'>Así se va a ver</p>
-          <p className='mt-1 text-body-md'>{vistaPrevia.texto}</p>
+          <p className='font-display text-label-lg uppercase'>Esto verá quien pide el trago</p>
+          <p className='mt-1 text-body-md'>
+            <span className='text-lime'>
+              {vistaPrevia.percentage}% ({formatCOP(vistaPrevia.material)}) van para reconstruir.
+            </span>{' '}
+            <span className='text-muted-foreground'>
+              {100 - vistaPrevia.percentage}% ({formatCOP(vistaPrevia.sitio)}) se quedan en tu
+              establecimiento.
+            </span>
+          </p>
         </div>
       ) : null}
+
+      <div className='flex flex-col gap-2'>
+        <label htmlFor='imageUrl' className='font-display text-label-lg uppercase'>
+          Foto del producto <span className='text-muted-foreground'>(opcional)</span>
+        </label>
+        <p className='text-muted-foreground text-sm'>
+          Pega una URL segura o sube una foto. Se verá en la carta pública cuando el producto se
+          publique.
+        </p>
+        <div className='flex flex-col gap-3 sm:flex-row'>
+          <input
+            id='imageUrl'
+            name='imageUrl'
+            type='url'
+            value={imagenUrl}
+            onChange={(event) => {
+              setImagenUrl(event.target.value)
+              setStorageKey('')
+            }}
+            placeholder='https://ejemplo.com/mi-trago.jpg'
+            className={input}
+          />
+          <label className='inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 font-display text-label-lg uppercase transition-colors hover:border-primary'>
+            <ImagePlusIcon className='size-4' />
+            {subiendoImagen ? 'Subiendo…' : 'Subir foto'}
+            <input
+              ref={imageInput}
+              type='file'
+              accept='image/jpeg,image/png,image/webp,image/avif'
+              disabled={subiendoImagen}
+              onChange={subirImagen}
+              className='sr-only'
+            />
+          </label>
+        </div>
+        <input type='hidden' name='storageKey' value={storageKey} />
+        <p className='text-muted-foreground text-sm'>JPG, PNG, WEBP o AVIF, máximo 5 MB.</p>
+
+        {imagenUrl ? (
+          <div className='relative mt-1 aspect-video max-w-sm overflow-hidden rounded-lg border border-border bg-muted'>
+            <img
+              src={imagenUrl}
+              alt='Vista previa de la foto del producto'
+              className='size-full object-cover'
+            />
+            <button
+              type='button'
+              onClick={() => {
+                setImagenUrl('')
+                setStorageKey('')
+              }}
+              className='absolute top-2 right-2 inline-flex items-center gap-1 rounded-lg bg-background/90 px-2 py-1 text-label-sm uppercase transition-colors hover:text-destructive-foreground'
+            >
+              <XIcon className='size-3.5' />
+              Quitar
+            </button>
+          </div>
+        ) : null}
+        {error('imageUrl') ? (
+          <span role='alert' className='text-body-sm text-destructive-foreground'>
+            {error('imageUrl')}
+          </span>
+        ) : null}
+      </div>
 
       <Campo
         id='description'
@@ -417,7 +554,7 @@ function FormularioDeProducto({
       </div>
 
       <p className='text-body-md text-muted-foreground'>
-        Se guarda como borrador. No se puede pedir hasta que lo revisemos.
+        Se guarda como borrador. Publícalo cuando esté listo.
       </p>
     </form>
   )

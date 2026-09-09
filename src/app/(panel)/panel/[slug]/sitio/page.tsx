@@ -11,7 +11,7 @@ export default async function PanelSitioPage({ params }: { params: Promise<{ slu
   const cabecera = await getVenueForPanel(slug)
   if (!cabecera) notFound()
 
-  await requireVenueAccess(cabecera.id, `/panel/${slug}/sitio`)
+  await requireVenueAccess(cabecera.id, `/panel/${slug}/sitio`, ['owner'])
 
   const sitio = await getVenueById(cabecera.id)
   if (!sitio) notFound()

@@ -40,7 +40,25 @@ type Estado =
 // Un id por intento. Distingue "el mesero toco dos veces" de "dos meseros
 // escanearon el mismo codigo": el primero es un reintento y tiene que salir
 // igual de bien, el segundo es un doble cobro y tiene que fallar.
-const nuevoIntento = () => crypto.randomUUID()
+const nuevoIntento = () => {
+  const navegadorCrypto = globalThis.crypto
+  if (typeof navegadorCrypto?.randomUUID === 'function') return navegadorCrypto.randomUUID()
+
+  // Safari de iOS expone Web Crypto desde hace años, pero algunas versiones no
+  // implementan `randomUUID`. Conservamos una UUID v4 para que cada entrega
+  // siga teniendo su propia llave de idempotencia.
+  if (typeof navegadorCrypto?.getRandomValues === 'function') {
+    const bytes = navegadorCrypto.getRandomValues(new Uint8Array(16))
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  }
+
+  // Ultimo respaldo para navegadores muy antiguos: esta llave no autoriza ni
+  // identifica a nadie; solo distingue intentos de entrega.
+  return `intento-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
 
 export function Escaner({
   venueId,

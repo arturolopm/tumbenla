@@ -2,6 +2,12 @@
 
 **The guide for this repo is [`CLAUDE.md`](./CLAUDE.md). Read it.**
 
+**Codex entry point:** then read [`docs/agent-workflows.md`](./docs/agent-workflows.md).
+It defines the supported procedures for skills, department reviews, experiments, GitNexus,
+media, loops, and handoffs. Its runtime mappings take precedence over tool-specific invocation
+instructions in imported skills and generated sections below; `PRODUCT.md` still governs product
+decisions. Referenced `.claude/` files are readable procedures, not a requirement to launch Claude.
+
 This file used to be a byte-identical copy of it. Two copies of the same 11 KB document drift, and
 they did: both spent months describing a `next-intl` setup that had already been deleted from the
 codebase. So this one is a pointer now.

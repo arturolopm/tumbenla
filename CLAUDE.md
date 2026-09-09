@@ -11,6 +11,14 @@ is not an excuse. Fatigue is not an excuse. Complexity is not an excuse. Boil th
 
 # ShipFree - AI Agent Onboarding Guide
 
+## Agent runtime compatibility
+
+This is the shared repository guide, despite its historical filename. Codex and other agents
+must also read [the portable workflows](docs/agent-workflows.md) before using local agent tooling.
+That document governs runtime substitutions for imported skills and generated GitNexus guidance;
+it preserves the impact-analysis and pre-commit checks below. No Claude session, hook, or plugin
+is required. Product decisions remain in `PRODUCT.md`.
+
 ## Product roadmap
 
 `PRODUCT.md` at the repo root is the living product doc: current state, decisions already taken
@@ -39,7 +47,9 @@ queda en la raiz porque la leen los tres, no solo Producto.
 
 **Se hablan por un solo canal:** `org/crecimiento/EXPERIMENTOS.md`. Un experimento va `Propuesto`
 (Crecimiento) -> `Medible` (Datos) -> `Aprobado` (Producto) -> `En curso` -> `Cerrado`, y no se
-salta ningun estado. Si la metrica no existe, no arranca. El comando `/experimento` corre el ciclo.
+salta ningun estado. Si la metrica no existe, no arranca. El procedimiento
+[`experimento`](docs/agent-workflows.md#experiments) corre el ciclo en cualquier agente;
+`/experimento` es solo el alias de Claude.
 
 Antes de escribir cualquier copy, lee `org/crecimiento/VOZ.md`. Estan instaladas las 50 skills de
 marketing de `coreyhaines31/marketingskills`; son de un SaaS B2B con precio y plan, asi que **se

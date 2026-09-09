@@ -1,4 +1,7 @@
 import type { Metadata } from 'next'
+import { Suspense } from 'react'
+
+import { CityGate } from '@/components/sitios/city-gate'
 
 import { SitiosExplorerWithMap } from '@/components/sitios/sitios-explorer-with-map'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
@@ -18,7 +21,7 @@ export const revalidate = 300
 export default async function SitiosPage() {
   const [venues, cities] = await Promise.all([listPublishedVenues(), listVenueCities()])
 
-  return (
+  const content = (
     <div className='flex flex-col'>
       <section className='relative mx-auto flex w-full max-w-4xl flex-col items-center px-margin-mobile pt-12 pb-10 text-center lg:px-margin-desktop'>
         <div className='pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-primary/10 via-transparent to-transparent opacity-50 blur-3xl' />
@@ -57,5 +60,11 @@ export default async function SitiosPage() {
         <SitiosExplorerWithMap venues={venues} cities={cities} />
       )}
     </div>
+  )
+
+  return (
+    <Suspense fallback={content}>
+      <CityGate>{content}</CityGate>
+    </Suspense>
   )
 }

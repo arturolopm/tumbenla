@@ -248,12 +248,12 @@ const purchases = [
  */
 const PRODUCTOS: Record<string, { name: string; kind: string; price: string; pct: string }[]> = {
   'la-guarida-del-mono': [
-    { name: 'Cerveza de la casa', kind: 'cerveza', price: '8000.00', pct: '12.50' },
+    { name: 'Cerveza de la casa', kind: 'cerveza', price: '8000.00', pct: '40.00' },
     { name: 'Michelada Palogrande', kind: 'coctel', price: '14000.00', pct: '40.00' },
   ],
   'discoteca-veneno': [
     { name: 'Coctel Veneno', kind: 'coctel', price: '28000.00', pct: '50.00' },
-    { name: 'Botella entera', kind: 'botella', price: '180000.00', pct: '10.00' },
+    { name: 'Botella entera', kind: 'botella', price: '180000.00', pct: '40.00' },
   ],
   'terraza-chipre': [
     { name: 'Coctel del mirador', kind: 'coctel', price: '26000.00', pct: '60.00' },

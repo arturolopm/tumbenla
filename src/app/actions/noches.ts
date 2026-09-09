@@ -118,7 +118,7 @@ export const guardarNocheAction = async (
 
   if (!sitio) return { status: 'error', error: 'Ese sitio ya no existe.' }
 
-  const acceso = await assertVenueAccess(sitio.id)
+  const acceso = await assertVenueAccess(sitio.id, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   const id = formData.get('id')
@@ -166,7 +166,7 @@ export const publicarNocheAction = async (
   const contexto = await contextoDeNoche(nightId)
   if (!contexto) return { status: 'error', error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {
@@ -227,7 +227,7 @@ export const firmarSubidaAction = async (
   const contexto = await contextoDeNoche(nightId)
   if (!contexto) return { ok: false, error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   const esDelSitio = acceso.ok
 
   // Quien no es del sitio solo puede subir a una noche publicada. A una en
@@ -279,7 +279,7 @@ export const registrarFotoAction = async (
   const contexto = await contextoDeNoche(parsed.data.nightId)
   if (!contexto) return { status: 'error', error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   const esDelSitio = acceso.ok
 
   if (!esDelSitio && contexto.status !== 'published') {
@@ -328,7 +328,7 @@ export const moderarFotoAction = async (
   const contexto = await contextoDeFoto(photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {
@@ -367,7 +367,7 @@ export const borrarFotoAction = async (photoId: string): Promise<NocheState> => 
   const contexto = await contextoDeFoto(photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   if (contexto.storageKey) {
@@ -438,7 +438,7 @@ export const resolverReporteAction = async (reportId: string): Promise<NocheStat
   const contexto = await contextoDeFoto(reporte.photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId)
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {

@@ -31,7 +31,6 @@ const NAV = [
   { href: '/admin/sitios', label: 'Sitios' },
   { href: '/admin/solicitudes', label: 'Solicitudes' },
   { href: '/admin/productos', label: 'Productos' },
-  { href: '/admin/aportes', label: 'Aportes' },
   { href: '/admin/cuentas', label: 'Cuentas' },
 ]
 

@@ -20,7 +20,7 @@ export default async function NochePanelPage({
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/noches/${nightId}`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/noches/${nightId}`, ['owner'])
 
   // La noche tiene que ser DE ESTE SITIO. Sin el eq(venueId), poner el id de la
   // noche de otro bar en la URL abriria sus fotos desde un panel propio.

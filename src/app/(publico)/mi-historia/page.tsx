@@ -15,7 +15,7 @@ import { formatCOP, formatNumber } from '@/lib/utils/format'
 export const metadata: Metadata = {
   ...buildMetadata({
     title: 'Mi historia',
-    description: 'Tus noches, tus fotos y tu aporte estimado.',
+    description: 'Tus noches, tus fotos y lo que has puesto para reconstruir.',
     canonical: '/mi-historia',
   }),
   // Es una pagina personal. No tiene nada que hacer en un indice.
@@ -41,6 +41,9 @@ export default async function MiHistoriaPage() {
     listMyClaimedPhotos(session.user.id),
     misPedidos(session.user.id),
   ])
+  const aporteParaReconstruir = pedidos
+    .filter((pedido) => pedido.estado === 'paid')
+    .reduce((total, pedido) => total + pedido.material, 0)
 
   return (
     <div className='w-full px-margin-mobile py-section-gap lg:px-margin-desktop'>
@@ -57,7 +60,7 @@ export default async function MiHistoriaPage() {
         </h1>
 
         <p className='max-w-2xl text-pretty text-body-lg text-muted-foreground'>
-          Las noches que has salido en la red, y lo que esas noches pusieron en material.
+          Las noches que has salido en la red y lo que tus pedidos han puesto para reconstruir.
         </p>
       </header>
 
@@ -91,30 +94,14 @@ export default async function MiHistoriaPage() {
 
           <section className='mx-auto mt-4 max-w-5xl rounded-xl border-2 border-primary bg-primary/5 p-8'>
             <p className='font-display text-label-lg text-muted-foreground uppercase tracking-widest'>
-              Aporte estimado
+              Tu aporte a reconstruir
             </p>
             <p className='mt-2 font-display font-black text-5xl text-primary-text leading-none tabular-nums'>
-              {formatCOP(resumen.estimatedAmount, resumen.currency)}
+              {formatCOP(aporteParaReconstruir)}
             </p>
 
-            {/* La honestidad de esta cifra es el producto. Se dice como se
-                calcula, ahi mismo, sin obligar a nadie a buscarlo. */}
             <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
-              Es un <strong className='text-street-white'>estimado</strong>, no un recibo. Sale de
-              multiplicar cada noche que guardaste por lo que ese sitio declara poner por persona.
-              Todavía no medimos lo que consumiste tú.
-              {resumen.estimateIsPartial ? (
-                <>
-                  {' '}
-                  Además se queda corto:{' '}
-                  <strong className='text-street-white'>
-                    {resumen.nightsWithoutEstimate === 1
-                      ? '1 noche fue en un sitio'
-                      : `${resumen.nightsWithoutEstimate} noches fueron en sitios`}
-                  </strong>{' '}
-                  que todavía no declara cuánto pone por persona, así que no suma acá.
-                </>
-              ) : null}
+              Esta es la suma exacta de la parte de tus pedidos pagados que va para reconstruir.
             </p>
 
             <Link
