@@ -2,16 +2,14 @@ import { withSentryConfig } from '@sentry/nextjs'
 import type { NextConfig } from 'next'
 
 /**
- * El host de R2, sacado de la variable en tiempo de BUILD.
+ * R2's host, read from the environment at build time.
  *
- * remotePatterns no admite comodines de host, y la URL del bucket cambia entre
- * local, preview y produccion, asi que se deriva en vez de escribirse. Y como
- * se resuelve al construir, cambiar el bucket obliga a REDESPLEGAR: ponerlo en
- * el panel de Vercel y esperar no basta.
+ * remotePatterns does not allow hostname wildcards, and the bucket URL changes
+ * between local, preview, and production, so derive it instead of hardcoding it.
+ * Because it is resolved while building, changing the bucket requires a redeploy.
  *
- * Sin la variable no se agrega ningun patron y next/image rechaza las remotas,
- * que es lo correcto: mejor una imagen rota en desarrollo que un optimizador
- * abierto a cualquier host.
+ * Without the variable, no pattern is added and next/image rejects remote images.
+ * A broken development image is safer than an optimizer open to arbitrary hosts.
  */
 const r2Patterns = (() => {
   const raw = process.env.R2_BUCKET_URL
@@ -32,6 +30,9 @@ const r2Patterns = (() => {
 })()
 
 const nextConfig: NextConfig = {
+  // A package-lock outside this repository otherwise makes Next trace from the
+  // user's home directory, slowing builds and making their inputs ambiguous.
+  outputFileTracingRoot: process.cwd(),
   images: {
     remotePatterns: r2Patterns,
   },
@@ -49,8 +50,8 @@ export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  // Inherited from the boilerplate and pointing at someone else's Sentry
-  // project. Set SENTRY_ORG / SENTRY_PROJECT before enabling error reporting.
+  // Inherited from the boilerplate and pointing at someone else's Sentry project.
+  // Set SENTRY_ORG / SENTRY_PROJECT before enabling error reporting.
   org: process.env.SENTRY_ORG,
 
   project: process.env.SENTRY_PROJECT,

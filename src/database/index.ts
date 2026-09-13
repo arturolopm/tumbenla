@@ -2,7 +2,10 @@ import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
 import { env } from '@/config/env'
-import * as schema from './schema'
+import * as commerceSchema from './commerce-schema'
+import * as baseSchema from './schema'
+
+const schema = { ...baseSchema, ...commerceSchema }
 
 const databaseUrl = env.DATABASE_URL
 

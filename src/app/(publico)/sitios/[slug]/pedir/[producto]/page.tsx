@@ -47,12 +47,14 @@ export default async function PedirPage({
           kind: producto.kind,
           descripcion: producto.descripcion,
           precio: producto.precio,
+          porcentajeMaterial: producto.porcentajeMaterial,
           material: producto.material,
           sitio: producto.sitio,
         }}
         correoDeLaCuenta={sesion?.user?.email ?? ''}
         nombreDeLaCuenta={sesion?.user?.name ?? ''}
         sinSesion={!sesion}
+        initialSubmissionKey={crypto.randomUUID()}
       />
     </div>
   )

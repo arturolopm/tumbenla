@@ -4,6 +4,12 @@ import { and, asc, desc, eq, gte, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
 import {
+  allocationRun,
+  commerceOrderSnapshot,
+  commerceOrderUnit,
+  paymentAttempt,
+} from '@/database/commerce-schema'
+import {
   ledgerAccount,
   ledgerEntry,
   ledgerTransaction,
@@ -209,6 +215,7 @@ export const contarOrdenesPorProducto = async (
 
 export type RedencionDTO = {
   id: string
+  unidadId: string
   /** El codigo en claro. Es lo que va en el QR y lo que se teclea a mano. */
   codigo: string
   estado: EstadoDeRedencion
@@ -237,6 +244,8 @@ export type OrdenDTO = {
   venueSlug: string
   venueNombre: string
   redenciones: RedencionDTO[]
+  repartoFinal: boolean
+  explicacionDelReparto: string | null
 }
 
 /**
@@ -288,6 +297,33 @@ export const ordenPorToken = async (token: string): Promise<OrdenDTO | null> => 
     .where(eq(orderRedemption.orderId, fila.id))
     .orderBy(asc(orderRedemption.createdAt))
 
+  const unidades = await db
+    .select({
+      id: commerceOrderUnit.id,
+      redemptionId: commerceOrderUnit.redemptionId,
+    })
+    .from(commerceOrderSnapshot)
+    .innerJoin(commerceOrderUnit, eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id))
+    .where(eq(commerceOrderSnapshot.orderId, fila.id))
+    .orderBy(asc(commerceOrderUnit.ordinal))
+
+  const unidadPorRedencion = new Map(
+    unidades.flatMap((unidad) =>
+      unidad.redemptionId ? [[unidad.redemptionId, unidad.id] as const] : []
+    )
+  )
+
+  const [reparto] = await db
+    .select({
+      disclosure: commerceOrderSnapshot.policyDisclosure,
+      status: allocationRun.status,
+    })
+    .from(commerceOrderSnapshot)
+    .leftJoin(allocationRun, eq(allocationRun.orderSnapshotId, commerceOrderSnapshot.id))
+    .where(eq(commerceOrderSnapshot.orderId, fila.id))
+    .orderBy(desc(allocationRun.revision))
+    .limit(1)
+
   return {
     id: fila.id,
     publicToken: fila.publicToken,
@@ -311,10 +347,13 @@ export const ordenPorToken = async (token: string): Promise<OrdenDTO | null> => 
     venueNombre: fila.venueNombre,
     redenciones: redenciones.map((r) => ({
       id: r.id,
+      unidadId: unidadPorRedencion.get(r.id) ?? r.id,
       codigo: r.code,
       estado: r.status as EstadoDeRedencion,
       redimidaEn: r.redeemedAt,
     })),
+    repartoFinal: reparto?.status === 'final',
+    explicacionDelReparto: reparto?.disclosure ?? null,
   }
 }
 
@@ -328,12 +367,29 @@ export const ordenPorToken = async (token: string): Promise<OrdenDTO | null> => 
  */
 export const estadoDeOrdenPorToken = async (
   token: string
-): Promise<{ estado: EstadoDeOrden; entregadas: number; total: number } | null> => {
+): Promise<{
+  estado: EstadoDeOrden
+  estadoDelPago: string
+  entregadas: number
+  total: number
+  venceEn: Date | null
+  estadoDelReembolso: 'none' | 'reserved' | 'refunded'
+  reparto: 'pending' | 'final'
+  unidades: {
+    id: string
+    redencionId: string | null
+    estado: string
+    venceEn: Date | null
+    redimidaEn: Date | null
+  }[]
+} | null> => {
   const [fila] = await db
     .select({
       id: productOrder.id,
       status: productOrder.status,
+      payMethod: productOrder.payMethod,
       quantity: productOrder.quantity,
+      expiresAt: productOrder.expiresAt,
     })
     .from(productOrder)
     .where(eq(productOrder.publicToken, token))
@@ -348,10 +404,58 @@ export const estadoDeOrdenPorToken = async (
     .from(orderRedemption)
     .where(eq(orderRedemption.orderId, fila.id))
 
+  const unidades = await db
+    .select({
+      id: commerceOrderUnit.id,
+      redemptionId: commerceOrderUnit.redemptionId,
+      status: commerceOrderUnit.lifecycleStatus,
+      expiresAt: commerceOrderUnit.expiresAt,
+      redeemedAt: commerceOrderUnit.redeemedAt,
+    })
+    .from(commerceOrderSnapshot)
+    .innerJoin(commerceOrderUnit, eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id))
+    .where(eq(commerceOrderSnapshot.orderId, fila.id))
+    .orderBy(asc(commerceOrderUnit.ordinal))
+
+  const [payment] = await db
+    .select({ status: paymentAttempt.status })
+    .from(commerceOrderSnapshot)
+    .innerJoin(paymentAttempt, eq(paymentAttempt.orderSnapshotId, commerceOrderSnapshot.id))
+    .where(eq(commerceOrderSnapshot.orderId, fila.id))
+    .orderBy(desc(paymentAttempt.createdAt))
+    .limit(1)
+
+  const [allocation] = await db
+    .select({ status: allocationRun.status })
+    .from(commerceOrderSnapshot)
+    .innerJoin(allocationRun, eq(allocationRun.orderSnapshotId, commerceOrderSnapshot.id))
+    .where(eq(commerceOrderSnapshot.orderId, fila.id))
+    .orderBy(desc(allocationRun.revision))
+    .limit(1)
+
+  const refunded = unidades.some((unit) => unit.status === 'refunded')
+  const refundReserved = unidades.some((unit) => unit.status === 'refund_reserved')
+
   return {
     estado: fila.status as EstadoDeOrden,
-    entregadas: Number(conteo?.entregadas ?? 0),
+    estadoDelPago:
+      payment?.status ??
+      (fila.payMethod === 'bar' ? 'cash' : fila.status === 'paid' ? 'paid' : 'legacy'),
+    entregadas:
+      unidades.length > 0
+        ? unidades.filter((unit) => unit.status === 'redeemed').length
+        : Number(conteo?.entregadas ?? 0),
     total: Number(fila.quantity),
+    venceEn: fila.expiresAt,
+    estadoDelReembolso: refunded ? 'refunded' : refundReserved ? 'reserved' : 'none',
+    reparto: allocation?.status === 'final' ? 'final' : 'pending',
+    unidades: unidades.map((unit) => ({
+      id: unit.id,
+      redencionId: unit.redemptionId,
+      estado: unit.status,
+      venceEn: unit.expiresAt,
+      redimidaEn: unit.redeemedAt,
+    })),
   }
 }
 

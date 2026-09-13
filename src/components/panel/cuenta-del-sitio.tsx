@@ -33,14 +33,27 @@ type Liquidacion = {
   nota: string | null
 }
 
+type FinanzasVerificadas = {
+  earned: number
+  pending: number
+  payoutReserved: number
+  paid: number
+  debt: number
+  creditLimit: number
+  creditAvailable: number
+  oldestDebtDueAt: string | null
+}
+
 export function CuentaDelSitio({
   saldo,
   movimientos,
   liquidaciones,
+  finanzas,
 }: {
   saldo: number
   movimientos: Movimiento[]
   liquidaciones: Liquidacion[]
+  finanzas: FinanzasVerificadas
 }) {
   const nosDebe = saldo > 0
   const alDia = saldo === 0
@@ -57,6 +70,28 @@ export function CuentaDelSitio({
         </p>
       </header>
 
+      <section>
+        <h2 className='font-display text-label-lg uppercase'>Cuenta verificada</h2>
+        <p className='mt-1 text-body-md text-muted-foreground'>
+          Solo movimientos reales del sistema financiero nuevo. Los pendientes son una estimación
+          hasta que termine la conciliación de la pasarela.
+        </p>
+        <div className='mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+          <FinanceMetric label='Ganado' value={finanzas.earned} />
+          <FinanceMetric label='Pendiente' value={finanzas.pending} />
+          <FinanceMetric label='Reservado para giro' value={finanzas.payoutReserved} />
+          <FinanceMetric label='Pagado' value={finanzas.paid} />
+          <FinanceMetric label='Deuda por ventas en barra' value={finanzas.debt} />
+          <FinanceMetric label='Cupo disponible' value={finanzas.creditAvailable} />
+        </div>
+        <p className='mt-3 text-sm text-muted-foreground'>
+          Cupo aprobado: {formatCOP(finanzas.creditLimit)}.
+          {finanzas.oldestDebtDueAt
+            ? ` La deuda más antigua vence el ${formatDate(new Date(finanzas.oldestDebtDueAt))}.`
+            : ' No hay deuda pendiente con fecha de pago.'}
+        </p>
+      </section>
+
       <div
         className={cn(
           'rounded-xl border-2 p-6',
@@ -65,7 +100,10 @@ export function CuentaDelSitio({
       >
         {alDia ? (
           <>
-            <p className='font-display font-black text-2xl uppercase'>Al día</p>
+            <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
+              Saldo anterior sin conciliación V2
+            </p>
+            <p className='mt-1 font-display font-black text-2xl uppercase'>Al día</p>
             <p className='mt-1 text-body-md text-muted-foreground'>
               Ni debes ni te debemos. Es lo normal cuando se vende parejo por los dos lados.
             </p>
@@ -73,7 +111,7 @@ export function CuentaDelSitio({
         ) : (
           <>
             <p className='font-display text-label-lg uppercase text-muted-foreground'>
-              {nosDebe ? 'Nos debes' : 'Te debemos'}
+              Saldo anterior · {nosDebe ? 'nos debes' : 'te debemos'}
             </p>
             <p
               className={cn(
@@ -148,6 +186,19 @@ export function CuentaDelSitio({
           </ul>
         </section>
       ) : null}
+    </div>
+  )
+}
+
+function FinanceMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className='rounded-xl border border-border bg-card p-4'>
+      <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
+        {label}
+      </p>
+      <p className='mt-1 font-display font-black text-2xl text-primary-text tabular-nums'>
+        {formatCOP(value)}
+      </p>
     </div>
   )
 }

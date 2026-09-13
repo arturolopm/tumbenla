@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { db } from '@/database'
+import { commerceOrderSnapshot } from '@/database/commerce-schema'
 import {
   ledgerAccount,
   ledgerEntry,
@@ -250,6 +251,19 @@ export const devolverAction = async (orderId: string, nota?: string): Promise<Li
     .limit(1)
 
   if (!orden) return { status: 'error', error: 'Ese pedido no existe.' }
+
+  const [snapshotV2] = await db
+    .select({ id: commerceOrderSnapshot.id })
+    .from(commerceOrderSnapshot)
+    .where(eq(commerceOrderSnapshot.orderId, orden.id))
+    .limit(1)
+  if (snapshotV2) {
+    return {
+      status: 'error',
+      error:
+        'Este pedido usa el flujo financiero revisado. Reserva sus unidades y confirma la devolución con evidencia bancaria desde Finanzas.',
+    }
+  }
 
   if (orden.status !== 'expired' && orden.status !== 'paid') {
     return { status: 'error', error: 'Ese pedido no se puede devolver.' }

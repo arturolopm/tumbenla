@@ -49,6 +49,7 @@ export default async function OrdenPage({
   const codigos = await Promise.all(
     orden.redenciones.map(async (r) => ({
       id: r.id,
+      unidadId: r.unidadId,
       estado: r.estado,
       redimidaEn: r.redimidaEn?.toISOString() ?? null,
       codigo: r.codigo,
@@ -73,6 +74,9 @@ export default async function OrdenPage({
         estado: orden.estado,
         productoNombre: orden.productoNombre,
         productoDescripcion: orden.productoDescripcion,
+        porcentajeMaterial: orden.porcentajeMaterial,
+        repartoFinal: orden.repartoFinal,
+        explicacionDelReparto: orden.explicacionDelReparto,
         venueSlug: orden.venueSlug,
         venueNombre: orden.venueNombre,
       }}

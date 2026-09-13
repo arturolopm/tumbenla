@@ -5,8 +5,10 @@ import { redirect } from 'next/navigation'
 
 import { MisPedidos } from '@/components/comercio/mis-pedidos'
 import { MiHistoriaGaleria } from '@/components/fiestas/mi-historia-galeria'
+import { db } from '@/database'
 import { auth } from '@/lib/auth/auth'
 import { misPedidos } from '@/lib/comercio/queries'
+import { getCustomerContributionStages } from '@/lib/commerce/transparency-service'
 import { vincularPedidosDeInvitado } from '@/lib/comercio/vincular'
 import { getHistorySummary, listMyClaimedPhotos } from '@/lib/fiestas/queries'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
@@ -36,14 +38,12 @@ export default async function MiHistoriaPage() {
     emailVerified: session.user.emailVerified,
   })
 
-  const [resumen, fotos, pedidos] = await Promise.all([
+  const [resumen, fotos, pedidos, aporte] = await Promise.all([
     getHistorySummary(session.user.id),
     listMyClaimedPhotos(session.user.id),
     misPedidos(session.user.id),
+    getCustomerContributionStages(db, session.user.id),
   ])
-  const aporteParaReconstruir = pedidos
-    .filter((pedido) => pedido.estado === 'paid')
-    .reduce((total, pedido) => total + pedido.material, 0)
 
   return (
     <div className='w-full px-margin-mobile py-section-gap lg:px-margin-desktop'>
@@ -96,13 +96,29 @@ export default async function MiHistoriaPage() {
             <p className='font-display text-label-lg text-muted-foreground uppercase tracking-widest'>
               Tu aporte a reconstruir
             </p>
-            <p className='mt-2 font-display font-black text-5xl text-primary-text leading-none tabular-nums'>
-              {formatCOP(aporteParaReconstruir)}
-            </p>
+            <div className='mt-3 grid gap-4 sm:grid-cols-2'>
+              <DatoDeAporte
+                label='Reparto final'
+                value={formatCOP(Number(aporte.finalDonationMinor) / 100)}
+              />
+              <DatoDeAporte
+                label='Ya transferido'
+                value={formatCOP(Number(aporte.transferredMinor) / 100)}
+              />
+            </div>
 
             <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
-              Esta es la suma exacta de la parte de tus pedidos pagados que va para reconstruir.
+              El reparto final cuenta únicamente unidades entregadas con cálculo financiero
+              terminado. Lo transferido exige confirmación bancaria y puede ir detrás del reparto.
             </p>
+
+            {aporte.pendingAllocationUnits > 0 ? (
+              <p className='mt-3 rounded-lg border border-border bg-card px-3 py-2 text-body-md'>
+                {aporte.pendingAllocationUnits === 1
+                  ? 'Tienes 1 entrega esperando reparto final.'
+                  : `Tienes ${aporte.pendingAllocationUnits} entregas esperando reparto final.`}
+              </p>
+            ) : null}
 
             <Link
               href='/transparencia'
@@ -128,6 +144,19 @@ function Dato({ label, valor }: { label: string; valor: string }) {
         {label}
       </p>
       <p className='mt-1 font-display font-black text-4xl tabular-nums'>{valor}</p>
+    </div>
+  )
+}
+
+function DatoDeAporte({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
+        {label}
+      </p>
+      <p className='mt-1 font-display font-black text-3xl text-primary-text tabular-nums'>
+        {value}
+      </p>
     </div>
   )
 }

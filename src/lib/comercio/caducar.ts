@@ -3,8 +3,10 @@ import 'server-only'
 import { and, eq, lt } from 'drizzle-orm'
 
 import { db } from '@/database'
+import { commerceOrderSnapshot } from '@/database/commerce-schema'
 import { orderRedemption, productOrder } from '@/database/schema'
 import { CUENTA, cuentaDePlataforma, publicarMovimiento } from '@/lib/comercio/libro'
+import { CommerceUnitService } from '@/lib/commerce/unit-lifecycle-service'
 
 /**
  * Los 45 dias (`PRODUCT.md`, decision 32).
@@ -25,31 +27,38 @@ export type ResultadoDeCaducidad = {
   revisadas: number
   caducadas: number
   aMaterial: number
+  unidadesV2Retenidas: number
+  responsabilidadV2Retenida: number
   errores: string[]
 }
 
 export const caducarPedidosVencidos = async (
   ahora: Date = new Date()
 ): Promise<ResultadoDeCaducidad> => {
+  const v2 = await new CommerceUnitService({ database: db }).expireDueUnits({ now: ahora })
   const candidatas = await db
     .select({
       id: productOrder.id,
       unitPrice: productOrder.unitPrice,
     })
     .from(productOrder)
+    .innerJoin(commerceOrderSnapshot, eq(commerceOrderSnapshot.orderId, productOrder.id))
     .where(
       and(
         eq(productOrder.status, 'paid'),
         eq(productOrder.payMethod, 'app'),
+        eq(commerceOrderSnapshot.fundingClassification, 'legacy_unverified'),
         lt(productOrder.expiresAt, ahora)
       )
     )
 
   const resultado: ResultadoDeCaducidad = {
-    revisadas: candidatas.length,
+    revisadas: candidatas.length + v2.reviewed,
     caducadas: 0,
     aMaterial: 0,
-    errores: [],
+    unidadesV2Retenidas: v2.expired,
+    responsabilidadV2Retenida: Number(v2.retainedMinor) / 100,
+    errores: [...v2.errors],
   }
 
   if (candidatas.length === 0) return resultado

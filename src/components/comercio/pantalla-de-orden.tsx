@@ -19,7 +19,14 @@ import { cn } from '@/lib/utils/css'
  * "no me salio" ahi mismo. Es la auditoria mas barata que hay.
  */
 
-type Codigo = { id: string; codigo: string; estado: string; redimidaEn: string | null; svg: string }
+type Codigo = {
+  id: string
+  unidadId: string
+  codigo: string
+  estado: string
+  redimidaEn: string | null
+  svg: string
+}
 
 type Orden = {
   publicToken: string
@@ -33,6 +40,9 @@ type Orden = {
   estado: string
   productoNombre: string
   productoDescripcion: string | null
+  porcentajeMaterial: number
+  repartoFinal: boolean
+  explicacionDelReparto: string | null
   venueSlug: string
   venueNombre: string
 }
@@ -49,7 +59,22 @@ const FAST_WINDOW_MS = 90_000
 const SLOW_WINDOW_MS = 300_000
 const GIVE_UP_MS = 900_000
 
-type OrderStatus = { estado: string; entregadas: number; total: number }
+type OrderStatus = {
+  estado: string
+  estadoDelPago: string
+  entregadas: number
+  total: number
+  venceEn: string | null
+  estadoDelReembolso: 'none' | 'reserved' | 'refunded'
+  reparto: 'pending' | 'final'
+  unidades: {
+    id: string
+    redencionId: string | null
+    estado: string
+    venceEn: string | null
+    redimidaEn: string | null
+  }[]
+}
 
 export function PantallaDeOrden({
   orden,
@@ -86,8 +111,19 @@ export function PantallaDeOrden({
     },
     initialData: {
       estado: orden.estado,
+      estadoDelPago: orden.payMethod === 'bar' ? 'cash' : orden.estado,
       entregadas: codigos.filter((c) => c.estado === 'redeemed').length,
       total: orden.cantidad,
+      venceEn: null,
+      estadoDelReembolso: 'none',
+      reparto: orden.repartoFinal ? 'final' : 'pending',
+      unidades: codigos.map((code) => ({
+        id: code.unidadId,
+        redencionId: code.id,
+        estado: code.estado,
+        venceEn: null,
+        redimidaEn: code.redimidaEn,
+      })),
     },
     refetchInterval: (query) => {
       const delivered = query.state.data?.entregadas ?? 0
@@ -99,6 +135,9 @@ export function PantallaDeOrden({
       if (elapsed < GIVE_UP_MS) return 10_000
       return false
     },
+    // The app-wide provider disables focus refetching. This screen explicitly
+    // needs it so a buyer who returns after staff scans sees the result at once.
+    refetchOnWindowFocus: true,
     // No noise on a dead spot in a basement: it retries on the next tick and
     // the person could not act on the error anyway.
     retry: false,
@@ -108,9 +147,11 @@ export function PantallaDeOrden({
   const todasEntregadas = entregadas >= orden.cantidad
   const detenido = !todasEntregadas && Date.now() - startedAt >= GIVE_UP_MS
 
-  // The cheap endpoint only says HOW MANY were delivered, not which, and for
-  // what the screen has to show that is enough.
-  const estado = codigos.map((c, i) => (i < entregadas ? { ...c, estado: 'redeemed' } : c))
+  const estadoPorUnidad = new Map(data?.unidades.map((unit) => [unit.id, unit.estado]) ?? [])
+  const estado = codigos.map((code) => ({
+    ...code,
+    estado: estadoPorUnidad.get(code.unidadId) ?? code.estado,
+  }))
 
   const pagaEnBarra = orden.payMethod === 'bar'
 
@@ -273,11 +314,25 @@ export function PantallaDeOrden({
       <footer className='mt-2 rounded-xl border border-border p-5'>
         <p className='font-display text-label-lg uppercase'>A dónde va</p>
         <p className='mt-1 text-body-md'>
-          De {formatCOP(orden.precioUnitario)}:{' '}
-          <span className='text-lime'>{formatCOP(orden.materialPorUnidad)} se van en material</span>
-          {orden.sitioPorUnidad > 0
-            ? `. ${formatCOP(orden.sitioPorUnidad)} se quedan en el sitio.`
-            : '.'}
+          {pagaEnBarra ? (
+            <>
+              De {formatCOP(orden.precioUnitario)}:{' '}
+              <span className='text-lime'>
+                {formatCOP(orden.materialPorUnidad)} se van en material
+              </span>
+              {orden.sitioPorUnidad > 0
+                ? `. ${formatCOP(orden.sitioPorUnidad)} se quedan en el sitio.`
+                : '.'}
+            </>
+          ) : (
+            <>
+              <span className='text-lime'>{orden.porcentajeMaterial}% del valor neto</span> se va en
+              material después de las deducciones verificadas de la pasarela.{' '}
+              {data?.reparto === 'final' || orden.repartoFinal
+                ? 'El reparto ya fue reconciliado.'
+                : 'El monto exacto sigue pendiente de reconciliación.'}
+            </>
+          )}
         </p>
         <p className='mt-2 text-muted-foreground text-sm'>
           Guarda este enlace: es tu pedido. También te llegó al correo.
@@ -287,14 +342,16 @@ export function PantallaDeOrden({
             sorpresa que este producto no se puede permitir. Y la devolucion
             cuesta escribir un correo a proposito: es la unica parte del
             producto donde la friccion es la funcion. */}
-        <p className='mt-2 text-muted-foreground text-sm'>
-          Si no lo reclamas en 45 días, esa plata se va toda en material. Si prefieres que te la
-          devolvamos, escríbenos a{' '}
-          <a href='mailto:hola@tumbenla.com' className='text-primary-text underline'>
-            hola@tumbenla.com
-          </a>{' '}
-          y lo hacemos.
-        </p>
+        {pagaEnBarra ? null : (
+          <p className='mt-2 text-muted-foreground text-sm'>
+            Si no lo reclamas en 45 días, el código vence y conservamos el valor disponible para
+            devolvértelo completo. Escríbenos a{' '}
+            <a href='mailto:hola@tumbenla.com' className='text-primary-text underline'>
+              hola@tumbenla.com
+            </a>{' '}
+            para solicitarlo.
+          </p>
+        )}
       </footer>
     </main>
   )

@@ -3,56 +3,87 @@ import 'server-only'
 import { and, desc, eq } from 'drizzle-orm'
 
 import { db } from '@/database'
-import {
-  materialPurchase,
-  materialPurchaseItem,
-  materialPurchaseMedia,
-} from '@/database/schema'
+import { financeEvidence, foundationPurchase } from '@/database/commerce-schema'
+import { materialPurchase, materialPurchaseItem, materialPurchaseMedia } from '@/database/schema'
 import { toPurchaseDetail, toPurchaseSummary } from './mappers'
 import type { PurchaseDetail, PurchaseSummary, TransparencyTotals } from './types'
 
-export const listPublishedPurchases = async (): Promise<PurchaseSummary[]> => {
-  const rows = await db
-    .select()
+type TransparencyDatabase = typeof db
+
+export const listPublishedPurchasesFrom = async (
+  database: TransparencyDatabase
+): Promise<PurchaseSummary[]> => {
+  const rows = await database
+    .select({ purchase: materialPurchase })
     .from(materialPurchase)
-    .where(eq(materialPurchase.status, 'published'))
+    .innerJoin(foundationPurchase, eq(foundationPurchase.materialPurchaseId, materialPurchase.id))
+    .innerJoin(financeEvidence, eq(foundationPurchase.receiptEvidenceId, financeEvidence.id))
+    .where(
+      and(
+        eq(materialPurchase.status, 'published'),
+        eq(foundationPurchase.status, 'verified'),
+        eq(financeEvidence.ownerType, 'foundation_purchase'),
+        eq(financeEvidence.ownerId, foundationPurchase.id),
+        eq(financeEvidence.kind, 'purchase_receipt'),
+        eq(financeEvidence.status, 'published')
+      )
+    )
     .orderBy(desc(materialPurchase.purchasedAt))
 
-  return rows.map(toPurchaseSummary)
+  return rows.map((row) => toPurchaseSummary(row.purchase))
 }
 
-export const getPurchaseBySlug = async (slug: string): Promise<PurchaseDetail | null> => {
-  const [row] = await db
-    .select()
+export const listPublishedPurchases = async (): Promise<PurchaseSummary[]> =>
+  listPublishedPurchasesFrom(db)
+
+export const getPurchaseBySlugFrom = async (
+  database: TransparencyDatabase,
+  slug: string
+): Promise<PurchaseDetail | null> => {
+  const [row] = await database
+    .select({ purchase: materialPurchase })
     .from(materialPurchase)
+    .innerJoin(foundationPurchase, eq(foundationPurchase.materialPurchaseId, materialPurchase.id))
+    .innerJoin(financeEvidence, eq(foundationPurchase.receiptEvidenceId, financeEvidence.id))
     .where(
-      and(eq(materialPurchase.slug, slug), eq(materialPurchase.status, 'published'))
+      and(
+        eq(materialPurchase.slug, slug),
+        eq(materialPurchase.status, 'published'),
+        eq(foundationPurchase.status, 'verified'),
+        eq(financeEvidence.ownerType, 'foundation_purchase'),
+        eq(financeEvidence.ownerId, foundationPurchase.id),
+        eq(financeEvidence.kind, 'purchase_receipt'),
+        eq(financeEvidence.status, 'published')
+      )
     )
     .limit(1)
 
   if (!row) return null
 
   const [items, media] = await Promise.all([
-    db
+    database
       .select()
       .from(materialPurchaseItem)
-      .where(eq(materialPurchaseItem.purchaseId, row.id)),
+      .where(eq(materialPurchaseItem.purchaseId, row.purchase.id)),
     // Only consented media is ever returned to a public caller. This is the
     // gate, not the admin UI: a photo without consent must not be reachable
     // even if something later renders media without checking.
-    db
+    database
       .select()
       .from(materialPurchaseMedia)
       .where(
         and(
-          eq(materialPurchaseMedia.purchaseId, row.id),
+          eq(materialPurchaseMedia.purchaseId, row.purchase.id),
           eq(materialPurchaseMedia.consentGiven, true)
         )
       ),
   ])
 
-  return toPurchaseDetail(row, items, media)
+  return toPurchaseDetail(row.purchase, items, media)
 }
+
+export const getPurchaseBySlug = async (slug: string): Promise<PurchaseDetail | null> =>
+  getPurchaseBySlugFrom(db, slug)
 
 /**
  * The running total. This number is the whole argument the product makes, so it
@@ -67,7 +98,18 @@ export const getTransparencyTotals = async (): Promise<TransparencyTotals> => {
       householdsHelped: materialPurchase.householdsHelped,
     })
     .from(materialPurchase)
-    .where(eq(materialPurchase.status, 'published'))
+    .innerJoin(foundationPurchase, eq(foundationPurchase.materialPurchaseId, materialPurchase.id))
+    .innerJoin(financeEvidence, eq(foundationPurchase.receiptEvidenceId, financeEvidence.id))
+    .where(
+      and(
+        eq(materialPurchase.status, 'published'),
+        eq(foundationPurchase.status, 'verified'),
+        eq(financeEvidence.ownerType, 'foundation_purchase'),
+        eq(financeEvidence.ownerId, foundationPurchase.id),
+        eq(financeEvidence.kind, 'purchase_receipt'),
+        eq(financeEvidence.status, 'published')
+      )
+    )
 
   // Number() on every value: these are decimal columns, so `+` on the raw
   // strings would concatenate rather than add.
@@ -92,5 +134,16 @@ export const listPublishedPurchaseSlugs = async (): Promise<
   return db
     .select({ slug: materialPurchase.slug, updatedAt: materialPurchase.updatedAt })
     .from(materialPurchase)
-    .where(eq(materialPurchase.status, 'published'))
+    .innerJoin(foundationPurchase, eq(foundationPurchase.materialPurchaseId, materialPurchase.id))
+    .innerJoin(financeEvidence, eq(foundationPurchase.receiptEvidenceId, financeEvidence.id))
+    .where(
+      and(
+        eq(materialPurchase.status, 'published'),
+        eq(foundationPurchase.status, 'verified'),
+        eq(financeEvidence.ownerType, 'foundation_purchase'),
+        eq(financeEvidence.ownerId, foundationPurchase.id),
+        eq(financeEvidence.kind, 'purchase_receipt'),
+        eq(financeEvidence.status, 'published')
+      )
+    )
 }

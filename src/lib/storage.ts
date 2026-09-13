@@ -28,6 +28,14 @@ interface imageOptions {
 
 type BucketType = 'public' | 'private'
 
+export type StorageObjectMetadata = Readonly<{
+  exists: boolean
+  contentLength: number | null
+  contentType: string | null
+  etag: string | null
+  sha256: string | null
+}>
+
 class StorageClient {
   private client: AwsClient
 
@@ -135,11 +143,13 @@ class StorageClient {
     method,
     expiresIn,
     bucket,
+    headers,
   }: {
     key: string
     method: 'PUT' | 'GET'
     bucket: BucketType
     expiresIn: number
+    headers?: Record<string, string>
   }) {
     const url = new URL(`${this._getEndpoint()}/${this._getBucketName(bucket)}/${key}`)
 
@@ -148,6 +158,7 @@ class StorageClient {
     try {
       const response = await this.client.sign(url, {
         method,
+        headers,
         aws: {
           signQuery: true,
           allHeaders: true,
@@ -161,12 +172,18 @@ class StorageClient {
     }
   }
 
-  async getSignedUploadUrl(opts: { key: string; bucket?: BucketType; expiresIn?: number }) {
+  async getSignedUploadUrl(opts: {
+    key: string
+    bucket?: BucketType
+    expiresIn?: number
+    headers?: Record<string, string>
+  }) {
     return await this.getSignedUrl({
       key: opts.key,
       method: 'PUT',
       bucket: opts.bucket || 'public',
       expiresIn: opts.expiresIn || 600,
+      headers: opts.headers,
     })
   }
 
@@ -177,6 +194,48 @@ class StorageClient {
       bucket: opts.bucket || 'private',
       expiresIn: opts.expiresIn || 600,
     })
+  }
+
+  async head({
+    key,
+    bucket = 'private',
+  }: {
+    key: string
+    bucket?: BucketType
+  }): Promise<StorageObjectMetadata> {
+    try {
+      const response = await this.client.fetch(
+        `${this._getEndpoint()}/${this._getBucketName(bucket)}/${key}`,
+        { method: 'HEAD' }
+      )
+      if (response.status === 404) {
+        return {
+          exists: false,
+          contentLength: null,
+          contentType: null,
+          etag: null,
+          sha256: null,
+        }
+      }
+      if (!response.ok) throw new Error(response.statusText)
+      const length = response.headers.get('content-length')
+      return {
+        exists: true,
+        contentLength: length && /^\d+$/.test(length) ? Number(length) : null,
+        contentType: response.headers.get('content-type'),
+        etag: response.headers.get('etag'),
+        sha256: response.headers.get('x-amz-meta-sha256'),
+      }
+    } catch (error) {
+      console.error('storage.head failed', error)
+      throw new Error('Failed to inspect stored file. Please try again later.')
+    }
+  }
+
+  publicUrl(key: string): string {
+    const base = env.R2_STORAGE_BASE_URL || env.R2_BUCKET_URL
+    if (!base) throw new Error('R2 public base URL is not set')
+    return `${base.replace(/\/$/, '')}/${key}`
   }
 
   private base64ToArrayBuffer(base64: string, opts?: imageOptions) {

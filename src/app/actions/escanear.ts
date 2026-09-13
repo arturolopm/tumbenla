@@ -4,6 +4,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 
 import { db } from '@/database'
+import { commerceOrderSnapshot, commerceOrderUnit } from '@/database/commerce-schema'
 import {
   ledgerTransaction,
   orderRedemption,
@@ -14,6 +15,14 @@ import {
 import { assertVenueAccess } from '@/lib/auth/venue-access'
 import { type MotivoNoRedime, normalizarCodigo } from '@/lib/comercio/codigos'
 import { CUENTA, cuentaDePlataforma, cuentaDeSitio, publicarMovimiento } from '@/lib/comercio/libro'
+import {
+  CommerceUnitService,
+  type UnitRedemptionFailure,
+} from '@/lib/commerce/unit-lifecycle-service'
+import { CommerceRateLimitService } from '@/lib/commerce/rate-limit-service'
+
+const commerceUnits = new CommerceUnitService({ database: db })
+const commerceRateLimits = new CommerceRateLimitService({ database: db })
 
 /**
  * Entregar un trago.
@@ -76,11 +85,17 @@ const buscarCodigo = async (codigo: string) => {
       unitVenueAmount: productOrder.unitVenueAmount,
       buyerName: productOrder.buyerName,
       producto: venueProduct.name,
+      fundingClassification: commerceOrderSnapshot.fundingClassification,
     })
     .from(orderRedemption)
     .innerJoin(productOrder, eq(orderRedemption.orderId, productOrder.id))
     .innerJoin(venue, eq(productOrder.venueId, venue.id))
     .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+    .leftJoin(commerceOrderUnit, eq(commerceOrderUnit.redemptionId, orderRedemption.id))
+    .leftJoin(
+      commerceOrderSnapshot,
+      eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+    )
     .where(eq(orderRedemption.code, codigo))
     .limit(1)
 
@@ -105,21 +120,56 @@ export const redimirAction = async (
     return { ok: false, motivo: 'no_existe', error: 'Ese código no existe. Revísalo.' }
   }
 
+  // Authenticate the panel venue before looking up the code. Otherwise a
+  // guessed valid code returned a different error and became an oracle.
+  const acceso = await assertVenueAccess(venueIdDeLaPantalla)
+  if (!acceso.ok) return { ok: false, motivo: 'sin_permiso', error: acceso.error }
+  const rate = await commerceRateLimits.consume({
+    scope: 'scanner',
+    key: `${acceso.acceso.userId}:${venueIdDeLaPantalla}`,
+    limit: 90,
+    windowSeconds: 60,
+  })
+  if (!rate.allowed) {
+    return {
+      ok: false,
+      motivo: 'no_existe',
+      error: 'Hay demasiados intentos seguidos. Espera un minuto antes de continuar.',
+    }
+  }
+
   const fila = await buscarCodigo(codigo)
   if (!fila) {
     return { ok: false, motivo: 'no_existe', error: 'Ese código no existe. Revísalo.' }
   }
 
-  // El permiso se comprueba contra el venueId DE LA FILA, no contra el de la
-  // pantalla ni contra ninguno que venga del cliente.
-  const acceso = await assertVenueAccess(fila.venueId)
-  if (!acceso.ok) return { ok: false, motivo: 'sin_permiso', error: acceso.error }
-
   // Y ademas el codigo tiene que ser de ESTE sitio. Sin esto, alguien con
   // permiso en dos sitios entregaria en el equivocado por error, y el saldo se
   // le anotaria al que no fue.
   if (fila.venueId !== venueIdDeLaPantalla) {
-    return { ok: false, motivo: 'otro_sitio', error: 'Ese código no es de este sitio.' }
+    return { ok: false, motivo: 'no_existe', error: 'Ese código no existe. Revísalo.' }
+  }
+
+  if (fila.fundingClassification === 'real' || fila.fundingClassification === 'sandbox') {
+    const result = await commerceUnits.redeem({
+      code: codigo,
+      expectedVenueId: venueIdDeLaPantalla,
+      actorUserId: acceso.acceso.userId,
+      actorIsPlatform: acceso.acceso.esPlataforma,
+      operationKey: `redeem:${fila.redencionId}:${idempotencyKey}`,
+    })
+    if (result.kind === 'rejected') return unitFailure(result.reason)
+
+    revalidatePath(`/panel/${result.venueSlug}/cuenta`)
+    return {
+      ok: true,
+      cobrar: result.collectMinor === null ? null : Number(result.collectMinor) / 100,
+      producto: result.productName,
+      cantidadDeLaOrden: result.quantity,
+      entregadas: result.redeemedCount,
+      comprador: result.buyerName,
+      repetido: result.duplicate,
+    }
   }
 
   // NO se corta aca cuando ya esta 'redeemed', aunque seria el atajo obvio.
@@ -266,4 +316,26 @@ export const redimirAction = async (
     comprador: fila.buyerName,
     repetido: esMiReintento,
   }
+}
+
+const unitFailure = (reason: UnitRedemptionFailure): Extract<Entrega, { ok: false }> => {
+  if (reason === 'unauthorized') {
+    return { ok: false, motivo: 'sin_permiso', error: 'No perteneces a este sitio.' }
+  }
+  if (reason === 'wrong_venue') {
+    return { ok: false, motivo: 'otro_sitio', error: 'Ese código no es de este sitio.' }
+  }
+  if (reason === 'expired') {
+    return { ok: false, motivo: 'orden_caducada', error: 'Ese pedido ya caducó.' }
+  }
+  if (reason === 'refund_reserved' || reason === 'unpaid') {
+    return { ok: false, motivo: 'orden_sin_pagar', error: 'Ese pedido está cancelado.' }
+  }
+  if (reason === 'void') {
+    return { ok: false, motivo: 'anulado', error: 'Ese código fue anulado.' }
+  }
+  if (reason === 'already_redeemed') {
+    return { ok: false, motivo: 'ya_redimido', error: 'Ese trago ya se entregó.' }
+  }
+  return { ok: false, motivo: 'no_existe', error: 'No se pudo entregar. Intenta otra vez.' }
 }

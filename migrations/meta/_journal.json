@@ -113,6 +113,83 @@
       "when": 1788942193000,
       "tag": "0015_retire_manual_contributions",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789179291528,
+      "tag": "0016_panoramic_calypso",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789180782098,
+      "tag": "0017_friendly_jean_grey",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789196405439,
+      "tag": "0018_noisy_the_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789197168105,
+      "tag": "0019_blue_tiger_shark",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789198079103,
+      "tag": "0020_new_doctor_faustus",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789198420011,
+      "tag": "0021_young_kid_colt",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789198687491,
+      "tag": "0022_known_skreet",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789222930126,
+      "tag": "0023_shallow_johnny_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789223252835,
+      "tag": "0024_cloudy_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1789224976969,
+      "tag": "0025_woozy_scream",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1789244837963,
+      "tag": "0026_lyrical_saracen",
+      "breakpoints": true
     }
   ]
 }

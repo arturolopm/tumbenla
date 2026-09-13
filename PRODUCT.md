@@ -53,13 +53,14 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
 | Alta de sitio: solicitud corta verificada por DM | Construido |
 | Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
-| Liquidación del sitio y transparencia | Construido. El libro la calcula y operación la confirma en Cuentas; no hay auto-reporte. |
+| Liquidación del sitio y transparencia | Construida y probada localmente: deducciones revisadas, asignación exacta, transferencias manuales con evidencia y vistas V2. Falta ejecutar la operación real en preview/live. |
 | Alta en 4 campos, sin cuenta por delante | Por construir (decisiones 35 y 36) |
 | Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
-| **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido, probado en local. **Falta la pasarela de verdad** (hoy corre con una de mentira) y probarlo en preview |
-| Harness local por roles: plataforma, dueño, personal y rumbero | Definido en `docs/validation-harness.md`; falta automatizar el recorrido en navegador |
+| **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido y probado en local. El adaptador ePayco Hosted Smart Checkout v2, la verificación autoritativa, la reconciliación y la recuperación están implementados; faltan aprobación comercial/legal, evidencia de cuenta y prueba en preview. |
+| Compras de material y trazabilidad de la fundación | Administración, evidencia privada/pública, atribución limitada por monto y vistas V2 construidas y probadas localmente; falta validar R2 real. |
+| Harness local por roles: plataforma, dueño, personal y rumbero | Automatizado con 91 pruebas Bun/PostgreSQL y Playwright sobre un build de producción aislado; ver `docs/validation-harness.md` |
 
 ---
 
@@ -259,10 +260,13 @@ Estan aca para no volver a discutirlas cada dos semanas.
     el correo ajeno y se queda con el historial de otro —que dice donde estuvo,
     cuando y con quien—. Vive en `src/lib/comercio/vincular.ts` y corre en
     `/entrar`, que es por donde pasa todo el que inicia sesion.
-30. **El precio y el reparto se congelan en la orden.** Los cinco campos de
-    plata se copian al comprar. Si el sitio cambia el precio o el reparto
-    manana, la orden vieja conserva lo que la persona vio. Un reparto que se
-    puede reescribir despues del hecho no es una promesa, es un adorno.
+30. **El precio y el porcentaje de reparto se congelan en la orden.** Los
+    campos comerciales que la persona vio se copian al comprar. Si el sitio
+    cambia el precio o el porcentaje manana, la orden vieja conserva esa promesa.
+    El porcentaje se conoce desde la compra; el valor exacto en pesos queda
+    pendiente hasta reconciliar las deducciones itemizadas y retenciones del
+    proveedor. Un reparto que se puede reescribir despues del hecho no es una
+    promesa, es un adorno.
 31. **La plataforma aprueba el sitio, no cada producto.** El dueno guarda sus
     productos en borrador y los publica directamente cuando estan listos. La
     regla que no se negocia es **minimo 40% para reconstruir**: la valida el
@@ -271,11 +275,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     sitio puede, dejar 100% para reconstruir recibe la mayor visibilidad. Esto
     conserva la verificacion que importa —quien es el bar— sin volver la carta
     una cola de operacion.
-32. **Sin reclamar, caduca a los 45 dias y se va en material; se devuelve a
-    quien lo pida.** El sitio no cobra lo que no entrego. El apartado para pedir
-    la devolucion existe y esta a la vista, pero cuesta escribir un correo: es a
-    proposito, y es la unica parte del producto donde la friccion es la
-    funcion.
+32. **Sin reclamar, el QR caduca a los 45 dias y no se asigna automaticamente.**
+    La orden conserva una obligacion de devolver el precio bruto completo a quien
+    lo pida; el sitio no cobra lo que no entrego. La asignacion exacta de impacto
+    permanece pendiente hasta reconciliar el bruto, las deducciones itemizadas y
+    las retenciones aplicables. El apartado de devolucion existe y esta a la
+    vista, y los costos no recuperables salen inicialmente de fondos operativos.
 33. **Quien trabaja en un sitio entra por el sitio, no por el sitio publico.**
     La sesion tiene dos sombreros sobre la MISMA cuenta —salir de rumba cuelga
     de `photo_claim`, trabajar cuelga de `venue_member`— y el que manda por
@@ -329,6 +334,18 @@ Estan aca para no volver a discutirlas cada dos semanas.
     en la barra de navegacion. O sea que el camino principal para registrar un
     bar era redactar un correo a mano y esperar. Ahora la puerta es
     `/registrar-sitio` y esta en la barra.
+37. **ePayco Hosted Smart Checkout v2 es el proveedor de cobro elegido para el
+    MVP colombiano; la salida de fondos será una transferencia bancaria manual
+    revisada.** El plan de implementación está autorizado. El checkout alojado
+    cobra la orden y deja las credenciales de tarjeta en ePayco. Tumbenla
+    reconcilia el bruto, cada deduccion itemizada y la retencion aplicable antes
+    de calcular el neto y cualquier asignacion. No hay split automatico en
+    checkout: la investigacion de Pagos Divididos se conserva como historial,
+    pero queda supersedida para este release. Musica para la Paz es solo una
+    candidata pendiente de verificacion como receptor de impacto; su recibo y la
+    compra de material verificada son hechos distintos. Abrir la cuenta comercial,
+    contratar, ejecutar transferencias reales y desplegar siguen bloqueados por
+    compuertas externas. El detalle vive en `docs/payment-provider-decision-brief.md`.
 
 ---
 
@@ -408,8 +425,8 @@ detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelin
 - [x] **Carta y revision.** `/panel/[slug]/carta` y la cola en
       `/admin/productos`. Nada se vende sin pasar por ahi (decision 31).
 - [x] **Pedido y pago.** La carta publica en `/sitios/[slug]`, el checkout, un
-      adaptador de pasarela agnostico (proveedor de mentira mientras se decide
-      cual), y `/orden/[token]` con el QR y su confirmacion en vivo.
+      adaptador agnostico con ePayco Hosted Smart Checkout v2 y un proveedor falso
+      restringido al arnes local, y `/orden/[token]` con el QR y su confirmacion en vivo.
       **En ESE paso, y no antes, hay que reescribir
       `src/app/(publico)/como-funciona/page.tsx:160`**, que hoy dice "La plata
       no pasa por esta pagina. No cobramos, no procesamos pagos". Hoy es
@@ -417,14 +434,18 @@ detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelin
       cambiarlo antes seria la misma mentira al reves.
 - [x] **Escaneo y redencion.** `/panel/[slug]/escanear`, el `UPDATE` atomico y
       los asientos.
-- [x] **Saldo y liquidacion.** `/panel/[slug]/cuenta`, `/admin/cuentas`, y el
-      puente que convierte la parte de material en un `venue_contribution`
-      verificado para que `/transparencia` siga respondiendo lo mismo.
-- [x] **Caducidad y devolucion.** Los 45 dias y el correo (decision 32).
+- [x] **Saldo y liquidacion.** `/panel/[slug]/cuenta` y `/admin/cuentas` derivan
+      saldos V2; la reconciliación exige deducciones/retenciones con evidencia y las
+      transferencias manuales pasan por reserva, resultado incierto y confirmación bancaria.
+- [x] **Caducidad y devolucion.** La unidad no reclamada vence a 45 días sin
+      asignarse; conserva el pasivo bruto y el reembolso comparte bloqueo con la redención,
+      exige evidencia y protege la cobertura de costos no recuperables.
 
-**La pasarela esta sin decidir a proposito.** Se escribe el adaptador contra una
-interfaz propia y la real entra despues sin tocar esquema ni pantallas. Cuando
-se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
+**La pasarela ya fue decidida: ePayco Hosted Smart Checkout v2 (decision 37).**
+El adaptador se mantiene contra una interfaz propia hasta que ePayco confirme por
+escrito la cuenta, PSE, recibos, reportes de deducciones, devoluciones y
+responsabilidades. Los pagos elegibles se liquidan mediante transferencias
+bancarias manuales revisadas, no mediante split automatico.
 
 ### Ahora
 
@@ -440,8 +461,6 @@ se decida: tiene que cubrir Nequi y PSE, que es como paga este publico.
       falla en el navegador con un error que no menciona CORS por ninguna parte.
       Hasta entonces, firmar una subida responde "El almacenamiento de fotos no
       esta configurado" y el resto del sitio sigue funcionando.
-- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed; falta
-      la operación para registrar las compras reales de reconstrucción.
 - [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
       que tiene fotos por revisar o un reporte de privacidad abierto: hay que
       entrar al panel a mirar.
@@ -491,26 +510,28 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   es un producto con reparto declarado y la puerta de alta es
   `/registrar-sitio`. Muerde en la primera visita de un dueño o rumbero: promete
   un producto que ya no existe antes de que puedan llegar al flujo correcto.
-- **La pasarela es de mentira.** `src/lib/comercio/pasarela.ts` da los pagos por
-  buenos sin salir a ninguna parte. `obtenerPasarela()` revienta si NODE_ENV es
-  production y no hay una real, asi que no se puede desplegar por accidente,
-  pero **hasta que exista una de verdad esto no puede ir a produccion**. Tiene
-  que cubrir Nequi y PSE.
+- **La integración ePayco no tiene evidencia de cuenta.** El adaptador Hosted Smart Checkout v2,
+  la firma, la consulta autoritativa y los estados pendientes están implementados con fixtures,
+  pero tarjeta crédito, débito, PSE, factura duplicada, reportes de deducciones y reembolsos aún
+  deben probarse con la cuenta aprobada en sandbox y preview antes de producción.
 - **`code_hash` en `order_redemption` esta muerta.** Quedo del diseno hasheado,
   ya es nullable y nadie la escribe. Borrarla en un deploy aparte.
-- **La caducidad necesita un cron.** `bun run caducar` esta escrito, probado y es
-  idempotente, pero nada lo dispara. Sin eso, ninguna orden caduca nunca.
+- **El cron necesita aceptación en Vercel.** La ruta diaria autenticada, los leases, cursores,
+  backlog y controles manuales están implementados y probados localmente; falta observar una
+  invocación real y su recuperación en preview.
 - **El pie de los correos esta en INGLES.** "Questions?", "Privacy Policy",
   "Terms of Service", "Unsubscribe" en `EmailLayout`. Es anterior a esto —le
   pasa igual a la invitacion de equipo, que ya se despacho— pero es texto que le
   llega a un usuario en un producto que es solo en espanol (decision 7).
-- **Un sitio con saldo en contra no tiene tope.** Ver riesgo 8. Antes de la
-  segunda ciudad hay que definirlo.
-- **No se puede decir QUE factura pago un pedido.** Los aportes se liquidan en
-  bloque, no pedido por pedido, asi que en `/mi-historia` se afirma que la plata
-  entra a lo que el sitio pone en material y se enlaza `/transparencia`, pero no
-  se promete la trazabilidad exacta. Rastrearla pedido a pedido pide amarrar
-  `product_order` a `material_purchase`, y eso es un cambio de esquema.
+- **El crédito de barra requiere operación humana.** El límite es cero por defecto, se versiona
+  por sitio y bloquea nueva deuda vencida; antes de usarlo hay que aprobar límites y responsables
+  reales, y observar la compensación contra ingresos electrónicos conciliados.
+- **La asignacion exacta queda pendiente hasta reconciliar.** El porcentaje se
+  congela en la orden, pero el valor en pesos se calcula sobre el neto real
+  despues de deducciones itemizadas y retenciones; no se muestra una cifra
+  inventada antes de esa conciliacion. El recibo del receptor de impacto no es
+  una compra de material verificada: `/transparencia` debe mostrar ambos hechos
+  por separado y no sumar sus etapas como si fueran dos asignaciones.
 
 ### El codigo esta a medias en español
 
@@ -562,12 +583,10 @@ mentalmente en cada linea. Hoy no rompe nada; solo cuesta leerlo.
   migracion reventara, lo que con migraciones en el build habria dejado pasar un
   deploy con la base sin migrar. Verificado en ambos sentidos: falla -> 1,
   exito -> 0. Si alguien toca ese script, esa es la prueba que hay que repetir.
-- **No hay framework de pruebas.** Todo lo que se ha verificado fue a mano o con
-  Playwright contra `localhost`. Los cinco PRs de la multi-tenencia se probaron
-  con tres cuentas y curl contra el servidor local, apuntando sobre todo a lo que
-  NO debe poder hacerse; nada de eso quedo automatizado, asi que **una regresion
-  de permisos hoy no la detecta nada**. Es el mejor candidato para las primeras
-  pruebas que se escriban.
+- **La cobertura automatizada aún es deliberadamente acotada.** El arnés ya ejecuta 91 pruebas
+  Bun/PostgreSQL y un recorrido Playwright con operador, dos dueños, personal y rumbero sobre un
+  build de producción. Cubre aislamiento mínimo y el circuito pago → QR → redención → confirmación,
+  pero no reemplaza la matriz manual de cámara, móvil, correo real ni aceptación en preview.
 
 - **El viaje real a R2 nunca se ejecuto.** Firmar, subir, registrar y borrar
   estan escritos y todo lo que los rodea esta probado, pero sin cuenta ni buckets
@@ -1009,15 +1028,16 @@ base desde ahi.
    de venderle el primer trago a nadie**, no despues de la primera discusion.
    Este riesgo hace crecer al 1, no lo reemplaza.
 8. **Un sitio que acumula saldo en contra y cierra.** Con el pago en barra, un
-   sitio nos va debiendo hasta que se liquida. Si cierra debiendo, esa plata ya
-   se le prometio a material. No hay tope ni garantia en el MVP: la mitigacion
-   es liquidar seguido y mirar el saldo, no un contrato. **Antes de abrir la
-   segunda ciudad hay que definir un tope por sitio.**
-9. **Pasivo de devoluciones.** Una orden que caduca a los 45 dias pasa a
-   material, pero la devolucion se sigue pudiendo pedir por correo. Si esa plata
-   ya se gasto en material, la devolucion sale de otro lado. Con el volumen de
-   hoy es un caso por mes y se resuelve a mano; deja de serlo cuando caduquen
-   decenas al mes.
+   sitio nos va debiendo hasta que se liquida. El limite aprobado por operador es
+   cero por defecto; cada reserva dura 15 minutos y una entrega redimida vence a
+   siete dias. El limite, la deuda vencida y las reservas activas bloquean nuevas
+   reservas de barra sin desactivar los pagos por app.
+9. **Pasivo de devoluciones.** Una orden que caduca a los 45 dias no se asigna
+   automaticamente: conserva una obligacion de devolver el precio bruto completo.
+   Si hay costos no recuperables, salen inicialmente de fondos operativos. La
+   conciliacion debe conservar la asignacion exacta pendiente hasta reconciliar
+   deducciones y retenciones; el recibo del receptor y la compra verificada son
+   hechos distintos.
 
 ---
 

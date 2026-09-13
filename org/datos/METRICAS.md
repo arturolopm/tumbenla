@@ -85,6 +85,53 @@ group by transaction_id having sum(amount) <> 0;
 
 ---
 
+## Cobro, neto y asignacion de impacto
+
+Estas definiciones reemplazan cualquier lectura anterior que tratara el porcentaje
+congelado como un valor final, o que enviara automaticamente una orden vencida a
+material. El porcentaje se congela en la orden; el valor exacto en pesos queda
+**pendiente** hasta reconciliar el bruto, cada deduccion itemizada y la retencion
+aplicable.
+
+| Metrica | Definicion canonica | Estado |
+|---|---|---|
+| Cobro bruto por app | suma de `product_order.total_amount` con `pay_method = 'app'` y cobro confirmado, agrupada por ventana | **NO existe aun** — el esquema actual no separa cobro confirmado de `status = 'paid'` simulado |
+| Neto reconciliado | bruto confirmado menos cada deduccion itemizada y retencion aplicable, con evidencia del reporte del proveedor | **NO existe aun** — faltan intentos, deducciones y conciliacion |
+| Asignacion exacta de impacto | porcentaje congelado aplicado al neto reconciliado, con redondeo y ajustes auditables | **NO existe aun** — `unit_donation_amount` es el snapshot previo a deducciones, no el valor final |
+| Asignacion pendiente | orden cobrada cuyo neto o deducciones aun no estan reconciliados | **NO existe aun** |
+| Recibo del receptor | transferencia bancaria confirmada al beneficiario verificado | **NO existe aun** |
+| Compra verificada | compra de material con factura/evidencia revisada y publicada | `material_purchase`, pero no prueba que exista recibo del receptor |
+| QR de app vencido | unidad no redimida al cumplir 45 días, conservando obligación de reembolso | **NO existe aun** — hoy falta distinguir expiración y reembolso por unidad |
+| Reembolso bruto | precio bruto completo de la unidad elegible, no el neto después de deducciones | **NO existe aun** |
+| Deuda de barra | obligación nacida de una unidad de barra redimida, con vencimiento a siete días | **NO existe aun** |
+| Reserva de barra | capacidad reservada contra límite aprobado, con vencimiento a 15 minutos | **NO existe aun** |
+
+Consulta diagnóstica de lo que el esquema actual sí permite ver, sin llamarlo neto
+ni asignacion final:
+
+```sql
+select
+  pay_method,
+  status,
+  count(*) as ordenes,
+  sum(total_amount) as total_snapshot
+from product_order
+where created_at >= now() - interval '30 days'
+group by pay_method, status
+order by pay_method, status;
+```
+
+La consulta anterior describe snapshots de orden, incluidos fixtures y estados
+simulados; no autoriza una cifra pública de cobro, neto o asignacion. Para el
+reporte financiero futuro, Datos debe adjuntar la consulta de reconciliacion, el
+reporte del proveedor, la ventana y la evidencia de transferencia.
+
+La transferencia al receptor y la compra verificada no son la misma metrica ni se
+suman entre sí: primero se confirma el recibo, después se puede verificar una o
+varias compras contra evidencia y límites de atribución.
+
+---
+
 ## Lado sitio
 
 | Metrica | Definicion | Estado |
@@ -93,13 +140,13 @@ group by transaction_id having sum(amount) <> 0;
 | Solicitudes por semana | `venue_application` por `created_at` | medible |
 | Solicitud → revisada | `venue_application.reviewed_at - created_at` | medible |
 | Solicitud → publicada | `venue_application.created_at` → `venue.published_at` | medible |
-| **Verificacion de aporte** | `venue_contribution.verified_at - created_at` | **medible** |
-| Aportes por estado | `venue_contribution` agrupado por `status` | medible |
-| Sitios con carta | sitios con al menos un `venue_product` publicado | **NO existe aun** |
-| Producto: creado → aprobado | `venue_product.reviewed_at - created_at` | **NO existe aun** |
-| Tragos entregados por sitio | `order_redemption` en `redeemed` | **NO existe aun** |
-| Saldo por sitio | `sum(amount)` de su cuenta `venue_current` | **NO existe aun** |
-| Ordenes sin escanear | `product_order` pagada, sin redencion, viva | **NO existe aun** |
+| Verificacion de aporte legado | `venue_contribution.verified_at - created_at`, solo para historial compatible | **medible, no es activacion vigente** |
+| Aportes por estado legado | `venue_contribution` agrupado por `status` | **medible, no es asignacion de checkout** |
+| Sitios con carta | sitios con al menos un `venue_product` publicado | medible |
+| Producto: creado → aprobado | `venue_product.reviewed_at - created_at` | medible |
+| Tragos entregados por sitio | `order_redemption` en `redeemed` | medible |
+| Saldo por sitio | `sum(amount)` de su cuenta `venue_current`, separando simulación/legado | medible con clasificación |
+| Ordenes sin escanear | `product_order` pagada, sin redención, viva | medible como diagnóstico; no prueba cobro real |
 | Sitios activos | con `party_night` en las ultimas 3 semanas | medible |
 | Sitios en silencio | publicados, sin `party_night` en 3 semanas | medible |
 | **Origen de la solicitud** | de donde llego el bar | **NO existe** — ver abajo |
@@ -111,12 +158,12 @@ activacion cuando reportar era el camino principal, y desde la Decision 1 el
 camino principal es vender. Un sitio que armo la carta pero nunca escaneo nada
 no esta activo, esta decorado.
 
-Para los sitios que van por el camino viejo (aporte por porcentaje, opcional),
-la activacion sigue siendo su primer `venue_contribution` verificado. Son dos
-definiciones porque son dos caminos, y al reportar hay que decir cual se uso.
+`venue_contribution` conserva filas del modelo anterior y puede medirse para
+reconciliacion histórica. No representa una segunda vía vigente ni convierte un
+porcentaje de ventas no auditado en una asignacion actual.
 
 ```sql
--- tiempo de reportado a verificado, la metrica de retencion mas importante
+-- historial: tiempo de verificado, no una metrica de checkout actual
 select
   percentile_cont(0.5) within group (order by verified_at - created_at) as mediana,
   count(*) filter (where verified_at is null and status = 'submitted') as pendientes
@@ -143,7 +190,7 @@ having max(n.happened_at) < now() - interval '21 days' or max(n.happened_at) is 
 | **Segunda noche** | rumberos con reclamos en 2+ `party_night` distintas | medible |
 | Reclamos por rumbero | `photo_claim` agrupado por `user_id` | medible |
 | Fotos disponibles sin reclamar | `party_photo` sin `photo_claim` | medible |
-| Tragos pedidos | `product_order` por `created_at` | **NO existe aun** |
+| Tragos pedidos | `product_order` por `created_at`, separando app/bar y estado | medible como pedidos, no como cobros |
 | **Pedido → escaneado** | `order_redemption.redeemed_at - product_order.created_at` | **NO existe aun** |
 | Cuanta gente ve el mapa | — | **NO existe** — ver abajo |
 

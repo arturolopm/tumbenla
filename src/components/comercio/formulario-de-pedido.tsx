@@ -29,6 +29,7 @@ export function FormularioDePedido({
   correoDeLaCuenta,
   nombreDeLaCuenta,
   sinSesion,
+  initialSubmissionKey,
 }: {
   venueSlug: string
   venueNombre: string
@@ -38,6 +39,7 @@ export function FormularioDePedido({
     kind: KindDeProducto
     descripcion: string | null
     precio: number
+    porcentajeMaterial: number
     material: number
     sitio: number
   }
@@ -45,6 +47,7 @@ export function FormularioDePedido({
   nombreDeLaCuenta: string
   /** Sin sesion se ofrece la cuenta; con sesion ya no hay nada que ofrecer. */
   sinSesion: boolean
+  initialSubmissionKey: string
 }) {
   const router = useRouter()
   const [estado, enviar, enviando] = useActionState<PedidoState, FormData>(crearPedidoAction, {
@@ -55,13 +58,33 @@ export function FormularioDePedido({
   // Arranca en true: la cuenta es lo que recomendamos, y es lo que convierte un
   // trago suelto en una historia. Quien no la quiera la apaga de un toque.
   const [quiereCuenta, setQuiereCuenta] = useState(true)
+  const [submissionKey, setSubmissionKey] = useState(initialSubmissionKey)
 
   useEffect(() => {
-    if (estado.status === 'success') router.push(estado.url)
+    const storageKey = `tumbenla:pedido:${venueSlug}:${producto.slug}`
+    const persisted = sessionStorage.getItem(storageKey)
+    if (persisted) setSubmissionKey(persisted)
+    else sessionStorage.setItem(storageKey, initialSubmissionKey)
+  }, [initialSubmissionKey, producto.slug, venueSlug])
+
+  useEffect(() => {
+    if (estado.status === 'success') {
+      const storageKey = `tumbenla:pedido:${venueSlug}:${producto.slug}`
+      const attempt = /^\/pago\/(?:iniciar|estado)\/([^?]+)/.exec(estado.url)?.[1]
+      if (attempt) {
+        sessionStorage.setItem(
+          `tumbenla:payment-attempt:${attempt}`,
+          JSON.stringify({ storageKey, wantsAccount: quiereCuenta && sinSesion })
+        )
+      } else {
+        sessionStorage.removeItem(storageKey)
+      }
+      router.push(estado.url)
+    }
     if (estado.status === 'error') {
       toastManager.add({ title: 'No se pudo', description: estado.error, type: 'error' })
     }
-  }, [estado, router])
+  }, [estado, producto.slug, quiereCuenta, router, sinSesion, venueSlug])
 
   const total = useMemo(() => producto.precio * cantidad, [producto.precio, cantidad])
   const materialTotal = producto.material * cantidad
@@ -74,6 +97,7 @@ export function FormularioDePedido({
       <input type='hidden' name='venueSlug' value={venueSlug} />
       <input type='hidden' name='productoSlug' value={producto.slug} />
       <input type='hidden' name='payMethod' value={metodo} />
+      <input type='hidden' name='submissionKey' value={submissionKey} />
       <input type='hidden' name='quiereCuenta' value={quiereCuenta ? '1' : '0'} />
 
       <header>
@@ -94,9 +118,21 @@ export function FormularioDePedido({
 
       <div className='rounded-xl border border-lime bg-lime/5 p-4'>
         <p className='text-body-lg'>
-          De {formatCOP(producto.precio)}:{' '}
-          <strong className='text-lime'>{formatCOP(producto.material)} se van en material</strong>
-          {producto.sitio > 0 ? `. ${formatCOP(producto.sitio)} se quedan en el sitio.` : '.'}
+          {metodo === 'app' ? (
+            <>
+              <strong className='text-lime'>{producto.porcentajeMaterial}% del valor neto</strong>{' '}
+              se va en material, después de las deducciones verificadas de la pasarela. El monto
+              exacto queda pendiente hasta la reconciliación.
+            </>
+          ) : (
+            <>
+              De {formatCOP(producto.precio)}:{' '}
+              <strong className='text-lime'>
+                {formatCOP(producto.material)} se van en material
+              </strong>
+              {producto.sitio > 0 ? `. ${formatCOP(producto.sitio)} se quedan en el sitio.` : '.'}
+            </>
+          )}
         </p>
       </div>
 
@@ -123,7 +159,9 @@ export function FormularioDePedido({
           <input type='hidden' name='quantity' value={cantidad} />
           {cantidad > 1 ? (
             <p className='text-body-md text-muted-foreground'>
-              {formatCOP(materialTotal)} en material
+              {metodo === 'app'
+                ? 'El reparto exacto se confirma al reconciliar el cobro.'
+                : `${formatCOP(materialTotal)} en material`}
             </p>
           ) : null}
         </div>

@@ -16,6 +16,7 @@ import {
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
 import { getActiveProviderName } from '@/lib/messaging/email/mailer'
 import { isEmailVerificationEnabled } from '@/config/feature-flags'
+import { isIsolatedBrowserTest } from '@/lib/isolated-browser-test'
 
 /**
  * Todas las direcciones por las que ESTE despliegue responde.
@@ -67,6 +68,9 @@ const origenesPropios = (): string[] => {
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
   trustedOrigins: origenesPropios(),
+  rateLimit: {
+    enabled: !isIsolatedBrowserTest(),
+  },
 
   /**
    * Server-side auth logging.
