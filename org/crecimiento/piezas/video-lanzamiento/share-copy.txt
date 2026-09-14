@@ -1,3 +1,13 @@
-Tumbenla: un mapa de los bares y discotecas de Manizales que ponen una parte de sus ventas en material de construcción. Usted se parcha como siempre, y después entra a verificar cuánto se puso.
+PIEZA 1 · PIDE EL TRAGO
 
-Nosotros compramos el material y publicamos la factura. Si no hay recibo, no pasó.
+Pide el trago. Antes ves el precio y el reparto en pesos. Pagas aquí o en la barra; en los dos casos te sale un QR. Muéstralo y ya.
+
+
+PIEZA 2 · ESCANEA PRIMERO
+
+El QR se escanea antes de cobrar. La pantalla del bar dice si ya está pagado o si toca cobrar. Así cada entrega deja rastro.
+
+
+PIEZA 3 · DEL TRAGO AL RECIBO
+
+Pedido. QR. Escaneo. Material. Factura publicada. La vuelta completa, sin promesas sueltas. Si no hay recibo, no pasó.

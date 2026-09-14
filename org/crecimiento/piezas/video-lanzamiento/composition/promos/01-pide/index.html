@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Tumbenla — Pide el trago</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "Anybody";
+        src: url("assets/fonts/anybody.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: "Montserrat";
+        src: url("assets/fonts/montserrat.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+
+      :root {
+        --background: oklch(0.188 0.03 265.9);
+        --foreground: oklch(0.915 0.028 274.6);
+        --card: oklch(0.241 0.03 267.3);
+        --popover: oklch(0.286 0.029 267.6);
+        --secondary: oklch(0.33 0.028 267.8);
+        --primary: oklch(0.676 0.196 41.9);
+        --primary-foreground: oklch(0.188 0.03 265.9);
+        --primary-text: oklch(0.836 0.095 42.3);
+        --party: oklch(0.776 0.165 72.6);
+        --lime: oklch(0.917 0.226 129);
+        --street-white: oklch(0.982 0.002 247.8);
+        --muted-foreground: oklch(0.831 0.044 41.4);
+        --border: oklch(0.4 0.038 40.7);
+        --sidebar: oklch(0.166 0.031 265.2);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--background);
+      }
+
+      body {
+        color: var(--foreground);
+        font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--background);
+      }
+
+      .clip {
+        position: absolute;
+        inset: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--background);
+        will-change: transform, opacity;
+      }
+
+      #scene-2,
+      #scene-3,
+      #scene-4 {
+        opacity: 0;
+      }
+
+      #s2-flow,
+      #s3-flow,
+      #s4-flow {
+        opacity: 0;
+      }
+
+      .scene-flow {
+        position: absolute;
+        inset: 0;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--background);
+        will-change: transform, opacity;
+      }
+
+      .poster-bg,
+      .poster-grain,
+      .poster-dots,
+      .poster-bloom,
+      .poster-vignette,
+      .poster-rule,
+      .registration {
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .poster-bg {
+        inset: 0;
+        background: var(--background);
+      }
+
+      .poster-grain {
+        inset: 0;
+        background-image: url("assets/img/grain.jpg");
+        background-size: 560px 560px;
+        mix-blend-mode: overlay;
+        opacity: 0.13;
+      }
+
+      .poster-dots {
+        inset: 0;
+        background-image: radial-gradient(circle, var(--foreground) 1.3px, transparent 1.5px);
+        background-size: 11px 11px;
+        mix-blend-mode: soft-light;
+        opacity: 0.12;
+      }
+
+      .poster-bloom {
+        width: 780px;
+        height: 780px;
+        border-radius: 50%;
+        background: var(--primary);
+        filter: blur(150px);
+        opacity: 0.16;
+      }
+
+      .poster-vignette {
+        inset: 0;
+        background: radial-gradient(circle at 48% 44%, transparent 34%, var(--sidebar) 112%);
+        opacity: 0.9;
+      }
+
+      .poster-rule {
+        width: 4px;
+        background: var(--primary);
+        opacity: 0.9;
+        transform-origin: top center;
+      }
+
+      .registration {
+        width: 36px;
+        height: 36px;
+        border-top: 4px solid var(--primary-text);
+        border-left: 4px solid var(--primary-text);
+        opacity: 0.8;
+      }
+
+      .reg-tr {
+        top: 64px;
+        right: 64px;
+        transform: rotate(90deg);
+      }
+
+      .reg-bl {
+        bottom: 64px;
+        left: 64px;
+        transform: rotate(-90deg);
+      }
+
+      .scene-inner {
+        position: absolute;
+        inset: 0;
+        padding: 112px 72px 104px;
+      }
+
+      .display {
+        margin: 0;
+        color: var(--street-white);
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        line-height: 0.88;
+        letter-spacing: -0.065em;
+        text-transform: uppercase;
+      }
+
+      .body-copy {
+        margin: 0;
+        color: var(--foreground);
+        font-size: 38px;
+        font-weight: 600;
+        line-height: 1.35;
+        letter-spacing: -0.025em;
+      }
+
+      .eyebrow-line {
+        display: flex;
+        width: 100%;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .eyebrow-line::before {
+        width: 66px;
+        height: 9px;
+        background: var(--primary);
+        content: "";
+      }
+
+      .eyebrow-line::after {
+        height: 3px;
+        flex: 1;
+        background: var(--border);
+        content: "";
+      }
+
+      .orange-text {
+        color: var(--primary-text);
+      }
+
+      .skeleton {
+        display: block;
+        border-radius: 999px;
+        background: var(--secondary);
+      }
+
+      /* Scene 1: the public product card, abstracted so it contains no fixture data. */
+      #scene-1 .poster-bloom {
+        top: -250px;
+        right: -340px;
+      }
+
+      #s1-rule {
+        top: 0;
+        left: 76px;
+        height: 620px;
+      }
+
+      #s1-title {
+        position: relative;
+        z-index: 2;
+        margin-top: 102px;
+        font-size: 168px;
+      }
+
+      #s1-title span {
+        display: block;
+        width: max-content;
+        opacity: 0;
+        will-change: transform;
+      }
+
+      #s1-trago {
+        color: var(--primary-text);
+      }
+
+      #s1-copy {
+        position: relative;
+        z-index: 2;
+        width: 780px;
+        margin-top: 42px;
+        opacity: 0;
+      }
+
+      #s1-card-stage {
+        position: absolute;
+        right: 42px;
+        bottom: 114px;
+        width: 854px;
+        height: 712px;
+      }
+
+      #s1-backplate,
+      #s1-card {
+        position: absolute;
+        border-radius: 34px;
+        will-change: transform, opacity;
+      }
+
+      #s1-backplate {
+        inset: 48px 10px 4px 64px;
+        background: var(--primary);
+        box-shadow: 0 34px 90px oklch(0.09 0.04 265 / 0.55);
+      }
+
+      #s1-card {
+        inset: 0 54px 50px 0;
+        overflow: hidden;
+        border: 4px solid var(--border);
+        background: var(--card);
+        box-shadow: 0 36px 110px oklch(0.08 0.03 265 / 0.7);
+        opacity: 0;
+      }
+
+      .abstract-product-art {
+        position: relative;
+        height: 300px;
+        overflow: hidden;
+        background: var(--popover);
+        border-bottom: 4px solid var(--border);
+      }
+
+      .abstract-product-art::before {
+        position: absolute;
+        top: -86px;
+        right: -30px;
+        width: 410px;
+        height: 410px;
+        border: 52px solid var(--primary);
+        border-radius: 50%;
+        content: "";
+        opacity: 0.95;
+      }
+
+      .abstract-product-art::after {
+        position: absolute;
+        bottom: 34px;
+        left: 44px;
+        width: 240px;
+        height: 118px;
+        border: 8px solid var(--party);
+        border-radius: 999px 999px 46px 46px;
+        content: "";
+        transform: rotate(-10deg);
+      }
+
+      .product-card-body {
+        display: grid;
+        gap: 31px;
+        padding: 38px 42px 40px;
+      }
+
+      .product-card-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 30px;
+      }
+
+      .product-lines {
+        display: grid;
+        flex: 1;
+        gap: 18px;
+      }
+
+      .product-lines .skeleton:first-child {
+        width: 72%;
+        height: 34px;
+        background: var(--street-white);
+      }
+
+      .product-lines .skeleton:last-child {
+        width: 48%;
+        height: 18px;
+      }
+
+      .price-blank {
+        width: 152px;
+        height: 58px;
+        border: 4px solid var(--primary-text);
+        border-radius: 14px;
+      }
+
+      .split-rows {
+        display: grid;
+        gap: 18px;
+        padding-top: 28px;
+        border-top: 4px solid var(--border);
+      }
+
+      .split-row {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .split-row::before {
+        width: 27px;
+        height: 27px;
+        flex: 0 0 auto;
+        border-radius: 7px;
+        background: var(--primary);
+        content: "";
+      }
+
+      .split-row:last-child::before {
+        border: 4px solid var(--party);
+        background: transparent;
+      }
+
+      .split-row .skeleton {
+        width: 100%;
+        height: 20px;
+      }
+
+      /* Scene 2: same two payment options as the real order form. */
+      #scene-2 .poster-bloom {
+        top: 520px;
+        left: -470px;
+      }
+
+      #s2-rule {
+        top: 112px;
+        right: 78px;
+        height: 480px;
+      }
+
+      #s2-title {
+        width: 820px;
+        margin-top: 96px;
+        font-size: 154px;
+        opacity: 0;
+      }
+
+      #s2-payment-stage {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 28px;
+        width: 936px;
+        height: 790px;
+        margin-top: 118px;
+        padding: 0;
+        opacity: 0;
+      }
+
+      #s2-selector {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        width: 454px;
+        height: 790px;
+        border-radius: 34px;
+        background: var(--lime);
+        box-shadow: 0 30px 100px oklch(0.09 0.04 265 / 0.55);
+        will-change: transform;
+      }
+
+      .payment-option {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        justify-content: space-between;
+        overflow: hidden;
+        border: 4px solid var(--border);
+        border-radius: 34px;
+        padding: 52px 36px 44px;
+        background: transparent;
+        color: var(--foreground);
+        will-change: color;
+      }
+
+      #pay-here {
+        color: var(--primary-foreground);
+      }
+
+      .payment-icon {
+        position: relative;
+        width: 180px;
+        height: 180px;
+        color: currentColor;
+      }
+
+      .payment-icon::before,
+      .payment-icon::after {
+        position: absolute;
+        border: 8px solid currentColor;
+        content: "";
+      }
+
+      .icon-app::before {
+        inset: 0 36px;
+        border-radius: 28px;
+      }
+
+      .icon-app::after {
+        right: 69px;
+        bottom: 19px;
+        width: 26px;
+        height: 8px;
+        border-width: 0 0 8px;
+      }
+
+      .icon-bar::before {
+        top: 24px;
+        right: 8px;
+        left: 8px;
+        height: 70px;
+        border-radius: 90px 90px 26px 26px;
+      }
+
+      .icon-bar::after {
+        right: 76px;
+        bottom: 0;
+        width: 10px;
+        height: 78px;
+        border-width: 0 8px 8px 0;
+        border-radius: 0;
+      }
+
+      .payment-copy {
+        display: block;
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-size: 68px;
+        font-weight: 900;
+        line-height: 0.94;
+        letter-spacing: -0.045em;
+        text-transform: uppercase;
+      }
+
+      .payment-index {
+        display: block;
+        width: 78px;
+        height: 10px;
+        margin-top: 28px;
+        background: currentColor;
+        opacity: 0.6;
+      }
+
+      /* Scene 3: a low-density module mark that deliberately cannot scan. */
+      #scene-3 .poster-bloom {
+        top: 880px;
+        right: -460px;
+      }
+
+      #s3-rule {
+        top: 0;
+        left: 72px;
+        height: 690px;
+      }
+
+      #s3-title {
+        position: relative;
+        z-index: 3;
+        width: 900px;
+        margin-top: 92px;
+        font-size: 108px;
+        opacity: 0;
+      }
+
+      #s3-title .orange-text {
+        display: block;
+        margin-bottom: 12px;
+        font-size: 62px;
+        line-height: 1;
+        letter-spacing: -0.025em;
+      }
+
+      #s3-phone {
+        position: absolute;
+        top: 630px;
+        left: 160px;
+        width: 760px;
+        height: 1070px;
+        overflow: hidden;
+        border: 7px solid var(--border);
+        border-radius: 70px;
+        background: var(--sidebar);
+        box-shadow: 0 48px 140px oklch(0.07 0.03 265 / 0.78);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+
+      .phone-speaker {
+        position: absolute;
+        top: 32px;
+        left: 50%;
+        width: 176px;
+        height: 18px;
+        border-radius: 999px;
+        background: var(--secondary);
+        transform: translateX(-50%);
+      }
+
+      #s3-qr-card {
+        position: absolute;
+        top: 126px;
+        left: 88px;
+        width: 570px;
+        height: 650px;
+        overflow: hidden;
+        border-radius: 38px;
+        background: var(--street-white);
+        box-shadow: 0 26px 80px oklch(0.06 0.025 265 / 0.5);
+      }
+
+      #s3-qr-stage {
+        position: absolute;
+        top: 58px;
+        left: 56px;
+        width: 458px;
+        height: 458px;
+        perspective: 1200px;
+        transform-style: preserve-3d;
+      }
+
+      .qr-module {
+        position: absolute;
+        display: block;
+        border-radius: 11px;
+        background: var(--background);
+        opacity: 0;
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+        will-change: transform, opacity;
+      }
+
+      .qr-module.orange {
+        background: var(--primary);
+      }
+
+      .qr-module.round {
+        border-radius: 50%;
+      }
+
+      #s3-status {
+        position: absolute;
+        right: 42px;
+        bottom: 40px;
+        width: 76px;
+        height: 76px;
+        border-radius: 50%;
+        background: var(--lime);
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+
+      #s3-status::after {
+        position: absolute;
+        top: 21px;
+        left: 20px;
+        width: 33px;
+        height: 18px;
+        border-bottom: 8px solid var(--primary-foreground);
+        border-left: 8px solid var(--primary-foreground);
+        content: "";
+        transform: rotate(-45deg);
+      }
+
+      .phone-bottom-lines {
+        position: absolute;
+        right: 88px;
+        bottom: 112px;
+        left: 88px;
+        display: grid;
+        gap: 22px;
+      }
+
+      .phone-bottom-lines .skeleton:first-child {
+        width: 84%;
+        height: 25px;
+        background: var(--foreground);
+      }
+
+      .phone-bottom-lines .skeleton:nth-child(2) {
+        width: 66%;
+        height: 17px;
+      }
+
+      .phone-bottom-lines .skeleton:last-child {
+        width: 46%;
+        height: 17px;
+      }
+
+      /* Scene 4: a quiet, fully settled lockup after the action. */
+      #scene-4 .poster-bloom {
+        right: -280px;
+        bottom: -300px;
+      }
+
+      #s4-lockup {
+        position: absolute;
+        right: 72px;
+        bottom: 196px;
+        left: 72px;
+        opacity: 0;
+        will-change: transform, opacity;
+      }
+
+      #s4-rule {
+        top: 0;
+        left: 0;
+        width: 182px;
+        height: 14px;
+        background: var(--primary);
+      }
+
+      #s4-title {
+        width: 930px;
+        margin-top: 58px;
+        font-size: 150px;
+      }
+
+      #s4-url {
+        display: inline-flex;
+        align-items: center;
+        min-height: 98px;
+        margin-top: 64px;
+        border-radius: 999px;
+        padding: 14px 38px 12px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      #s4-ghost-phone {
+        position: absolute;
+        top: 168px;
+        right: -150px;
+        width: 490px;
+        height: 900px;
+        border: 9px solid var(--primary-text);
+        border-radius: 82px;
+        opacity: 0.16;
+        transform: rotate(11deg);
+      }
+
+      #s4-ghost-phone::before {
+        position: absolute;
+        top: 150px;
+        left: 74px;
+        width: 330px;
+        height: 330px;
+        border: 16px solid var(--primary-text);
+        border-radius: 36px;
+        content: "";
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      id="root"
+      data-composition-id="promo-01-pide"
+      data-start="0"
+      data-width="1080"
+      data-height="1920"
+      data-duration="12"
+      data-fps="30"
+    >
+      <section
+        id="scene-1"
+        class="clip"
+        data-start="0"
+        data-duration="2.6"
+        data-track-index="1"
+      >
+        <div id="s1-flow" class="scene-flow">
+          <div class="poster-bg" data-layout-ignore></div>
+          <div class="poster-bloom" data-layout-ignore></div>
+          <div class="poster-dots" data-layout-ignore></div>
+          <div class="poster-grain" data-layout-ignore></div>
+          <div class="poster-vignette" data-layout-ignore></div>
+          <div id="s1-rule" class="poster-rule" data-layout-ignore></div>
+          <div class="registration reg-tr" data-layout-ignore></div>
+          <div class="scene-inner">
+            <div class="eyebrow-line" data-layout-ignore></div>
+            <h1 id="s1-title" class="display">
+              <span id="s1-pide">Pide el</span>
+              <span id="s1-trago">trago</span>
+            </h1>
+            <p id="s1-copy" class="body-copy">Antes ves el precio y el reparto en pesos.</p>
+            <div id="s1-card-stage" data-layout-allow-overflow>
+              <div id="s1-backplate" data-layout-ignore></div>
+              <div id="s1-card">
+                <div class="abstract-product-art"></div>
+                <div class="product-card-body">
+                  <div class="product-card-top">
+                    <div class="product-lines">
+                      <span class="skeleton"></span>
+                      <span class="skeleton"></span>
+                    </div>
+                    <span class="price-blank"></span>
+                  </div>
+                  <div class="split-rows">
+                    <div class="split-row"><span class="skeleton"></span></div>
+                    <div class="split-row"><span class="skeleton"></span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="scene-2"
+        class="clip"
+        data-start="2.6"
+        data-duration="3.6"
+        data-track-index="1"
+      >
+        <div id="s2-flow" class="scene-flow">
+          <div class="poster-bg" data-layout-ignore></div>
+          <div class="poster-bloom" data-layout-ignore></div>
+          <div class="poster-dots" data-layout-ignore></div>
+          <div class="poster-grain" data-layout-ignore></div>
+          <div class="poster-vignette" data-layout-ignore></div>
+          <div id="s2-rule" class="poster-rule" data-layout-ignore></div>
+          <div class="registration reg-bl" data-layout-ignore></div>
+          <div class="scene-inner">
+            <div class="eyebrow-line" data-layout-ignore></div>
+            <h2 id="s2-title" class="display">Cómo pagas</h2>
+            <div id="s2-payment-stage">
+              <div id="s2-selector" data-layout-ignore></div>
+              <div id="pay-here" class="payment-option">
+                <span class="payment-icon icon-app" data-layout-ignore></span>
+                <span>
+                  <span class="payment-copy">Aquí</span>
+                  <span class="payment-index" data-layout-ignore></span>
+                </span>
+              </div>
+              <div id="pay-bar" class="payment-option">
+                <span class="payment-icon icon-bar" data-layout-ignore></span>
+                <span>
+                  <span class="payment-copy">En la barra</span>
+                  <span class="payment-index" data-layout-ignore></span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="scene-3"
+        class="clip"
+        data-start="6.2"
+        data-duration="3.4"
+        data-track-index="1"
+      >
+        <div id="s3-flow" class="scene-flow">
+          <div class="poster-bg" data-layout-ignore></div>
+          <div class="poster-bloom" data-layout-ignore></div>
+          <div class="poster-dots" data-layout-ignore></div>
+          <div class="poster-grain" data-layout-ignore></div>
+          <div class="poster-vignette" data-layout-ignore></div>
+          <div id="s3-rule" class="poster-rule" data-layout-ignore></div>
+          <div class="registration reg-tr" data-layout-ignore></div>
+          <div class="scene-inner">
+            <div class="eyebrow-line" data-layout-ignore></div>
+            <h2 id="s3-title" class="display">
+              <span class="orange-text">En los dos casos</span>
+              te sale un QR.
+            </h2>
+            <div id="s3-phone">
+              <span class="phone-speaker" data-layout-ignore></span>
+              <div id="s3-qr-card">
+                <div id="s3-qr-stage" data-layout-ignore>
+                  <i class="qr-module" style="left: 0; top: 0; width: 118px; height: 72px"></i>
+                  <i class="qr-module orange" style="left: 152px; top: 0; width: 72px; height: 72px"></i>
+                  <i class="qr-module" style="right: 0; top: 0; width: 180px; height: 72px"></i>
+                  <i class="qr-module round" style="left: 0; top: 110px; width: 82px; height: 82px"></i>
+                  <i class="qr-module" style="left: 118px; top: 105px; width: 168px; height: 88px"></i>
+                  <i class="qr-module" style="right: 0; top: 112px; width: 132px; height: 78px"></i>
+                  <i class="qr-module orange" style="left: 0; top: 232px; width: 192px; height: 66px"></i>
+                  <i class="qr-module" style="right: 0; top: 226px; width: 224px; height: 78px"></i>
+                  <i class="qr-module" style="left: 0; bottom: 0; width: 92px; height: 116px"></i>
+                  <i class="qr-module" style="left: 128px; bottom: 0; width: 72px; height: 72px"></i>
+                  <i class="qr-module orange round" style="left: 236px; bottom: 0; width: 112px; height: 112px"></i>
+                  <i class="qr-module" style="right: 0; bottom: 0; width: 74px; height: 150px"></i>
+                </div>
+                <span id="s3-status" data-layout-ignore></span>
+              </div>
+              <div class="phone-bottom-lines" data-layout-ignore>
+                <span class="skeleton"></span>
+                <span class="skeleton"></span>
+                <span class="skeleton"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="scene-4"
+        class="clip"
+        data-start="9.6"
+        data-duration="2.4"
+        data-track-index="1"
+      >
+        <div id="s4-flow" class="scene-flow">
+          <div class="poster-bg" data-layout-ignore></div>
+          <div class="poster-bloom" data-layout-ignore></div>
+          <div class="poster-dots" data-layout-ignore></div>
+          <div class="poster-grain" data-layout-ignore></div>
+          <div class="poster-vignette" data-layout-ignore></div>
+          <div id="s4-ghost-phone" data-layout-ignore></div>
+          <div class="registration reg-bl" data-layout-ignore></div>
+          <div id="s4-lockup">
+            <span id="s4-rule" data-layout-ignore></span>
+            <h2 id="s4-title" class="display">Muéstralo en la barra.</h2>
+            <span id="s4-url">tumbenla.com</span>
+          </div>
+        </div>
+      </section>
+
+      <audio
+        id="music-bed"
+        src="assets/music/perreo-melodico.mp3"
+        data-start="0"
+        data-duration="12"
+        data-media-start="27.6845"
+        data-track-index="20"
+      ></audio>
+      <audio
+        id="sfx-impact"
+        src="assets/sfx/impactSoft_medium_001.ogg"
+        data-start="0.15"
+        data-duration="0.183"
+        data-track-index="21"
+        data-volume="0.28"
+      ></audio>
+      <audio
+        id="sfx-switch"
+        src="assets/sfx/switch_007.ogg"
+        data-start="4.45"
+        data-duration="0.614"
+        data-track-index="21"
+        data-volume="0.2"
+      ></audio>
+      <audio
+        id="sfx-qr"
+        src="assets/sfx/card-slide-1.ogg"
+        data-start="6.48"
+        data-duration="0.6"
+        data-track-index="21"
+        data-volume="0.18"
+      ></audio>
+    </main>
+
+    <script>
+      const tl = gsap.timeline({ paused: true })
+
+      // Music bed: low, quick fade-in, and fully gone over the final second.
+      tl.fromTo(
+        "#music-bed",
+        { volume: 0 },
+        { volume: 0.18, duration: 0.25, ease: "power2.out" },
+        0
+      )
+      tl.to("#music-bed", { volume: 0, duration: 1, ease: "power2.in" }, 11)
+
+      // Scene 1 — waterfall headline, then a two-plate product card assembly.
+      tl.set("#s1-pide", { opacity: 1, y: 78 }, 0.13)
+      tl.to("#s1-pide", { y: 0, duration: 0.2, ease: "power4.out" }, 0.13)
+      tl.set("#s1-trago", { opacity: 1, y: 66 }, 0.31)
+      tl.to("#s1-trago", { y: 0, duration: 0.17, ease: "expo.out" }, 0.31)
+      tl.fromTo(
+        "#s1-copy",
+        { x: 78, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.42, ease: "power4.out" },
+        0.5
+      )
+      tl.fromTo(
+        "#s1-backplate",
+        { x: 240, y: 70, rotation: 10, opacity: 0 },
+        { x: 0, y: 0, rotation: 3, opacity: 1, duration: 0.7, ease: "expo.out" },
+        0.72
+      )
+      tl.fromTo(
+        "#s1-card",
+        { x: -210, y: 90, rotation: -8, opacity: 0 },
+        { x: 0, y: 0, rotation: -2, opacity: 1, duration: 0.76, ease: "power4.out" },
+        0.82
+      )
+      tl.fromTo(
+        "#s1-card .split-row",
+        { x: -80, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.38, stagger: 0.11, ease: "power3.out" },
+        1.35
+      )
+
+      // Cut-the-curve, leftward current at each exact story boundary.
+      tl.to(
+        "#s1-flow",
+        { x: -130, opacity: 0, duration: 0.26, ease: "power4.in" },
+        2.34
+      )
+      tl.set("#s1-flow", { opacity: 0 }, 2.6)
+      tl.set("#scene-2", { opacity: 1 }, 2.6)
+      tl.fromTo(
+        "#s2-flow",
+        { x: 130, opacity: 0.35 },
+        { x: 0, opacity: 1, duration: 0.32, ease: "power4.out", immediateRender: false },
+        2.6
+      )
+
+      // Scene 2 — the selected slab and its labels move as one coupled state.
+      tl.fromTo(
+        "#s2-title",
+        { y: 74, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.48, ease: "expo.out", immediateRender: false },
+        2.77
+      )
+      tl.fromTo(
+        "#s2-payment-stage",
+        { y: 110, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.62, ease: "power4.out", immediateRender: false },
+        3.1
+      )
+      tl.fromTo(
+        ".payment-icon",
+        { scale: 0.68, rotation: -8 },
+        { scale: 1, rotation: 0, duration: 0.46, stagger: 0.09, ease: "back.out(1.45)", immediateRender: false },
+        3.34
+      )
+      tl.addLabel("payment-switch", 4.45)
+      tl.to(
+        "#s2-selector",
+        { x: 482, duration: 0.7, ease: "power2.inOut" },
+        "payment-switch"
+      )
+      tl.to(
+        "#pay-here",
+        { color: "oklch(0.915 0.028 274.6)", duration: 0.7, ease: "power2.inOut" },
+        "payment-switch"
+      )
+      tl.to(
+        "#pay-bar",
+        { color: "oklch(0.188 0.03 265.9)", duration: 0.7, ease: "power2.inOut" },
+        "payment-switch"
+      )
+      tl.to(
+        "#s2-flow",
+        { x: -130, opacity: 0, duration: 0.26, ease: "power4.in" },
+        5.94
+      )
+      tl.set("#s2-flow", { opacity: 0 }, 6.2)
+      tl.set("#scene-3", { opacity: 1 }, 6.2)
+      tl.fromTo(
+        "#s3-flow",
+        { x: 130, opacity: 0.35 },
+        { x: 0, opacity: 1, duration: 0.32, ease: "power4.out", immediateRender: false },
+        6.2
+      )
+
+      // Scene 3 — a deterministic twelve-fragment assembly, intentionally not a QR code.
+      tl.fromTo(
+        "#s3-title",
+        { y: 70, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.44, ease: "expo.out", immediateRender: false },
+        6.35
+      )
+      tl.fromTo(
+        "#s3-phone",
+        { y: 190, rotation: 7, opacity: 0 },
+        { y: 0, rotation: -1.5, opacity: 1, duration: 0.72, ease: "power4.out", immediateRender: false },
+        6.48
+      )
+
+      const qrModules = Array.from(document.querySelectorAll(".qr-module"))
+      const golden = Math.PI * (3 - Math.sqrt(5))
+      qrModules.forEach((module, index) => {
+        const angle = index * golden
+        const depth = 260 - (index / (qrModules.length - 1)) * 520
+        tl.fromTo(
+          module,
+          {
+            x: Math.cos(angle) * 280,
+            y: Math.sin(angle) * 340,
+            z: depth,
+            rotationX: Math.sin(angle) * 64,
+            rotationY: Math.cos(angle) * 64,
+            opacity: 0
+          },
+          {
+            x: 0,
+            y: 0,
+            z: 0,
+            rotationX: 0,
+            rotationY: 0,
+            opacity: 1,
+            duration: 0.84,
+            ease: "expo.out",
+            immediateRender: false
+          },
+          6.68 + index * 0.045
+        )
+      })
+      tl.fromTo(
+        "#s3-status",
+        { scale: 0.35, rotation: -16, opacity: 0 },
+        { scale: 1, rotation: 0, opacity: 1, duration: 0.42, ease: "back.out(1.5)", immediateRender: false },
+        8.25
+      )
+      tl.to(
+        "#s3-flow",
+        { x: -130, opacity: 0, duration: 0.26, ease: "power4.in" },
+        9.34
+      )
+      tl.set("#s3-flow", { opacity: 0 }, 9.6)
+      tl.set("#scene-4", { opacity: 1 }, 9.6)
+      tl.fromTo(
+        "#s4-flow",
+        { x: 130, opacity: 0.35 },
+        { x: 0, opacity: 1, duration: 0.32, ease: "power4.out", immediateRender: false },
+        9.6
+      )
+
+      // Scene 4 — rises once, then holds completely still through the end frame.
+      tl.fromTo(
+        "#s4-lockup",
+        { y: 220, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.62, ease: "power4.out", immediateRender: false },
+        9.74
+      )
+      tl.fromTo(
+        "#s4-rule",
+        { scaleX: 0, transformOrigin: "left center" },
+        { scaleX: 1, duration: 0.4, ease: "expo.out", immediateRender: false },
+        9.92
+      )
+      tl.fromTo(
+        "#s4-url",
+        { x: 100, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.4, ease: "power3.out", immediateRender: false },
+        10.08
+      )
+
+      window.__timelines["promo-01-pide"] = tl
+    </script>
+  </body>
+</html>

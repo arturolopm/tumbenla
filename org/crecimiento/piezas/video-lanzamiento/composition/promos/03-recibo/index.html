@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <title>Tumbenla — Del trago al recibo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: 'Anybody';
+        src: url('assets/fonts/anybody.woff2') format('woff2');
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: block;
+      }
+
+      @font-face {
+        font-family: 'Montserrat';
+        src: url('assets/fonts/montserrat.woff2') format('woff2');
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: block;
+      }
+
+      :root {
+        --background: oklch(0.188 0.03 265.9);
+        --foreground: oklch(0.915 0.028 274.6);
+        --card: oklch(0.241 0.03 267.3);
+        --card-raised: oklch(0.286 0.029 267.6);
+        --primary: oklch(0.676 0.196 41.9);
+        --primary-text: oklch(0.836 0.095 42.3);
+        --lime: oklch(0.917 0.226 129);
+        --street-white: oklch(0.982 0.002 247.8);
+        --muted: oklch(0.754 0.034 41.4);
+        --border: oklch(0.4 0.038 40.7);
+        --shadow: oklch(0.12 0.03 265.9);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--background);
+      }
+
+      body {
+        color: var(--foreground);
+        font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      #root {
+        position: relative;
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--background);
+        isolation: isolate;
+      }
+
+      .clip {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .stage-background,
+      .poster-frame,
+      .dot-field,
+      .grain,
+      .bloom,
+      .street-mark {
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .stage-background {
+        inset: 0;
+        background:
+          radial-gradient(circle at 87% 10%, color-mix(in oklab, var(--primary) 28%, transparent), transparent 31%),
+          radial-gradient(circle at 5% 76%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 28%),
+          var(--background);
+      }
+
+      .dot-field {
+        inset: 0;
+        color: var(--street-white);
+        opacity: 0.1;
+        background-image: radial-gradient(circle, currentColor 1.5px, transparent 1.5px);
+        background-size: 12px 12px;
+        mask-image: linear-gradient(to bottom, black, transparent 74%);
+      }
+
+      .grain {
+        inset: 0;
+        opacity: 0.075;
+        background-image: url('assets/img/grain.jpg');
+        background-size: 520px 520px;
+        mix-blend-mode: overlay;
+      }
+
+      .bloom {
+        top: -250px;
+        right: -350px;
+        width: 980px;
+        height: 980px;
+        border-radius: 50%;
+        background: color-mix(in oklab, var(--primary) 20%, transparent);
+        filter: blur(150px);
+      }
+
+      .poster-frame {
+        inset: 30px;
+        border: 3px solid color-mix(in oklab, var(--primary) 78%, var(--border));
+        box-shadow: inset 0 0 0 10px color-mix(in oklab, var(--background) 80%, transparent);
+      }
+
+      .street-mark {
+        width: 310px;
+        height: 28px;
+        background: var(--primary);
+        opacity: 0.8;
+      }
+
+      #street-mark-a {
+        top: 176px;
+        right: -92px;
+        rotate: -12deg;
+      }
+
+      #street-mark-b {
+        bottom: 160px;
+        left: -112px;
+        rotate: -12deg;
+      }
+
+      .world {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .display {
+        display: block;
+        margin: 0;
+        font-family: 'Anybody', ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        line-height: 0.88;
+        letter-spacing: -0.055em;
+        text-transform: uppercase;
+      }
+
+      .meta {
+        display: block;
+        font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .poster-rule {
+        display: block;
+        width: 100%;
+        height: 18px;
+        background: var(--primary);
+        transform-origin: 0 50%;
+      }
+
+      /* Opening poster */
+      #title-layout {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 120px 82px 140px;
+      }
+
+      #title-del {
+        color: var(--primary-text);
+        font-size: 58px;
+        letter-spacing: 0.22em;
+      }
+
+      #title-trago {
+        margin-top: 30px;
+        color: var(--street-white);
+        font-size: 190px;
+      }
+
+      #title-al {
+        align-self: flex-end;
+        margin: 22px 18px 24px 0;
+        color: var(--foreground);
+        font-size: 62px;
+        letter-spacing: 0.18em;
+      }
+
+      #title-recibo {
+        color: var(--lime);
+        font-size: 166px;
+      }
+
+      #title-rule {
+        margin-top: 64px;
+      }
+
+      #title-bottom {
+        position: absolute;
+        right: 82px;
+        bottom: 120px;
+        color: var(--muted);
+        writing-mode: vertical-rl;
+      }
+
+      /* Five-step rail */
+      #chain-world {
+        padding: 118px 90px 108px;
+      }
+
+      #chain-rule {
+        width: 220px;
+      }
+
+      #rail {
+        position: relative;
+        width: 900px;
+        margin-top: 74px;
+      }
+
+      .step-card {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 112px 1fr 88px;
+        align-items: center;
+        width: 900px;
+        height: 190px;
+        padding: 0 38px;
+        overflow: hidden;
+        border: 3px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        color: var(--street-white);
+        box-shadow: 0 24px 64px color-mix(in oklab, var(--shadow) 75%, transparent);
+        transform-origin: 50% 50%;
+      }
+
+      .step-index {
+        font-family: 'Montserrat', ui-sans-serif, system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+      }
+
+      .step-name {
+        font-family: 'Anybody', ui-sans-serif, system-ui, sans-serif;
+        font-size: 66px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: -0.025em;
+        text-transform: uppercase;
+      }
+
+      .step-glyph {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 70px;
+        height: 70px;
+        border: 3px solid currentColor;
+        border-radius: 50%;
+        font-family: 'Anybody', ui-sans-serif, system-ui, sans-serif;
+        font-size: 30px;
+        font-weight: 900;
+      }
+
+      .connector {
+        position: relative;
+        z-index: 1;
+        width: 8px;
+        height: 54px;
+        margin-left: 52px;
+        background: color-mix(in oklab, var(--border) 78%, transparent);
+      }
+
+      .connector-fill {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background: var(--primary);
+        transform-origin: 50% 0;
+      }
+
+      .connector::after {
+        position: absolute;
+        right: -7px;
+        bottom: -1px;
+        width: 18px;
+        height: 18px;
+        border-right: 7px solid var(--primary);
+        border-bottom: 7px solid var(--primary);
+        content: '';
+        rotate: 45deg;
+      }
+
+      #receipt-seed {
+        position: absolute;
+        top: 520px;
+        left: 124px;
+        display: grid;
+        place-items: center;
+        width: 832px;
+        height: 760px;
+        border: 6px solid var(--primary);
+        background: var(--card);
+        opacity: 0;
+        box-shadow: 0 38px 100px color-mix(in oklab, var(--shadow) 82%, transparent);
+        clip-path: polygon(
+          0 0,
+          100% 0,
+          100% 96%,
+          94% 100%,
+          88% 96%,
+          82% 100%,
+          76% 96%,
+          70% 100%,
+          64% 96%,
+          58% 100%,
+          52% 96%,
+          46% 100%,
+          40% 96%,
+          34% 100%,
+          28% 96%,
+          22% 100%,
+          16% 96%,
+          10% 100%,
+          4% 96%,
+          0 100%
+        );
+      }
+
+      #receipt-seed-rule {
+        width: 590px;
+        height: 28px;
+        background: var(--primary);
+      }
+
+      /* Closing receipt */
+      #close-world {
+        display: grid;
+        place-items: center;
+        padding: 120px 78px;
+      }
+
+      #receipt-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 890px;
+        height: 1320px;
+        padding: 106px 74px 130px;
+        border: 6px solid var(--primary);
+        background: var(--card);
+        box-shadow:
+          0 42px 120px color-mix(in oklab, var(--shadow) 86%, transparent),
+          inset 0 0 0 12px color-mix(in oklab, var(--background) 56%, transparent);
+        clip-path: polygon(
+          0 0,
+          100% 0,
+          100% 96%,
+          95% 100%,
+          90% 96%,
+          85% 100%,
+          80% 96%,
+          75% 100%,
+          70% 96%,
+          65% 100%,
+          60% 96%,
+          55% 100%,
+          50% 96%,
+          45% 100%,
+          40% 96%,
+          35% 100%,
+          30% 96%,
+          25% 100%,
+          20% 96%,
+          15% 100%,
+          10% 96%,
+          5% 100%,
+          0 96%
+        );
+      }
+
+      #receipt-notch {
+        position: absolute;
+        top: 72px;
+        left: 74px;
+        width: 220px;
+        height: 18px;
+        background: var(--primary);
+      }
+
+      #receipt-rule-a,
+      #receipt-rule-b {
+        position: absolute;
+        left: 74px;
+        width: 742px;
+        height: 3px;
+        background: var(--border);
+      }
+
+      #receipt-rule-a {
+        top: 138px;
+      }
+
+      #receipt-rule-b {
+        bottom: 278px;
+      }
+
+      #close-copy {
+        position: relative;
+        z-index: 2;
+      }
+
+      #close-line-a {
+        color: var(--foreground);
+        font-size: 70px;
+        letter-spacing: 0.02em;
+      }
+
+      #close-line-b {
+        margin-top: 18px;
+        color: var(--primary-text);
+        font-size: 148px;
+      }
+
+      #close-line-c {
+        margin-top: 18px;
+        color: var(--street-white);
+        font-size: 132px;
+      }
+
+      #transparency-link {
+        position: absolute;
+        right: 74px;
+        bottom: 118px;
+        left: 74px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 108px;
+        padding: 0 34px;
+        border-radius: 999px;
+        background: var(--lime);
+        color: var(--background);
+        font-size: 25px;
+        font-weight: 850;
+        letter-spacing: -0.015em;
+      }
+
+      #transparency-arrow {
+        display: grid;
+        place-items: center;
+        width: 52px;
+        height: 52px;
+        border: 3px solid currentColor;
+        border-radius: 50%;
+        font-family: 'Anybody', ui-sans-serif, system-ui, sans-serif;
+        font-size: 34px;
+        font-weight: 900;
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-mk2y" id="root" data-composition-id="promo-03-recibo" data-start="0" data-width="1080" data-height="1920" data-duration="12" data-fps="30">
+      <div data-hf-id="hf-l59u" class="stage-background" aria-hidden="true"></div>
+      <div data-hf-id="hf-qyz7" class="bloom" data-layout-ignore="" aria-hidden="true"></div>
+      <div data-hf-id="hf-64wp" class="dot-field" aria-hidden="true"></div>
+      <div data-hf-id="hf-ub7q" class="grain" aria-hidden="true"></div>
+      <div data-hf-id="hf-om3c" id="street-mark-a" class="street-mark" data-layout-ignore="" aria-hidden="true"></div>
+      <div data-hf-id="hf-x9z7" id="street-mark-b" class="street-mark" data-layout-ignore="" aria-hidden="true"></div>
+      <div data-hf-id="hf-56c6" class="poster-frame" aria-hidden="true"></div>
+
+      <section data-hf-id="hf-yzai" id="scene-title" class="clip" data-start="0" data-duration="2.4" data-track-index="1">
+        <div data-hf-id="hf-l407" id="title-world" class="world">
+          <div data-hf-id="hf-5ht4" id="title-layout">
+            <span data-hf-id="hf-rvw4" id="title-del" class="display">Del</span>
+            <span data-hf-id="hf-j7hk" id="title-trago" class="display">trago</span>
+            <span data-hf-id="hf-20ae" id="title-al" class="display">al</span>
+            <span data-hf-id="hf-scw6" id="title-recibo" class="display">recibo.</span>
+            <span data-hf-id="hf-drrj" id="title-rule" class="poster-rule" aria-hidden="true"></span>
+          </div>
+          <span data-hf-id="hf-sksh" id="title-bottom" class="meta">tumbenla.com</span>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-r54z" id="scene-chain" class="clip" data-start="2.4" data-duration="6.4" data-track-index="1">
+        <div data-hf-id="hf-clpu" id="chain-world" class="world">
+          <span data-hf-id="hf-godc" id="chain-rule" class="poster-rule" aria-hidden="true"></span>
+          <div data-hf-id="hf-gvf1" id="rail">
+            <div data-hf-id="hf-fmk1" id="step-pedido" class="step-card">
+              <span data-hf-id="hf-zer3" class="step-index">01</span>
+              <span data-hf-id="hf-imcg" class="step-name">Pedido</span>
+              <span data-hf-id="hf-eh6m" class="step-glyph">P</span>
+            </div>
+            <div data-hf-id="hf-vz5u" class="connector" aria-hidden="true"><span data-hf-id="hf-aq09" id="connector-1" class="connector-fill"></span></div>
+            <div data-hf-id="hf-gxan" id="step-qr" class="step-card">
+              <span data-hf-id="hf-z0g2" class="step-index">02</span>
+              <span data-hf-id="hf-fgee" class="step-name">QR</span>
+              <span data-hf-id="hf-e2vl" class="step-glyph">Q</span>
+            </div>
+            <div data-hf-id="hf-7k12" class="connector" aria-hidden="true"><span data-hf-id="hf-eo4a" id="connector-2" class="connector-fill"></span></div>
+            <div data-hf-id="hf-rrjo" id="step-escaneo" class="step-card">
+              <span data-hf-id="hf-ym51" class="step-index">03</span>
+              <span data-hf-id="hf-drhx" class="step-name">Escaneo</span>
+              <span data-hf-id="hf-64r1" class="step-glyph">E</span>
+            </div>
+            <div data-hf-id="hf-7yc3" class="connector" aria-hidden="true"><span data-hf-id="hf-im8b" id="connector-3" class="connector-fill"></span></div>
+            <div data-hf-id="hf-9jc9" id="step-material" class="step-card">
+              <span data-hf-id="hf-1ea8" class="step-index">04</span>
+              <span data-hf-id="hf-a824" class="step-name">Material</span>
+              <span data-hf-id="hf-9b79" class="step-glyph">M</span>
+            </div>
+            <div data-hf-id="hf-8cn4" class="connector" aria-hidden="true"><span data-hf-id="hf-v4qs" id="connector-4" class="connector-fill"></span></div>
+            <div data-hf-id="hf-wqy2" id="step-factura" class="step-card">
+              <span data-hf-id="hf-0zz7" class="step-index">05</span>
+              <span data-hf-id="hf-m1az" class="step-name">Factura</span>
+              <span data-hf-id="hf-7bo4" class="step-glyph">F</span>
+            </div>
+          </div>
+          <div data-hf-id="hf-nxcg" id="receipt-seed" aria-hidden="true">
+            <span data-hf-id="hf-wojz" id="receipt-seed-rule"></span>
+          </div>
+        </div>
+      </section>
+
+      <section data-hf-id="hf-iomj" id="scene-close" class="clip" data-start="8.8" data-duration="3.2" data-track-index="1">
+        <div data-hf-id="hf-f11l" id="close-world" class="world">
+          <div data-hf-id="hf-s1qm" id="receipt-card">
+            <span data-hf-id="hf-e4ok" id="receipt-notch" aria-hidden="true"></span>
+            <span data-hf-id="hf-gyfm" id="receipt-rule-a" aria-hidden="true"></span>
+            <span data-hf-id="hf-d0bl" id="receipt-rule-b" aria-hidden="true"></span>
+            <div data-hf-id="hf-fnk7" id="close-copy">
+              <span data-hf-id="hf-7hv3" id="close-line-a" class="display">Si no hay</span>
+              <span data-hf-id="hf-242t" id="close-line-b" class="display">recibo,</span>
+              <span data-hf-id="hf-iy1a" id="close-line-c" class="display">no pasó.</span>
+            </div>
+            <div data-hf-id="hf-3y9g" id="transparency-link">
+              <span data-hf-id="hf-8s8h">Ver transparencia · tumbenla.com</span>
+              <span data-hf-id="hf-d369" id="transparency-arrow" aria-hidden="true">→</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <audio data-hf-id="hf-w1w7" id="music-bed" src="assets/music/perreo-melodico.mp3" data-start="0" data-duration="12" data-track-index="20"></audio>
+      <audio data-hf-id="hf-3hv5" id="title-impact" src="assets/sfx/impact-soft.ogg" data-start="0.3" data-duration="0.183" data-track-index="21" data-volume="0.3"></audio>
+      <audio data-hf-id="hf-m9bz" id="rail-switch" src="assets/sfx/switch.ogg" data-start="2.46" data-duration="0.614" data-track-index="22" data-volume="0.16"></audio>
+      <audio data-hf-id="hf-ak1o" id="receipt-slide" src="assets/sfx/card-slide.ogg" data-start="8.16" data-duration="0.601" data-track-index="23" data-volume="0.18"></audio>
+    </div>
+
+    <script>
+      const LIME = 'oklch(0.917 0.226 129)'
+      const DARK = 'oklch(0.188 0.03 265.9)'
+      const CARD = 'oklch(0.241 0.03 267.3)'
+      const WHITE = 'oklch(0.982 0.002 247.8)'
+      const BORDER = 'oklch(0.4 0.038 40.7)'
+      const ORANGE = 'oklch(0.676 0.196 41.9)'
+      const TRAVEL = 130
+      const SEAM = 0.34
+
+      const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } })
+
+      gsap.set('#title-del', { x: -82, autoAlpha: 0 })
+      gsap.set('#title-trago', { x: -176, autoAlpha: 0 })
+      gsap.set('#title-al', { y: 46, autoAlpha: 0 })
+      gsap.set('#title-recibo', { x: 176, autoAlpha: 0 })
+      tl.set('#title-rule', { scaleX: 0 }, 0)
+      gsap.set('#title-bottom', { autoAlpha: 0 })
+      tl.set('.connector-fill', { scaleY: 0, transformOrigin: '50% 0%' }, 0)
+
+      tl.to('#title-del', { x: 0, autoAlpha: 1, duration: 0.36, ease: 'power4.out' }, 0.08)
+      tl.to('#title-trago', { x: 0, autoAlpha: 1, duration: 0.46, ease: 'expo.out' }, 0.2)
+      tl.to('#title-recibo', { x: 0, autoAlpha: 1, duration: 0.46, ease: 'expo.out' }, 0.2)
+      tl.to('#title-al', { y: 0, autoAlpha: 1, duration: 0.32, ease: 'power4.out' }, 0.48)
+      tl.to('#title-rule', { scaleX: 1, duration: 0.54, ease: 'power4.out' }, 0.7)
+      tl.to('#title-bottom', { autoAlpha: 1, duration: 0.32, ease: 'power2.out' }, 0.88)
+
+      tl.to('#title-world', { x: -TRAVEL, duration: SEAM, ease: 'power4.in' }, 2.06)
+      tl.to('#title-world', { opacity: 0, duration: 0.18, ease: 'none' }, 2.22)
+      tl.set('#title-world', { opacity: 0 }, 2.4)
+      tl.fromTo(
+        '#chain-world',
+        { x: TRAVEL, opacity: 0.35 },
+        { x: 0, opacity: 1, duration: SEAM, ease: 'power4.out', immediateRender: false },
+        2.4,
+      )
+
+      tl.set('#step-pedido', { backgroundColor: LIME, color: DARK, borderColor: LIME }, 2.4)
+      tl.set(['#step-qr', '#step-escaneo', '#step-material', '#step-factura'], {
+        backgroundColor: CARD,
+        color: WHITE,
+        borderColor: BORDER,
+      }, 2.4)
+
+      const activateStep = (previous, next, connector, at) => {
+        tl.set(previous, { backgroundColor: CARD, color: WHITE, borderColor: ORANGE }, at)
+        tl.set(next, { backgroundColor: LIME, color: DARK, borderColor: LIME }, at)
+        tl.to(connector, { scaleY: 1, duration: 0.3, ease: 'power4.out' }, at - 0.18)
+        tl.fromTo(
+          next,
+          { scale: 0.965 },
+          { scale: 1, duration: 0.26, ease: 'power4.out', immediateRender: false },
+          at,
+        )
+      }
+
+      activateStep('#step-pedido', '#step-qr', '#connector-1', 3.3)
+      activateStep('#step-qr', '#step-escaneo', '#connector-2', 4.55)
+      activateStep('#step-escaneo', '#step-material', '#connector-3', 5.8)
+      activateStep('#step-material', '#step-factura', '#connector-4', 7.05)
+
+      const collapsingSteps = [
+        ['#step-pedido', 976],
+        ['#step-qr', 732],
+        ['#step-escaneo', 488],
+        ['#step-material', 244],
+      ]
+
+      collapsingSteps.forEach(([selector, y], index) => {
+        tl.to(selector, {
+          x: -110,
+          y,
+          scale: 0.82,
+          opacity: 0,
+          duration: 0.34,
+          ease: 'power4.in',
+        }, 8.08 + index * 0.018)
+      })
+      tl.to('.connector-fill', { scaleY: 0, duration: 0.28, ease: 'power3.in' }, 8.08)
+      tl.to('#step-factura', {
+        x: -78,
+        y: -486,
+        scaleX: 0.91,
+        scaleY: 1.84,
+        opacity: 0,
+        duration: 0.34,
+        ease: 'power4.in',
+      }, 8.1)
+      tl.set(['#step-pedido', '#step-qr', '#step-escaneo', '#step-material', '#step-factura'], {
+        opacity: 0,
+      }, 8.46)
+      tl.fromTo(
+        '#receipt-seed',
+        { x: 150, scaleY: 0.18, autoAlpha: 0, transformOrigin: '50% 50%' },
+        { x: 0, scaleY: 1, autoAlpha: 1, duration: 0.44, ease: 'expo.out', immediateRender: false },
+        8.16,
+      )
+
+      tl.to('#chain-world', { x: -TRAVEL, duration: SEAM, ease: 'power4.in' }, 8.46)
+      tl.to('#chain-world', { opacity: 0, duration: 0.18, ease: 'none' }, 8.62)
+      tl.set('#chain-world', { opacity: 0 }, 8.8)
+      tl.fromTo(
+        '#close-world',
+        { x: TRAVEL, opacity: 0.35 },
+        { x: 0, opacity: 1, duration: SEAM, ease: 'power4.out', immediateRender: false },
+        8.8,
+      )
+
+      tl.set(['#close-line-a', '#close-line-b', '#close-line-c'], { y: 54, autoAlpha: 0 }, 8.8)
+      tl.set('#transparency-link', { y: 36, scale: 0.97, autoAlpha: 0 }, 8.8)
+      tl.to('#close-line-a', { y: 0, autoAlpha: 1, duration: 0.34, ease: 'power4.out' }, 9.15)
+      tl.to('#close-line-b', { y: 0, autoAlpha: 1, duration: 0.4, ease: 'expo.out' }, 9.28)
+      tl.to('#close-line-c', { y: 0, autoAlpha: 1, duration: 0.4, ease: 'expo.out' }, 9.43)
+      tl.to('#transparency-link', {
+        y: 0,
+        scale: 1,
+        autoAlpha: 1,
+        duration: 0.42,
+        ease: 'power4.out',
+      }, 9.82)
+
+      tl.fromTo(
+        '#music-bed',
+        { volume: 0 },
+        { volume: 0.13, duration: 0.25, ease: 'power2.out' },
+        0,
+      )
+      tl.to('#music-bed', { volume: 0, duration: 1, ease: 'power3.in' }, 11)
+
+      window.__timelines['promo-03-recibo'] = tl
+    </script>
+  </body>
+</html>

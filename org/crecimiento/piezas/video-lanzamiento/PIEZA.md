@@ -1,51 +1,54 @@
 # Pieza — video de lanzamiento
 
-**Departamento:** Crecimiento · **Lado del embudo:** los dos, sobre todo rumbero
-· **Estado:** renderizado, sin repartir
+**Departamento:** Crecimiento · **Lado del embudo:** los dos
+· **Estado:** reemplazo renderizado; render histórico retirado de reparto
 
-Video de lanzamiento de Tumbenla, generado con HyperFrames a partir del codigo
-del proyecto (skill `/brag`). Antes se llamaba `brag-output/` y estaba en la
-raiz; es una pieza de marketing, no una salida de herramienta, y por eso vive
-aca.
+Serie promocional sobre el flujo actual de pedidos de Tumbenla. `brag.mp4` y su
+versión vertical quedan como archivo histórico: enseñan el modelo retirado de
+porcentaje de ventas y no se deben repartir. La guía vigente es
+`composition-brief.md`.
 
 ## Que hay
 
 | Archivo | Que es |
 |---|---|
-| `brag.mp4` | render horizontal (16:9) |
-| `brag-vertical.mp4` | render vertical (9:16), para historias y Reels |
-| `brag.jpg` / `brag-vertical.jpg` | miniatura de cada uno |
-| `share-copy.txt` | el texto con el que se reparte |
-| `brag-plan.md` | el plan del video: escenas y decisiones |
-| `composition-brief.md` | el brief que alimento la composicion |
-| `guion-para-pruebas.txt` | guion para probar voces (acento paisa, no locutor) |
-| `composition/` | el proyecto HyperFrames. Aca se edita y se vuelve a renderizar |
+| `brag.mp4` / `brag-vertical.mp4` | renders históricos; no repartir |
+| `brag.jpg` / `brag-vertical.jpg` | miniaturas históricas |
+| `promo-01-pide.mp4` / `.jpg` | pieza para rumbero: pedido, pago y QR |
+| `promo-02-escanea.mp4` / `.jpg` | pieza operativa: escanear antes de cobrar |
+| `promo-03-recibo.mp4` / `.jpg` | pieza de confianza: del pedido a la factura |
+| `share-copy.txt` | copy de reparto de las tres piezas |
+| `brag-plan.md` | auditoría del video viejo y plan de reemplazo |
+| `composition-brief.md` | guía vigente de mensaje, copy, tiempo y producción |
+| `guion-para-pruebas.txt` | aviso de retiro de la locución vieja |
+| `composition/` | proyectos HyperFrames y assets de producción |
 
-Los nombres `brag*` se quedaron como los dejo la herramienta: renombrarlos
-romperia referencias dentro de `composition/` sin ganar nada.
+Los nombres `brag*` se conservan para no fingir que el material histórico nunca
+existió. Las piezas vigentes llevan nombres `promo-*` y viven en
+`composition/promos/`.
 
-## Reglas que ya cumple, y que hay que conservar al editarla
+## Reglas de publicación
 
-- El copy de `share-copy.txt` pasa por `org/crecimiento/VOZ.md`. Hoy cumple: no
-  dice "solidario" ni "dona", le habla al que se parcha, y cierra con la prueba
-  ("Si no hay recibo, no paso") en vez de un argumento moral.
-- **Ninguna cifra.** El video no afirma cuantos bares hay ni cuanta plata se ha
-  puesto, y asi tiene que quedarse mientras esas cifras no salgan de la base
-  (`PRODUCT.md`, Decision 5).
+- El copy pasa por `org/crecimiento/VOZ.md`: nada de caridad; la prueba es el
+  pedido, el escaneo y la factura.
+- **Ninguna cifra de ejemplo.** Tampoco productos, bares o recibos de fixtures.
 - **Nada sobre el sismo con numeros propios.** Ni magnitud ni damnificados
   (Riesgo 4).
 - **El verso de la cancion no se usa**, ni cantado ni de fondo (Decision 3). El
-  guion trabaja con "¿qué chimba, cierto?", que es propio.
+  nombre propio de la marca sí.
+- No se dice “porcentaje de ventas”. El camino único es un producto concreto
+  con reparto visible, pedido, QR y escaneo.
 
-## Lo que falta
+## Distribución
 
-Repartirla. No hay experimento abierto que la use; si se reparte, entra por
-`org/crecimiento/EXPERIMENTOS.md` como cualquier otra cosa, con la metrica
-decidida antes de publicar.
+Las piezas se entregan como archivos locales, **sin repartir**. Publicarlas o
+meterles pauta no está autorizado por esta tarea. Si se usan como experimento,
+deben entrar primero por `org/crecimiento/EXPERIMENTOS.md`, con métrica y ventana
+definidas antes de salir.
 
 ## Peso
 
-30 MB, casi todo `.mp4` y los assets de `composition/`, versionados en git.
-Renderizar otra version duplica ese peso en el historial para siempre. Vale la
-pena decidir si los renders siguen en el repo o se suben a R2 antes de que haya
-una segunda pieza.
+Los proyectos reutilizan los mismos blobs de fuente, música y efectos, pero los
+MP4 sí suman peso al historial. Son cortos y verticales a propósito; antes de una
+cuarta pieza hay que decidir si los renders siguientes permanecen en git o van
+a R2.

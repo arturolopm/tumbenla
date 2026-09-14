@@ -1,0 +1,41 @@
+{
+  "fps": 30,
+  "seams": [
+    {
+      "id": "title-to-chain",
+      "cut": 2.4,
+      "technique": "cut-the-curve LEFT",
+      "exit": {
+        "selector": "#title-world",
+        "axis": "x",
+        "dir": -1,
+        "dur": 0.34
+      },
+      "entry": {
+        "selector": "#chain-world",
+        "axis": "x",
+        "dir": -1,
+        "dur": 0.34,
+        "travel": 12
+      }
+    },
+    {
+      "id": "chain-to-close",
+      "cut": 8.8,
+      "technique": "cut-the-curve LEFT",
+      "exit": {
+        "selector": "#chain-world",
+        "axis": "x",
+        "dir": -1,
+        "dur": 0.34
+      },
+      "entry": {
+        "selector": "#close-world",
+        "axis": "x",
+        "dir": -1,
+        "dur": 0.34,
+        "travel": 12
+      }
+    }
+  ]
+}
