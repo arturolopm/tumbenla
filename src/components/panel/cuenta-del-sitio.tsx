@@ -85,7 +85,7 @@ export function CuentaDelSitio({
           <FinanceMetric label='Cupo disponible' value={finanzas.creditAvailable} />
         </div>
         <p className='mt-3 text-sm text-muted-foreground'>
-          Cupo aprobado: {formatCOP(finanzas.creditLimit)}.
+          Cupo vigente: {formatCOP(finanzas.creditLimit)}.
           {finanzas.oldestDebtDueAt
             ? ` La deuda más antigua vence el ${formatDate(new Date(finanzas.oldestDebtDueAt))}.`
             : ' No hay deuda pendiente con fecha de pago.'}

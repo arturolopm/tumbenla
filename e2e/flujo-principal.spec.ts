@@ -171,3 +171,51 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await staffContext.close()
   }
 })
+
+test('one guest bar order uses the default cupo and tells staff to collect', async ({
+  browser,
+  page: guest,
+}, testInfo) => {
+  const staffContext = await authenticatedContext(browser, 'staff')
+  try {
+    const staff = await staffContext.newPage()
+    await staff.goto('/panel/bar-la-nona')
+    await expect(staff).toHaveURL(/\/panel\/bar-la-nona\/escanear$/)
+
+    await guest.goto('/sitios/bar-la-nona/pedir/mojito-reconstruccion')
+    await guest.getByRole('button', { name: /^En la barra/ }).click()
+    await guest.getByLabel('Tu nombre').fill('Rumbero barra')
+    await guest
+      .getByLabel('Tu correo')
+      .fill(`rumbero-barra-e2e-${testInfo.repeatEachIndex}-${testInfo.retry}@prueba.local`)
+    await guest.getByRole('button', { name: /^Pedirlo/ }).click()
+    await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
+    await expect(guest.getByText('Muestra esto ANTES de pagar')).toBeVisible()
+
+    const token = /^\/orden\/([A-Za-z0-9_-]+)$/.exec(new URL(guest.url()).pathname)?.[1]
+    if (!token) throw new Error('The cash order URL did not contain a bearer token')
+    const initialStatus = await readOrderStatus(guest, token)
+    expect(initialStatus).toMatchObject({ entregadas: 0, total: 1 })
+    expect(initialStatus.unidades[0]?.estado).toBe('issued')
+
+    const formattedCode = await guest.locator('p.font-mono').first().innerText()
+    const redemptionCode = formattedCode.replace(/[^A-Z0-9]/g, '')
+    await staff.getByLabel('O escríbelo').fill(redemptionCode)
+    await staff.getByRole('button', { name: 'Buscar' }).click()
+    await expect(staff.getByText(/^Cobrar /)).toBeVisible()
+    await expect(staff.getByText('Cobra y entrégalo.')).toBeVisible()
+
+    await expect
+      .poll(
+        async () => {
+          const status = await readOrderStatus(guest, token)
+          return status.unidades[0]?.estado
+        },
+        { message: 'the cash order should be redeemed after staff scans it', timeout: 10_000 }
+      )
+      .toBe('redeemed')
+    await expect(guest.getByText('Confirmado', { exact: true })).toBeVisible()
+  } finally {
+    await staffContext.close()
+  }
+})

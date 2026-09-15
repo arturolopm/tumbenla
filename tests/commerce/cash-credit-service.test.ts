@@ -2,10 +2,14 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
 import { AllocationService } from '../../src/lib/commerce/allocation-service'
 import { CashCreditService } from '../../src/lib/commerce/cash-credit-service'
-import { CreditPolicyService } from '../../src/lib/commerce/credit-policy-service'
+import {
+  DEFAULT_CASH_CREDIT_LIMIT_MINOR,
+  CreditPolicyService,
+} from '../../src/lib/commerce/credit-policy-service'
 import { CreditSettlementService } from '../../src/lib/commerce/credit-settlement-service'
 import { CommerceUnitService } from '../../src/lib/commerce/unit-lifecycle-service'
 import { PayoutService } from '../../src/lib/commerce/payout-service'
+import { getVenueFinanceView } from '../../src/lib/commerce/venue-finance-view'
 import type { CommerceTestDatabase } from './database'
 import { createCommerceTestDatabase } from './database'
 
@@ -202,17 +206,80 @@ const seedClearedAppAllocation = async (input: {
 }
 
 describe('CashCreditService', () => {
-  test('defaults to no cash credit when an operator has not approved a policy', async () => {
+  test('starts every venue with an audited COP 500,000 cash credit policy', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
-    const fixture = await seedVenue('zero-default')
+    const fixture = await seedVenue('automatic-default')
+    const policies = new CreditPolicyService({ database: database.db, now: () => START })
 
-    const result = await createService(START).startOrder(input('zero-default', fixture.productId))
+    const beforeOrder = (await policies.listOverview()).find(
+      (row) => row.venueId === fixture.venueId
+    )
+    const venueFinances = await getVenueFinanceView(database.db, fixture.venueId, START)
+    expect(beforeOrder).toMatchObject({
+      version: null,
+      limitMinor: DEFAULT_CASH_CREDIT_LIMIT_MINOR,
+      availableMinor: DEFAULT_CASH_CREDIT_LIMIT_MINOR,
+    })
+    expect(venueFinances.creditLimitMinor).toBe(DEFAULT_CASH_CREDIT_LIMIT_MINOR)
+
+    const result = await createService(START).startOrder(
+      input('automatic-default', fixture.productId)
+    )
+
+    expect(result).toMatchObject({ kind: 'reserved', duplicate: false })
+    const [policy] = await database.sql<
+      {
+        version: number
+        limit_minor: string
+        approved_by_user_id: string | null
+        audit_events: string
+      }[]
+    >`
+      select p.version, p.limit_minor::text, p.approved_by_user_id,
+        (select count(*)::text from finance_audit_event e
+          where e.entity_id = p.id and e.action = 'defaulted') as audit_events
+      from venue_credit_policy p where p.venue_id = ${fixture.venueId}
+    `
+    expect(policy).toEqual({
+      version: 1,
+      limit_minor: DEFAULT_CASH_CREDIT_LIMIT_MINOR.toString(),
+      approved_by_user_id: null,
+      audit_events: '1',
+    })
+  }, 30_000)
+
+  test('does not restore the automatic cupo after an operator sets it to zero', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedVenue('manual-zero', { limitMinor: BigInt(0) })
+
+    const result = await createService(START).startOrder(input('manual-zero', fixture.productId))
 
     expect(result).toEqual({ kind: 'unavailable', reason: 'credit-not-configured' })
-    const orders = await database.sql`
-      select id from product_order where venue_id = ${fixture.venueId}
+    const policies = await database.sql`
+      select id from venue_credit_policy where venue_id = ${fixture.venueId}
     `
-    expect(orders).toHaveLength(0)
+    expect(policies).toHaveLength(1)
+  }, 30_000)
+
+  test('creates the automatic policy once under concurrent first orders', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedVenue('default-race')
+
+    const results = await Promise.all([
+      createService(START).startOrder(input('default-race-a', fixture.productId)),
+      createService(START).startOrder(input('default-race-b', fixture.productId)),
+    ])
+
+    expect(results.every((result) => result.kind === 'reserved')).toBe(true)
+    const [counts] = await database.sql<{ policies: string; audit_events: string }[]>`
+      select
+        count(*)::text as policies,
+        (select count(*)::text from finance_audit_event e
+          where e.entity_type = 'venue_credit_policy'
+            and e.detail->>'venueId' = ${fixture.venueId}) as audit_events
+      from venue_credit_policy where venue_id = ${fixture.venueId}
+    `
+    expect(counts).toEqual({ policies: '1', audit_events: '1' })
   }, 30_000)
 
   test('reserves the exact limit once and never extends the deadline on retry', async () => {

@@ -15,6 +15,7 @@ import {
   venueCreditPolicy,
 } from '@/database/commerce-schema'
 import { productOrder } from '@/database/schema'
+import { DEFAULT_CASH_CREDIT_LIMIT_MINOR } from './credit-policy-service'
 
 type CommerceDatabase = typeof db
 
@@ -108,15 +109,14 @@ export const getVenueFinanceView = async (
       .from(creditDebt)
       .where(eq(creditDebt.venueId, venueId)),
     database
-      .select({ limitMinor: venueCreditPolicy.limitMinor })
+      .select({
+        limitMinor: venueCreditPolicy.limitMinor,
+        status: venueCreditPolicy.status,
+        effectiveAt: venueCreditPolicy.effectiveAt,
+        retiredAt: venueCreditPolicy.retiredAt,
+      })
       .from(venueCreditPolicy)
-      .where(
-        and(
-          eq(venueCreditPolicy.venueId, venueId),
-          eq(venueCreditPolicy.currency, 'COP'),
-          eq(venueCreditPolicy.status, 'active')
-        )
-      )
+      .where(and(eq(venueCreditPolicy.venueId, venueId), eq(venueCreditPolicy.currency, 'COP')))
       .orderBy(desc(venueCreditPolicy.version))
       .limit(1),
     database
@@ -132,7 +132,16 @@ export const getVenueFinanceView = async (
   ])
 
   const debtMinor = total(debts[0]?.outstanding)
-  const creditLimitMinor = total(policy[0]?.limitMinor)
+  const latestPolicy = policy[0]
+  const policyIsActive =
+    latestPolicy?.status === 'active' &&
+    latestPolicy.effectiveAt <= now &&
+    (!latestPolicy.retiredAt || latestPolicy.retiredAt > now)
+  const creditLimitMinor = latestPolicy
+    ? policyIsActive
+      ? total(latestPolicy.limitMinor)
+      : BigInt(0)
+    : DEFAULT_CASH_CREDIT_LIMIT_MINOR
   const reservedCreditMinor = total(reservations[0]?.value)
   const creditAvailableMinor = creditLimitMinor - debtMinor - reservedCreditMinor
   const oldestDebtDueAt = debts[0]?.oldestDueAt

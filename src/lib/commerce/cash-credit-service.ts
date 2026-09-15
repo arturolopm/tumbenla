@@ -18,6 +18,13 @@ import {
 import { orderRedemption, productOrder, venue, venueMember, venueProduct } from '@/database/schema'
 import { generarCodigo } from '@/lib/comercio/codigos'
 import { createId } from '@/lib/utils/id'
+import {
+  DEFAULT_CASH_CREDIT_LIMIT_MINOR,
+  DEFAULT_CASH_MAX_ACTIVE_PER_SHOPPER,
+  DEFAULT_CASH_MAX_ACTIVE_RESERVATIONS,
+  DEFAULT_CASH_REPAYMENT_TERM_SECONDS,
+  DEFAULT_CASH_RESERVATION_TTL_SECONDS,
+} from './credit-policy-service'
 import { formatMinorUnits, multiplyBasisPoints, parseMinorUnits } from './money'
 
 type CommerceDatabase = typeof db
@@ -165,6 +172,62 @@ export class CashCreditService {
           if (membership) {
             return { kind: 'unavailable', reason: 'self-order-not-allowed' } as const
           }
+        }
+
+        const [lockedVenue] = await transaction
+          .select({ status: venue.status })
+          .from(venue)
+          .where(eq(venue.id, product.venueId))
+          .limit(1)
+          .for('update')
+        if (!lockedVenue || lockedVenue.status !== 'published') {
+          return { kind: 'unavailable', reason: 'product-unavailable' } as const
+        }
+
+        const [latestPolicy] = await transaction
+          .select({ id: venueCreditPolicy.id })
+          .from(venueCreditPolicy)
+          .where(eq(venueCreditPolicy.venueId, product.venueId))
+          .orderBy(desc(venueCreditPolicy.version))
+          .limit(1)
+        if (!latestPolicy) {
+          const policyId = createId('vcp')
+          const operationKey = `credit-policy:default-500000:${product.venueId}`
+          const defaultPolicy = {
+            venueId: product.venueId,
+            limitMinor: DEFAULT_CASH_CREDIT_LIMIT_MINOR.toString(),
+            maxActiveReservations: DEFAULT_CASH_MAX_ACTIVE_RESERVATIONS,
+            maxActivePerShopper: DEFAULT_CASH_MAX_ACTIVE_PER_SHOPPER,
+            reservationTtlSeconds: DEFAULT_CASH_RESERVATION_TTL_SECONDS,
+            repaymentTermSeconds: DEFAULT_CASH_REPAYMENT_TERM_SECONDS,
+          }
+          await transaction.insert(venueCreditPolicy).values({
+            id: policyId,
+            operationKey,
+            contentHash: hashJson(defaultPolicy),
+            venueId: product.venueId,
+            version: 1,
+            limitMinor: DEFAULT_CASH_CREDIT_LIMIT_MINOR,
+            currency: 'COP',
+            reservationTtlSeconds: DEFAULT_CASH_RESERVATION_TTL_SECONDS,
+            repaymentTermSeconds: DEFAULT_CASH_REPAYMENT_TERM_SECONDS,
+            maxActiveReservations: DEFAULT_CASH_MAX_ACTIVE_RESERVATIONS,
+            maxActivePerShopper: DEFAULT_CASH_MAX_ACTIVE_PER_SHOPPER,
+            status: 'active',
+            effectiveAt: now,
+            createdAt: now,
+          })
+          await transaction.insert(financeAuditEvent).values({
+            id: createId('fae'),
+            entityType: 'venue_credit_policy',
+            entityId: policyId,
+            action: 'defaulted',
+            operationKey,
+            previousState: null,
+            nextState: 'version:1',
+            detail: { ...defaultPolicy, source: 'system_default' },
+            createdAt: now,
+          })
         }
 
         const [policy] = await transaction

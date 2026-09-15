@@ -17,7 +17,7 @@ import {
   unitAllocation,
   venueCreditPolicy,
 } from '@/database/commerce-schema'
-import { productOrder } from '@/database/schema'
+import { productOrder, venue } from '@/database/schema'
 import { createId } from '@/lib/utils/id'
 import { assertReviewedEvidence } from './finance-evidence-service'
 import {
@@ -264,6 +264,14 @@ export class CreditSettlementService {
   }
 
   async #lockVenue(transaction: FinanceTransactionConnection, venueId: string): Promise<void> {
+    const [targetVenue] = await transaction
+      .select({ id: venue.id })
+      .from(venue)
+      .where(eq(venue.id, venueId))
+      .limit(1)
+      .for('update')
+    if (!targetVenue) throw new Error('The venue does not exist')
+
     const [policy] = await transaction
       .select({ id: venueCreditPolicy.id })
       .from(venueCreditPolicy)

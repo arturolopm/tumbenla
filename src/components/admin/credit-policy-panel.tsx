@@ -31,8 +31,8 @@ export function CreditPolicyPanel({ venues }: { venues: readonly CreditPolicyVie
       <div>
         <h2 className='font-display text-label-lg uppercase'>Cupo para cobrar en la barra</h2>
         <p className='mt-1 max-w-prose text-body-md text-muted-foreground'>
-          Arranca en cero. El disponible descuenta deuda y reservas activas; una deuda vencida pausa
-          pedidos nuevos, pero no los pagos aquí.
+          Cada sitio arranca con $500.000. El disponible descuenta deuda y reservas activas; guarda
+          un cupo de $0 para cortar pedidos nuevos sin afectar los pagos aquí.
         </p>
       </div>
       <ul className='grid gap-4 lg:grid-cols-2'>
@@ -67,7 +67,7 @@ function CreditPolicyRow({ venue }: { venue: CreditPolicyView }) {
         <div>
           <p className='font-display font-bold text-lg'>{venue.venueName}</p>
           <p className='text-muted-foreground text-sm'>
-            {venue.version ? `Política v${venue.version}` : 'Sin cupo aprobado'}
+            {venue.version ? `Política v${venue.version}` : 'Cupo inicial automático'}
           </p>
         </div>
         {venue.overdue > 0 ? (
@@ -85,7 +85,7 @@ function CreditPolicyRow({ venue }: { venue: CreditPolicyView }) {
         <input type='hidden' name='venueId' value={venue.venueId} />
         <input type='hidden' name='operationKey' value={operationKey} />
         <label className='flex flex-col gap-1 sm:col-span-2'>
-          <span className='font-display text-label-lg uppercase'>Cupo aprobado en pesos</span>
+          <span className='font-display text-label-lg uppercase'>Cupo vigente en pesos</span>
           <input
             name='limitPesos'
             type='number'

@@ -346,6 +346,13 @@ Estan aca para no volver a discutirlas cada dos semanas.
     compra de material verificada son hechos distintos. Abrir la cuenta comercial,
     contratar, ejecutar transferencias reales y desplegar siguen bloqueados por
     compuertas externas. El detalle vive en `docs/payment-provider-decision-brief.md`.
+38. **Cada sitio publicado arranca con COP 500.000 de cupo para cobrar en la
+    barra; Operación lo puede bajar hasta cero.** El cupo cubre la obligación
+    congelada del aporte, no el bruto completo de la venta. La primera orden de
+    barra materializa una política v1 auditada si el sitio nunca tuvo una; una
+    política manual existente —incluido un límite de cero o una suspensión—
+    siempre gana y el sistema no la reemplaza. La deuda vencida sigue bloqueando
+    pedidos nuevos y no deshabilita el pago por ePayco.
 
 ---
 
@@ -523,9 +530,10 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   "Terms of Service", "Unsubscribe" en `EmailLayout`. Es anterior a esto —le
   pasa igual a la invitacion de equipo, que ya se despacho— pero es texto que le
   llega a un usuario en un producto que es solo en espanol (decision 7).
-- **El crédito de barra requiere operación humana.** El límite es cero por defecto, se versiona
-  por sitio y bloquea nueva deuda vencida; antes de usarlo hay que aprobar límites y responsables
-  reales, y observar la compensación contra ingresos electrónicos conciliados.
+- **El crédito de barra abre exposición antes de observar comportamiento.** Cada sitio publicado
+  arranca con COP 500.000 sobre la obligación del aporte; la política queda auditada al primer uso
+  y Operación puede reducirla o llevarla a cero. Sigue pendiente observar deuda, cortes manuales y
+  compensación contra ingresos electrónicos conciliados antes de ampliar ese cupo.
 - **La asignacion exacta queda pendiente hasta reconciliar.** El porcentaje se
   congela en la orden, pero el valor en pesos se calcula sobre el neto real
   despues de deducciones itemizadas y retenciones; no se muestra una cifra

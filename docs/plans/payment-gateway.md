@@ -160,6 +160,9 @@ Cash credit follows a deliberately simple rule:
 
 Do not count unsettled or merely expected app proceeds as extra credit.
 
+- Start a venue that has never had a credit policy with COP 500,000 of system-default credit.
+  Materialize that default as an audited version 1 policy on first use. Any manual policy history,
+  including a zero limit or suspension, suppresses automatic recreation.
 - Reserve the cash donation obligation before issuing its QR.
 - Reservation and QR expire after 15 minutes; retries do not extend that deadline.
 - Redemption converts the relevant reserved amount to debt due seven days later.
@@ -236,7 +239,7 @@ Each checkpoint records status, commit, affected files, commands/results, eviden
 - [x] **P3 — Establish migration and test foundations — COMPLETED 2026-09-11.** GitNexus was refreshed, the local legacy ledger was audited read-only, the additive commerce schema is wired into Drizzle, migration `0016_panoramic_calypso.sql` is applied locally, and isolated PostgreSQL tests verify migration and financial invariants. Historical orders are preserved as `legacy_unverified` snapshots and units.
 - [x] **P4 — Implement facade and collection adapter — COMPLETED 2026-09-12.** App checkout now uses `CommercePaymentService`, persisted immutable snapshots and globally idempotent attempts, versioned gateway bindings, hosted Smart Checkout v2 launch, signed webhook intake, authoritative lookup, bounded browser-return recovery, explicit payment-state UI, charge/overpayment records, and atomic QR + V2 finance posting. The unsafe direct-confirmation compatibility export fails closed. Account-backed ePayco evidence remains P2, not local P4 evidence.
 - [x] **P5 — Repair accounting and unit lifecycle — COMPLETED 2026-09-12.** Final provider deductions now create immutable, deterministic allocation revisions and balanced clearing/correction postings. V2 app units redeem atomically with authorization rechecks and final-allocation release, expiry retains the full refund liability without automatic donation, and refund reservation shares the unit lock with redemption. Legacy cash/legacy-unverified paths remain isolated during P6 migration.
-- [x] **P6 — Implement bounded cash credit — COMPLETED 2026-09-12.** Cash checkout now requires an operator-versioned zero-default policy, atomically reserves only the frozen donation obligation for 15 minutes, enforces venue/shopper/concurrent capacity, converts redemption into seven-day debt, releases expiry, blocks new cash orders on overdue debt, and applies verified repayments or specifically identified cleared app earnings oldest-first.
+- [x] **P6 — Implement bounded cash credit — COMPLETED 2026-09-12; DEFAULT UPDATED 2026-09-14.** Cash checkout starts a venue with an audited COP 500,000 default only when it has no policy history, atomically reserves only the frozen donation obligation for 15 minutes, honors manual zero/suspended policies, enforces venue/shopper/concurrent capacity, converts redemption into seven-day debt, releases expiry, blocks new cash orders on overdue debt, and applies verified repayments or specifically identified cleared app earnings oldest-first.
 - [x] **P7 — Implement reviewed financial operations — COMPLETED 2026-09-12.** Provider deduction reconciliation and incoming credit repayments require reviewed evidence of an approved kind. Legal beneficiaries, agreements, and versioned bank destinations are independently verified. Refunds and exact-source venue/foundation payouts now move through reserved, submitted/unknown, bank-confirmed, failed, and compensating-reversal paths with frozen destinations, cash/refund/dispute/reserve coverage, and immutable audit records. The admin accounts page exposes the reviewed workflow; external bank/provider execution remains a P2/P10 gate.
 - [ ] **P8 — Complete foundation transparency — IN PROGRESS.** Private-original/public-redaction custody, purchase administration, amount-capped funding attribution, and V2-derived customer/bar/operator/public views are implemented and covered by local object-port and PostgreSQL tests. Completion still requires the real R2 account, buckets, CORS, credentials, and remote retention/access verification.
 - [x] **P9 — Complete recovery and security acceptance — COMPLETED LOCALLY 2026-09-13.** Authenticated daily recovery, durable leases/backlog, deployment guards, database-backed rate limits, adversarial/concurrency coverage, and a disposable PostgreSQL Playwright harness are implemented. The harness now tests a production build with bounded deadlines, explicit API/UI state boundaries, retained failure traces, isolated role sessions, and guaranteed database cleanup. The complete browser suite, a five-repeat purchase/redemption stress run, repository lint, typecheck, build, and all 91 commerce tests pass locally.
@@ -767,3 +770,31 @@ passed before source integration. These facts do not close any external gate.
   result and prove zero QR issuance for insufficient/failed plus a non-redeemable pending state.
   Then deploy the isolated payment changes to Preview with its own test credentials and stable HTTPS
   origin, repeat all four cases, and preserve only sanitized evidence before any live enablement.
+
+### 2026-09-14 — Default bar-credit policy changed to COP 500,000
+
+- Product decision 38 supersedes the former zero-default operating rule. Every published venue
+  with no credit-policy history now exposes COP 500,000 of initial capacity against its frozen
+  donation obligation. The first cash order creates an audited version 1 policy inside the same
+  venue-locked transaction as the reservation.
+- A manual policy remains authoritative. Setting the limit to zero, retiring it, or suspending it
+  prevents the automatic default from being recreated. Overdue debt, shopper and venue reservation
+  limits, 15-minute expiry, seven-day repayment, self-order prevention, and app-payment independence
+  remain unchanged.
+- Admin and venue account views show the automatic limit before first use and label it as current
+  rather than falsely claiming human approval. Local fixtures were explicitly configured with COP
+  500,000 for immediate manual acceptance.
+- Focused cash tests were repeated five times: **90 passed, 0 failed, 270 assertions**. They prove
+  automatic creation, manual-zero precedence, concurrent first-order serialization, and view
+  consistency. The concurrency run also exposed a venue/policy lock-order inversion in settlement;
+  settlement now follows the documented venue-first order.
+- Final regression evidence:
+  - `bun run typecheck` — passed.
+  - `bun run test:commerce` — **96 passed, 0 failed, 364 assertions** in 7.13 seconds.
+  - `bun run test:e2e` — production build passed and **5 passed, 0 failed** in 10.2 seconds,
+    including a browser-level bar-order reservation, scan, full-amount collection instruction, and
+    buyer confirmation.
+  - `bun run lint` — completed successfully with the same four unrelated unused-import warnings
+    and one pre-existing missing-radix advisory.
+- **Exact next action:** deploy this isolated policy change to Preview and repeat the staff/buyer
+  acceptance flow against Preview's database before enabling the same rule in production.

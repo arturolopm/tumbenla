@@ -15,6 +15,12 @@ import { createId } from '@/lib/utils/id'
 
 type CommerceDatabase = typeof db
 
+export const DEFAULT_CASH_CREDIT_LIMIT_MINOR = BigInt(50_000_000)
+export const DEFAULT_CASH_MAX_ACTIVE_RESERVATIONS = 100
+export const DEFAULT_CASH_MAX_ACTIVE_PER_SHOPPER = 20
+export const DEFAULT_CASH_RESERVATION_TTL_SECONDS = 900
+export const DEFAULT_CASH_REPAYMENT_TERM_SECONDS = 604800
+
 export type CreditOverview = Readonly<{
   venueId: string
   venueName: string
@@ -173,11 +179,12 @@ export class CreditPolicyService {
         status: venueCreditPolicy.status,
         version: venueCreditPolicy.version,
         limitMinor: venueCreditPolicy.limitMinor,
+        effectiveAt: venueCreditPolicy.effectiveAt,
+        retiredAt: venueCreditPolicy.retiredAt,
         maxActiveReservations: venueCreditPolicy.maxActiveReservations,
         maxActivePerShopper: venueCreditPolicy.maxActivePerShopper,
       })
       .from(venueCreditPolicy)
-      .where(eq(venueCreditPolicy.status, 'active'))
       .orderBy(desc(venueCreditPolicy.version))
     const reservations = await this.#database
       .select({
@@ -212,7 +219,15 @@ export class CreditPolicyService {
       const policy = firstPolicy.get(currentVenue.id)
       const activeReservationMinor = reservationByVenue.get(currentVenue.id) ?? BigInt(0)
       const debt = debtByVenue.get(currentVenue.id) ?? { amount: BigInt(0), overdue: 0 }
-      const limitMinor = policy?.limitMinor ?? BigInt(0)
+      const policyIsActive =
+        policy?.status === 'active' &&
+        policy.effectiveAt <= now &&
+        (!policy.retiredAt || policy.retiredAt > now)
+      const limitMinor = policy
+        ? policyIsActive
+          ? policy.limitMinor
+          : BigInt(0)
+        : DEFAULT_CASH_CREDIT_LIMIT_MINOR
       return {
         venueId: currentVenue.id,
         venueName: currentVenue.name,
@@ -225,8 +240,9 @@ export class CreditPolicyService {
         outstandingDebtMinor: debt.amount,
         availableMinor: limitMinor - activeReservationMinor - debt.amount,
         overdueDebtCount: debt.overdue,
-        maxActiveReservations: policy?.maxActiveReservations ?? 100,
-        maxActivePerShopper: policy?.maxActivePerShopper ?? 20,
+        maxActiveReservations:
+          policy?.maxActiveReservations ?? DEFAULT_CASH_MAX_ACTIVE_RESERVATIONS,
+        maxActivePerShopper: policy?.maxActivePerShopper ?? DEFAULT_CASH_MAX_ACTIVE_PER_SHOPPER,
       }
     })
   }
