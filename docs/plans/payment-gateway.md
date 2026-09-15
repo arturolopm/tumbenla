@@ -773,7 +773,6 @@ passed before source integration. These facts do not close any external gate.
   result and prove zero QR issuance for insufficient/failed plus a non-redeemable pending state.
   Then deploy the isolated payment changes to Preview with its own test credentials and stable HTTPS
   origin, repeat all four cases, and preserve only sanitized evidence before any live enablement.
-
 ### 2026-09-14 — Default bar-credit policy changed to COP 500,000
 
 - Product decision 38 supersedes the former zero-default operating rule. Every published venue
