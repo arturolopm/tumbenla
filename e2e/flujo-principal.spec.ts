@@ -114,6 +114,10 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await expect(staff.getByRole('link', { name: 'Carta' })).toHaveCount(0)
 
     await guest.goto('/sitios/bar-la-nona/pedir/mojito-reconstruccion')
+    await expect(guest.getByRole('link', { name: 'Volver a Bar La Nona' })).toHaveAttribute(
+      'href',
+      '/sitios/bar-la-nona'
+    )
     await guest.getByLabel('Tu nombre').fill('Rumbero navegador')
     await guest
       .getByLabel('Tu correo')
@@ -123,6 +127,10 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await expect(
       guest.getByText('Ya está pagado. Que lo escaneen para entregártelo.')
     ).toBeVisible()
+    await expect(guest.getByRole('link', { name: 'Volver a Bar La Nona' })).toHaveAttribute(
+      'href',
+      '/sitios/bar-la-nona'
+    )
 
     const token = /^\/orden\/([A-Za-z0-9_-]+)$/.exec(new URL(guest.url()).pathname)?.[1]
     expect(token).toBeTruthy()
@@ -192,7 +200,7 @@ test('one QR fulfills a multi-unit bar order and tells staff the full amount', a
     await guest.getByRole('button', { name: /^Pedirlo/ }).click()
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
     await expect(guest.getByText('Muestra esto ANTES de pagar')).toBeVisible()
-    await expect(guest.locator('main svg')).toHaveCount(1)
+    await expect(guest.locator('main ul svg')).toHaveCount(1)
     await expect(guest.locator('footer')).toContainText(
       'Del total de $ 60.000 del pedido: $ 48.000 se van en material. $ 12.000 se quedan en el sitio.'
     )

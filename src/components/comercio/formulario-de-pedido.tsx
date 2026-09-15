@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useActionState, useEffect, useMemo, useState } from 'react'
 
 import { type PedidoState, crearPedidoAction } from '@/app/actions/pedidos'
+import { BackToVenueLink } from '@/components/comercio/back-to-venue-link'
 import { toastManager } from '@/components/ui/toast'
 import { Spinner } from '@/components/ui/spinner'
 import { KIND_LABEL, type KindDeProducto } from '@/lib/comercio/types'
@@ -122,12 +122,7 @@ export function FormularioDePedido({
       <input type='hidden' name='quiereCuenta' value={quiereCuenta ? '1' : '0'} />
 
       <header>
-        <Link
-          href={`/sitios/${venueSlug}`}
-          className='font-display text-label-lg text-primary-text uppercase hover:underline'
-        >
-          ← {venueNombre}
-        </Link>
+        <BackToVenueLink venueName={venueNombre} venueSlug={venueSlug} />
         <h1 className='mt-2 font-display font-black text-4xl uppercase leading-none tracking-tighter'>
           {producto.nombre}
         </h1>

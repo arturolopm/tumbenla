@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 
+import { BackToVenueLink } from '@/components/comercio/back-to-venue-link'
 import { formatearCodigo } from '@/lib/comercio/codigos-cliente'
 import { PAY_METHOD_LABEL, type PayMethod } from '@/lib/comercio/types'
 import { formatCOP } from '@/lib/utils/format'
@@ -161,12 +162,7 @@ export function PantallaDeOrden({
   return (
     <main className='mx-auto flex min-h-screen max-w-lg flex-col gap-6 px-margin-mobile py-10'>
       <header>
-        <Link
-          href={`/sitios/${orden.venueSlug}`}
-          className='font-display text-label-lg text-primary-text uppercase hover:underline'
-        >
-          {orden.venueNombre}
-        </Link>
+        <BackToVenueLink venueName={orden.venueNombre} venueSlug={orden.venueSlug} />
         <h1 className='mt-1 font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           {orden.productoNombre}
         </h1>
