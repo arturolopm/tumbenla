@@ -155,6 +155,8 @@ export function PantallaDeOrden({
   }))
 
   const pagaEnBarra = orden.payMethod === 'bar'
+  const totalMaterialAmount = orden.materialPorUnidad * orden.cantidad
+  const totalVenueAmount = orden.sitioPorUnidad * orden.cantidad
 
   return (
     <main className='mx-auto flex min-h-screen max-w-lg flex-col gap-6 px-margin-mobile py-10'>
@@ -311,12 +313,10 @@ export function PantallaDeOrden({
         <p className='mt-1 text-body-md'>
           {pagaEnBarra ? (
             <>
-              De {formatCOP(orden.precioUnitario)}:{' '}
-              <span className='text-lime'>
-                {formatCOP(orden.materialPorUnidad)} se van en material
-              </span>
-              {orden.sitioPorUnidad > 0
-                ? `. ${formatCOP(orden.sitioPorUnidad)} se quedan en el sitio.`
+              Del total de {formatCOP(orden.total)} del pedido:{' '}
+              <span className='text-lime'>{formatCOP(totalMaterialAmount)} se van en material</span>
+              {totalVenueAmount > 0
+                ? `. ${formatCOP(totalVenueAmount)} se quedan en el sitio.`
                 : '.'}
             </>
           ) : (

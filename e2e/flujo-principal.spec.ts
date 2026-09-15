@@ -193,6 +193,9 @@ test('one QR fulfills a multi-unit bar order and tells staff the full amount', a
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
     await expect(guest.getByText('Muestra esto ANTES de pagar')).toBeVisible()
     await expect(guest.locator('main svg')).toHaveCount(1)
+    await expect(guest.locator('footer')).toContainText(
+      'Del total de $ 60.000 del pedido: $ 48.000 se van en material. $ 12.000 se quedan en el sitio.'
+    )
 
     const token = /^\/orden\/([A-Za-z0-9_-]+)$/.exec(new URL(guest.url()).pathname)?.[1]
     if (!token) throw new Error('The cash order URL did not contain a bearer token')
