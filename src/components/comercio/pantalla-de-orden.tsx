@@ -32,6 +32,7 @@ type Orden = {
   publicToken: string
   compradorNombre: string
   cantidad: number
+  entregadasIniciales: number
   precioUnitario: number
   materialPorUnidad: number
   sitioPorUnidad: number
@@ -112,7 +113,7 @@ export function PantallaDeOrden({
     initialData: {
       estado: orden.estado,
       estadoDelPago: orden.payMethod === 'bar' ? 'cash' : orden.estado,
-      entregadas: codigos.filter((c) => c.estado === 'redeemed').length,
+      entregadas: orden.entregadasIniciales,
       total: orden.cantidad,
       venceEn: null,
       estadoDelReembolso: 'none',
@@ -219,7 +220,7 @@ export function PantallaDeOrden({
       )}
 
       <ul className='flex flex-col gap-4'>
-        {estado.map((c, i) => {
+        {estado.map((c) => {
           const entregada = c.estado === 'redeemed'
           return (
             <li
@@ -229,12 +230,6 @@ export function PantallaDeOrden({
                 entregada ? 'border-lime bg-lime/5' : 'border-border bg-card'
               )}
             >
-              {estado.length > 1 ? (
-                <p className='mb-3 font-display text-label-lg uppercase text-muted-foreground'>
-                  {i + 1} de {estado.length}
-                </p>
-              ) : null}
-
               <div
                 className={cn('relative mx-auto w-full max-w-[260px]', entregada && 'opacity-25')}
               >

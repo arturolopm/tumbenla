@@ -222,7 +222,7 @@ Estan aca para no volver a discutirlas cada dos semanas.
     *(El ejemplo canonico era `UNIT_LABEL` en `pledge-badge.tsx`, que se borro
     con la decision 34. `KIND_LABEL` es ademas mejor ejemplo: cubre sus seis
     valores, mientras que `UNIT_LABEL` tenia una sola entrada.)*
-26. **Toda orden lleva QR, y el mesero no sabe cual esta pagada hasta despues de
+26. **Toda orden lleva un solo QR visible, y el mesero no sabe cual esta pagada hasta despues de
     escanear.** Es el mecanismo entero, no un detalle de implementacion. Un
     mesero que cobra en la barra y nos dice que nunca entrego se queda con todo;
     la defensa no es pedirle al cliente que verifique nada, es que no escanear
@@ -231,12 +231,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     politica segura es escanear todas. **La incertidumbre hace el trabajo que
     haria una auditoria.** De aqui salen las dos siguientes, que no se pueden
     quitar sin tumbar esta.
-27. **Se escanea ANTES de cobrar, y sin escaneo no hay credito.** La pantalla
-    del escaneo es la que le dice al mesero si cobra ("YA PAGADO, entrega" o
-    "COBRAR $30.000"); si cobrara primero ya sabria cual es y la decision 26 se
-    cae. Y la parte del sitio en una orden pagada en la app se le abona **al
-    redimir**, no al pagar: es lo que vuelve caro no escanear.
-28. **Al comprador solo se le pide mostrar el QR.** Nada de confirmar, calificar
+27. **Se escanea UNA VEZ por orden, ANTES de cobrar, y sin escaneo no hay credito.** La pantalla
+    del escaneo confirma todas las unidades de esa orden y le dice al mesero si cobra el total
+    ("YA PAGADO, entrega" o "COBRAR $60.000"); si cobrara primero ya sabria cual es y la decision
+    26 se cae. Y la parte del sitio en una orden pagada en la app se le abona **al redimir**, no al
+    pagar: es lo que vuelve caro no escanear.
+28. **Al comprador solo se le pide mostrar un QR por orden.** Nada de confirmar, calificar
     ni marcar recibido. La confirmacion en vivo —la pantalla pasa a "Listo" en el
     momento del escaneo— lo vuelve un sensor sin pedirle trabajo: si no cambio,
     dice "no me salio" ahi mismo. Todo lo demas lo hacemos nosotros, lo hace el
@@ -412,6 +412,7 @@ logo.
 | El operador escribe pin y compromiso a mano | Con muchos sitios por semana | Que el sitio proponga y el operador solo apruebe |
 | Sin caducidad de solicitudes | Cuando la cola no quepa en una pantalla | Caducar `verifying` a los 30 dias con aviso |
 | Sin auditoria mas alla de `reviewedBy` | Con mas operadores | Bitacora aparte |
+| Una orden contiene un producto, aunque puede llevar varias unidades | Cuando alguien quiera combinar, por ejemplo, un mojito y una cerveza en un solo pago | Carrito con lineas de pedido, un cobro y un QR para todo el carrito |
 
 ---
 
@@ -631,7 +632,7 @@ Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
 segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
 fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
 
-### Redimir un QR es UNA sentencia, nunca leer-y-despues-escribir
+### Redimir un QR reclama la orden y cambia cada unidad condicionalmente
 
 ```sql
 UPDATE order_redemption
@@ -640,18 +641,19 @@ UPDATE order_redemption
 RETURNING *;
 ```
 
-Cero filas de vuelta = ya estaba redimido. Toda la garantia que sostiene el
-producto —una persona no recibe dos tragos, un sitio no cobra mas de lo que se
-pago— vive en el `AND status = 'issued'` de adentro. Un `select` para comprobar
-seguido de un `update` deja ganar a los dos escaneos simultaneos, y la ventana
-entre los dos es de milisegundos: no se reproduce probando a mano, se reproduce
-un sabado a las 11 de la noche.
+Primero se bloquea la orden; luego cada unidad aun emitida cambia con el
+`AND status = 'issued'` dentro de la misma transaccion. Cero filas significa que
+otra operacion gano y se revierte todo. Asi un pedido de tres tragos necesita un
+solo escaneo, pero conserva tres unidades contables, tres repartos y tres
+posibles decisiones de reembolso. Dos codigos viejos de la misma orden tampoco
+pueden competir ni bloquearse entre si: el bloqueo de orden los serializa.
 
 Va acompanada de dos cosas que **no** son la misma y hacen falta igual:
 
-- **Una fila de redencion por unidad comprada.** Cantidad 3 son 3 codigos. Asi
-  el limite no es una validacion que alguien pueda olvidar: no existe una cuarta
-  fila que redimir.
+- **Una fila interna de redencion por unidad comprada, pero un solo codigo visible por orden.**
+  Cantidad 3 conserva 3 unidades y 3 transiciones contables; la pantalla y el correo exponen solo
+  el codigo canonico y su escaneo reclama las 3. Asi el limite no es una validacion que alguien
+  pueda olvidar: no existe una cuarta unidad que redimir.
 - **Idempotencia, que es otro problema.** El `UPDATE` resuelve *dos escaneos a
   la vez*. No resuelve *el mismo escaneo reintentado* —el mesero toca dos veces,
   la red repite el POST—, que con solo el `UPDATE` le responde "ya se entrego" a

@@ -313,8 +313,8 @@ function Resultado({ estado, onSeguir }: { estado: Estado; onSeguir: () => void 
       <p className='mt-3 text-body-lg'>{entrega.producto}</p>
       <p className='text-body-md text-muted-foreground'>
         {entrega.comprador}
-        {entrega.cantidadDeLaOrden > 1
-          ? ` · ${entrega.entregadas} de ${entrega.cantidadDeLaOrden} del pedido`
+        {entrega.cantidadAEntregar > 1
+          ? ` · ${entrega.cantidadAEntregar} unidades en este pedido`
           : null}
       </p>
       <p className='mt-3 text-muted-foreground text-sm'>Toca para seguir.</p>

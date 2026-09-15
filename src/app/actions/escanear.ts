@@ -25,9 +25,11 @@ const commerceUnits = new CommerceUnitService({ database: db })
 const commerceRateLimits = new CommerceRateLimitService({ database: db })
 
 /**
- * Entregar un trago.
+ * Entregar un pedido.
  *
- * TODA LA GARANTIA DEL PRODUCTO VIVE EN UNA SOLA SENTENCIA:
+ * En operaciones V2, un codigo reclama la orden completa: el servicio bloquea
+ * la orden y cambia cada unidad emitida en la misma transaccion. La rama de
+ * compatibilidad conserva la garantia original por unidad:
  *
  *   update order_redemption set status = 'redeemed', ...
  *    where id = $1 and status = 'issued' returning *;
@@ -53,6 +55,7 @@ export type Entrega =
       cobrar: number | null
       producto: string
       cantidadDeLaOrden: number
+      cantidadAEntregar: number
       entregadas: number
       comprador: string
       /** true cuando este mismo escaneo ya se habia procesado (reintento). */
@@ -166,6 +169,7 @@ export const redimirAction = async (
       cobrar: result.collectMinor === null ? null : Number(result.collectMinor) / 100,
       producto: result.productName,
       cantidadDeLaOrden: result.quantity,
+      cantidadAEntregar: result.fulfilledCount,
       entregadas: result.redeemedCount,
       comprador: result.buyerName,
       repetido: result.duplicate,
@@ -312,6 +316,7 @@ export const redimirAction = async (
     cobrar: pagaEnBarra ? unitPrice : null,
     producto: fila.producto,
     cantidadDeLaOrden: Number(fila.quantity),
+    cantidadAEntregar: 1,
     entregadas: await contarEntregadas(fila.orderId),
     comprador: fila.buyerName,
     repetido: esMiReintento,

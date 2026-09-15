@@ -40,6 +40,9 @@ export const notifyApprovedOrder = async (input: {
     material: Number(order.unitDonationAmount) * Number(order.quantity),
     pagaEnBarra: order.payMethod === 'bar',
     token: order.publicToken,
-    codigos: [...input.codes],
+    // Unit codes remain separate internally for accounting and refunds. The
+    // buyer receives one canonical order code because one scan fulfills the
+    // whole order.
+    codigos: input.codes.slice(0, 1),
   })
 }

@@ -37,6 +37,7 @@ afterAll(async () => {
 type UnitFixture = Readonly<{
   chargeId: string
   code: string
+  codes: readonly string[]
   orderId: string
   snapshotId: string
   unitId: string
@@ -46,6 +47,7 @@ type UnitFixture = Readonly<{
 const seedApprovedUnit = async (input: {
   suffix: string
   expiresAt?: Date
+  quantity?: number
 }): Promise<UnitFixture> => {
   if (!database) throw new Error('Commerce test database was not initialized')
   const venueId = `unit-venue-${input.suffix}`
@@ -53,10 +55,11 @@ const seedApprovedUnit = async (input: {
   const orderId = `unit-order-${input.suffix}`
   const snapshotId = `unit-snapshot-${input.suffix}`
   const unitId = `unit-${input.suffix}`
-  const redemptionId = `redemption-${input.suffix}`
   const attemptId = `unit-attempt-${input.suffix}`
   const chargeId = `unit-charge-${input.suffix}`
   const code = `CODE-${input.suffix}`
+  const quantity = input.quantity ?? 1
+  const grossMinor = quantity * 10_000
   const expiresAt = input.expiresAt ?? new Date('2026-10-01T00:00:00.000Z')
 
   await database.sql`
@@ -83,8 +86,8 @@ const seedApprovedUnit = async (input: {
        donation_percentage, unit_donation_amount, unit_venue_amount, total_amount,
        public_token, pay_method, status, provider, provider_reference, paid_at, expires_at)
     values
-      (${orderId}, ${productId}, ${venueId}, 'Persona', 'persona@example.test', 1, 100.00,
-       50.00, 50.00, 50.00, 100.00, ${`token-${input.suffix}`}, 'app', 'paid', 'epayco',
+      (${orderId}, ${productId}, ${venueId}, 'Persona', 'persona@example.test', ${quantity}, 100.00,
+       50.00, 50.00, 50.00, ${quantity * 100}, ${`token-${input.suffix}`}, 'app', 'paid', 'epayco',
        ${`reference-${input.suffix}`}, now(), ${expiresAt.toISOString()})
   `
   await database.sql`
@@ -95,19 +98,26 @@ const seedApprovedUnit = async (input: {
        funding_classification)
     values
       (${snapshotId}, ${orderId}, ${`Product ${input.suffix}`}, 'coctel',
-       ${`Venue ${input.suffix}`}, 'COP', 1, 10000, 5000, 'unit-policy', 'unit-foundation',
+       ${`Venue ${input.suffix}`}, 'COP', ${quantity}, 10000, 5000, 'unit-policy', 'unit-foundation',
        'Fundación unidades', 'Reparto de prueba', 'sandbox')
   `
-  await database.sql`
-    insert into order_redemption (id, order_id, code, status)
-    values (${redemptionId}, ${orderId}, ${code}, 'issued')
-  `
-  await database.sql`
-    insert into commerce_order_unit
-      (id, order_snapshot_id, redemption_id, ordinal, gross_minor, lifecycle_status, expires_at)
-    values (${unitId}, ${snapshotId}, ${redemptionId}, 1, 10000, 'issued',
-            ${expiresAt.toISOString()})
-  `
+  const codes: string[] = []
+  for (let ordinal = 1; ordinal <= quantity; ordinal += 1) {
+    const currentUnitId = ordinal === 1 ? unitId : `${unitId}-${ordinal}`
+    const redemptionId = `redemption-${input.suffix}-${ordinal}`
+    const currentCode = ordinal === 1 ? code : `${code}-${ordinal}`
+    codes.push(currentCode)
+    await database.sql`
+      insert into order_redemption (id, order_id, code, status)
+      values (${redemptionId}, ${orderId}, ${currentCode}, 'issued')
+    `
+    await database.sql`
+      insert into commerce_order_unit
+        (id, order_snapshot_id, redemption_id, ordinal, gross_minor, lifecycle_status, expires_at)
+      values (${currentUnitId}, ${snapshotId}, ${redemptionId}, ${ordinal}, 10000, 'issued',
+              ${expiresAt.toISOString()})
+    `
+  }
   await database.sql`
     insert into payment_attempt
       (id, order_snapshot_id, submission_key, request_hash, provider,
@@ -123,7 +133,7 @@ const seedApprovedUnit = async (input: {
        provider_transaction_id, gross_minor, currency, status, approved_at)
     values
       (${chargeId}, ${attemptId}, 'epayco', 'merchant-unit', 'test',
-       ${`reference-${input.suffix}`}, ${`transaction-${input.suffix}`}, 10000, 'COP',
+       ${`reference-${input.suffix}`}, ${`transaction-${input.suffix}`}, ${grossMinor}, 'COP',
        'approved', now())
   `
   await database.sql`
@@ -144,9 +154,9 @@ const seedApprovedUnit = async (input: {
       insert into finance_entry (id, transaction_id, account_id, amount_minor, ordinal)
       values
         (${`unit-approval-debit-${input.suffix}`}, ${`unit-approval-${input.suffix}`},
-         'unit-receivable', 10000, 1),
+         'unit-receivable', ${grossMinor}, 1),
         (${`unit-approval-credit-${input.suffix}`}, ${`unit-approval-${input.suffix}`},
-         ${`unit-held-${input.suffix}`}, -10000, 2)
+         ${`unit-held-${input.suffix}`}, ${-grossMinor}, 2)
     `
     await transaction`
       update finance_transaction set status = 'posted', posted_at = now()
@@ -154,7 +164,7 @@ const seedApprovedUnit = async (input: {
     `
   })
 
-  return { chargeId, code, orderId, snapshotId, unitId, venueId }
+  return { chargeId, code, codes, orderId, snapshotId, unitId, venueId }
 }
 
 describe('CommerceUnitService redemption', () => {
@@ -210,6 +220,84 @@ describe('CommerceUnitService redemption', () => {
       where t.order_snapshot_id = ${fixture.snapshotId} and t.kind = 'unit_distribution'
     `
     expect(posting).toEqual({ entries: '3', difference: '0' })
+  }, 30_000)
+
+  test('one scan redeems and distributes every unit in an app-paid order', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedApprovedUnit({ suffix: 'order-batch', quantity: 2 })
+    await new AllocationService({ database: database.db, now: () => NOW }).reconcileCharge({
+      chargeId: fixture.chargeId,
+      operationKey: 'allocation:order-batch:report',
+      deductions: [],
+    })
+    const service = new CommerceUnitService({ database: database.db, now: () => NOW })
+
+    const result = await service.redeem({
+      code: fixture.code,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:order-batch:first',
+    })
+    const secondScan = await service.redeem({
+      code: fixture.codes[1]!,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:order-batch:second',
+    })
+
+    expect(result).toMatchObject({
+      kind: 'redeemed',
+      collectMinor: null,
+      fulfilledCount: 2,
+      redeemedCount: 2,
+      duplicate: false,
+    })
+    expect(secondScan).toEqual({ kind: 'rejected', reason: 'already_redeemed' })
+    const [state] = await database.sql<
+      { redeemed: string; postings: string; entries: string; difference: string }[]
+    >`
+      select
+        (select count(*) from commerce_order_unit u
+          where u.order_snapshot_id = ${fixture.snapshotId}
+            and u.lifecycle_status = 'redeemed')::text as redeemed,
+        count(distinct t.id)::text as postings,
+        count(e.id)::text as entries,
+        coalesce(sum(e.amount_minor), 0)::text as difference
+      from finance_transaction t
+      join finance_entry e on e.transaction_id = t.id
+      where t.order_snapshot_id = ${fixture.snapshotId} and t.kind = 'unit_distribution'
+    `
+    expect(state).toEqual({ redeemed: '2', postings: '2', entries: '6', difference: '0' })
+  }, 30_000)
+
+  test('finishes only the remaining units of an older partially redeemed order', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedApprovedUnit({ suffix: 'partial-order', quantity: 2 })
+    await database.sql`
+      update order_redemption set status = 'redeemed', redeemed_at = ${NOW.toISOString()}
+      where code = ${fixture.codes[0]!}
+    `
+    await database.sql`
+      update commerce_order_unit set lifecycle_status = 'redeemed', redeemed_at = ${NOW.toISOString()}
+      where id = ${fixture.unitId}
+    `
+
+    const result = await new CommerceUnitService({ database: database.db, now: () => NOW }).redeem({
+      code: fixture.codes[1]!,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:partial-order:remaining',
+    })
+
+    expect(result).toMatchObject({
+      kind: 'redeemed',
+      fulfilledCount: 1,
+      redeemedCount: 2,
+      duplicate: false,
+    })
   }, 30_000)
 
   test('allows only one of two concurrent independent scans', async () => {

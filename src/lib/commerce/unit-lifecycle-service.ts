@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { createHash } from 'node:crypto'
-import { and, desc, eq, inArray, lte, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, lte, sql } from 'drizzle-orm'
 
 import type { db } from '@/database'
 import {
@@ -48,6 +48,7 @@ export type UnitRedemptionResult =
       orderId: string
       venueSlug: string
       quantity: number
+      fulfilledCount: number
       redeemedCount: number
       collectMinor: bigint | null
     }>
@@ -129,17 +130,10 @@ export class CommerceUnitService {
     }
 
     return this.#database.transaction(async (transaction) => {
-      const context = await this.#loadRedemption(transaction, input.code)
-      if (!context) return { kind: 'rejected', reason: 'not_found' } as const
+      const found = await this.#loadRedemption(transaction, input.code)
+      if (!found) return { kind: 'rejected', reason: 'not_found' } as const
 
-      const operationHash = digest({
-        kind: 'redeem',
-        unitId: context.unitId,
-        expectedVenueId: input.expectedVenueId,
-        actorUserId: input.actorUserId,
-        actorIsPlatform: input.actorIsPlatform,
-      })
-      if (context.venueId !== input.expectedVenueId) {
+      if (found.venueId !== input.expectedVenueId) {
         return { kind: 'rejected', reason: 'wrong_venue' } as const
       }
       if (!input.actorIsPlatform) {
@@ -147,11 +141,30 @@ export class CommerceUnitService {
           .select({ id: venueMember.id })
           .from(venueMember)
           .where(
-            and(eq(venueMember.venueId, context.venueId), eq(venueMember.userId, input.actorUserId))
+            and(eq(venueMember.venueId, found.venueId), eq(venueMember.userId, input.actorUserId))
           )
           .limit(1)
         if (!membership) return { kind: 'rejected', reason: 'unauthorized' } as const
       }
+
+      // One scan now owns the whole order. Lock the order before any unit so
+      // two old, still-open QR screens cannot deadlock by scanning different
+      // unit codes at the same time.
+      await this.#lockOrder(transaction, found.orderId)
+      const orderUnits = await this.#loadOrderRedemptions(transaction, found.snapshotId)
+      const context = orderUnits.find((unit) => unit.redemptionId === found.redemptionId)
+      if (!context) return { kind: 'rejected', reason: 'operator_review' } as const
+      if (orderUnits.length !== Number(context.quantity)) {
+        return { kind: 'rejected', reason: 'operator_review' } as const
+      }
+
+      const operationHash = digest({
+        kind: 'redeem_order',
+        orderId: context.orderId,
+        expectedVenueId: input.expectedVenueId,
+        actorUserId: input.actorUserId,
+        actorIsPlatform: input.actorIsPlatform,
+      })
       const existing = await this.#findLifecycleOperation(transaction, input.operationKey)
       if (existing) {
         if (
@@ -161,7 +174,13 @@ export class CommerceUnitService {
         ) {
           return { kind: 'rejected', reason: 'operator_review' } as const
         }
-        return this.#successResult(transaction, context, true)
+        return this.#successResult(
+          transaction,
+          context,
+          true,
+          this.#collectMinorFromOperation(existing, context),
+          this.#fulfilledCountFromOperation(existing)
+        )
       }
       if (
         !classification(context.fundingClassification) ||
@@ -179,39 +198,66 @@ export class CommerceUnitService {
       }
 
       const now = this.#now()
-      if (
-        context.unitExpiresAt &&
-        context.unitExpiresAt <= now &&
-        context.unitStatus === 'issued'
-      ) {
-        if (context.payMethod === 'bar') {
-          await this.#expireCashUnit(transaction, context, now, 'scan')
-        } else {
-          await this.#expireLockedUnit(transaction, context, now, 'scan')
+      const issuedUnits = orderUnits.filter(
+        (unit) => unit.unitStatus === 'issued' && unit.redemptionStatus === 'issued'
+      )
+      if (issuedUnits.some((unit) => unit.unitExpiresAt && unit.unitExpiresAt <= now)) {
+        for (const unit of issuedUnits) {
+          if (unit.payMethod === 'bar') {
+            await this.#expireCashUnit(transaction, unit, now, 'scan')
+          } else {
+            await this.#expireLockedUnit(transaction, unit, now, 'scan')
+          }
         }
         return { kind: 'rejected', reason: 'expired' } as const
       }
       if (context.unitStatus !== 'issued' || context.redemptionStatus !== 'issued') {
         return { kind: 'rejected', reason: rejectionForState(context) } as const
       }
-      const cashReservation =
-        context.payMethod === 'bar'
-          ? await this.#loadCashReservation(transaction, context.unitId)
-          : undefined
-      if (
-        context.payMethod === 'bar' &&
-        (!cashReservation ||
-          cashReservation.status !== 'active' ||
-          cashReservation.expiresAt <= now)
-      ) {
-        return { kind: 'rejected', reason: 'expired' } as const
+      const incompatible = orderUnits.find(
+        (unit) =>
+          !(
+            (unit.unitStatus === 'issued' && unit.redemptionStatus === 'issued') ||
+            (unit.unitStatus === 'redeemed' && unit.redemptionStatus === 'redeemed')
+          )
+      )
+      if (incompatible) {
+        return { kind: 'rejected', reason: rejectionForState(incompatible) } as const
+      }
+      if (issuedUnits.length === 0) {
+        return { kind: 'rejected', reason: 'already_redeemed' } as const
+      }
+
+      const cashReservations = new Map<string, CashReservationContext>()
+      if (context.payMethod === 'bar') {
+        for (const unit of issuedUnits) {
+          const reservation = await this.#loadCashReservation(transaction, unit.unitId)
+          if (!reservation || reservation.status !== 'active') {
+            return { kind: 'rejected', reason: 'operator_review' } as const
+          }
+          if (reservation.expiresAt <= now) {
+            for (const expirable of issuedUnits) {
+              await this.#expireCashUnit(transaction, expirable, now, 'scan')
+            }
+            return { kind: 'rejected', reason: 'expired' } as const
+          }
+          cashReservations.set(unit.unitId, reservation)
+        }
       }
       if (
         context.payMethod === 'bar' &&
-        (context.venueStatus !== 'published' || cashReservation?.policyStatus !== 'active')
+        (context.venueStatus !== 'published' ||
+          [...cashReservations.values()].some(
+            (reservation) => reservation.policyStatus !== 'active'
+          ))
       ) {
         return { kind: 'rejected', reason: 'operator_review' } as const
       }
+
+      const collectMinor =
+        context.payMethod === 'bar'
+          ? issuedUnits.reduce((sum, unit) => sum + unit.unitGrossMinor, BigInt(0))
+          : null
 
       const claimed = await transaction
         .insert(unitLifecycleOperation)
@@ -223,7 +269,12 @@ export class CommerceUnitService {
           kind: 'redeem',
           status: 'completed',
           actorUserId: input.actorUserId,
-          detail: { venueId: context.venueId, orderId: context.orderId },
+          detail: {
+            venueId: context.venueId,
+            orderId: context.orderId,
+            unitCount: issuedUnits.length,
+            collectMinor: collectMinor?.toString() ?? null,
+          },
           createdAt: now,
         })
         .onConflictDoNothing({ target: unitLifecycleOperation.operationKey })
@@ -239,61 +290,96 @@ export class CommerceUnitService {
         ) {
           return { kind: 'rejected', reason: 'operator_review' } as const
         }
-        return this.#successResult(transaction, context, true)
-      }
-
-      const [updatedRedemption] = await transaction
-        .update(orderRedemption)
-        .set({
-          status: 'redeemed',
-          redeemedAt: now,
-          redeemedByUserId: input.actorUserId,
-          updatedAt: now,
-        })
-        .where(
-          and(eq(orderRedemption.id, context.redemptionId), eq(orderRedemption.status, 'issued'))
-        )
-        .returning({ id: orderRedemption.id })
-      const [updatedUnit] = await transaction
-        .update(commerceOrderUnit)
-        .set({ lifecycleStatus: 'redeemed', redeemedAt: now, updatedAt: now })
-        .where(
-          and(
-            eq(commerceOrderUnit.id, context.unitId),
-            eq(commerceOrderUnit.lifecycleStatus, 'issued')
-          )
-        )
-        .returning({ id: commerceOrderUnit.id })
-      if (!updatedRedemption || !updatedUnit) {
-        throw new Error('The unit and compatibility redemption diverged')
-      }
-
-      if (context.payMethod === 'bar') {
-        if (!cashReservation) throw new Error('The cash reservation disappeared')
-        await this.#consumeCashReservation(
+        return this.#successResult(
           transaction,
           context,
-          cashReservation,
-          input.actorUserId,
-          now
+          true,
+          this.#collectMinorFromOperation(raced, context),
+          this.#fulfilledCountFromOperation(raced)
         )
-      } else {
-        await this.#postDistributionIfFinal(transaction, context, input.actorUserId, now)
       }
-      await transaction.insert(financeAuditEvent).values({
-        id: createId('fae'),
-        entityType: 'commerce_order_unit',
-        entityId: context.unitId,
-        action: 'redeemed',
-        actorUserId: input.actorUserId,
-        operationKey: input.operationKey,
-        previousState: 'issued',
-        nextState: 'redeemed',
-        detail: { orderId: context.orderId, venueId: context.venueId },
-        createdAt: now,
-      })
 
-      return this.#successResult(transaction, context, false)
+      for (const unit of issuedUnits) {
+        const unitOperationKey =
+          unit.unitId === context.unitId
+            ? input.operationKey
+            : `redeem-unit:${digest(`${input.operationKey}:${unit.unitId}`).slice(0, 48)}`
+        if (unit.unitId !== context.unitId) {
+          const inserted = await transaction
+            .insert(unitLifecycleOperation)
+            .values({
+              id: createId('ulo'),
+              operationKey: unitOperationKey,
+              contentHash: digest({
+                kind: 'redeem_order_unit',
+                orderId: context.orderId,
+                unitId: unit.unitId,
+                parentOperationKey: input.operationKey,
+              }),
+              unitId: unit.unitId,
+              kind: 'redeem',
+              status: 'completed',
+              actorUserId: input.actorUserId,
+              detail: {
+                venueId: context.venueId,
+                orderId: context.orderId,
+                parentOperationKey: input.operationKey,
+              },
+              createdAt: now,
+            })
+            .onConflictDoNothing({ target: unitLifecycleOperation.operationKey })
+            .returning({ id: unitLifecycleOperation.id })
+          if (inserted.length === 0) throw new Error('The order-unit operation already exists')
+        }
+
+        const [updatedRedemption] = await transaction
+          .update(orderRedemption)
+          .set({
+            status: 'redeemed',
+            redeemedAt: now,
+            redeemedByUserId: input.actorUserId,
+            updatedAt: now,
+          })
+          .where(
+            and(eq(orderRedemption.id, unit.redemptionId), eq(orderRedemption.status, 'issued'))
+          )
+          .returning({ id: orderRedemption.id })
+        const [updatedUnit] = await transaction
+          .update(commerceOrderUnit)
+          .set({ lifecycleStatus: 'redeemed', redeemedAt: now, updatedAt: now })
+          .where(
+            and(
+              eq(commerceOrderUnit.id, unit.unitId),
+              eq(commerceOrderUnit.lifecycleStatus, 'issued')
+            )
+          )
+          .returning({ id: commerceOrderUnit.id })
+        if (!updatedRedemption || !updatedUnit) {
+          throw new Error('The order unit and compatibility redemption diverged')
+        }
+
+        if (unit.payMethod === 'bar') {
+          const reservation = cashReservations.get(unit.unitId)
+          if (!reservation) throw new Error('The cash reservation disappeared')
+          await this.#consumeCashReservation(transaction, unit, reservation, input.actorUserId, now)
+        } else {
+          await this.#postDistributionIfFinal(transaction, unit, input.actorUserId, now)
+        }
+        await transaction.insert(financeAuditEvent).values({
+          id: createId('fae'),
+          entityType: 'commerce_order_unit',
+          entityId: unit.unitId,
+          action: 'redeemed',
+          actorUserId: input.actorUserId,
+          operationKey: unitOperationKey,
+          previousState: 'issued',
+          nextState: 'redeemed',
+          detail: { orderId: unit.orderId, venueId: unit.venueId },
+          createdAt: now,
+        })
+      }
+
+      return this.#successResult(transaction, context, false, collectMinor, issuedUnits.length)
     })
   }
 
@@ -387,8 +473,56 @@ export class CommerceUnitService {
       .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
       .where(eq(orderRedemption.code, code))
       .limit(1)
-      .for('update')
     return row
+  }
+
+  async #lockOrder(transaction: FinanceTransactionConnection, orderId: string): Promise<void> {
+    const [locked] = await transaction
+      .select({ id: productOrder.id })
+      .from(productOrder)
+      .where(eq(productOrder.id, orderId))
+      .limit(1)
+      .for('update')
+    if (!locked) throw new Error('The redemption order disappeared')
+  }
+
+  async #loadOrderRedemptions(
+    transaction: FinanceTransactionConnection,
+    snapshotId: string
+  ): Promise<RedemptionContext[]> {
+    return transaction
+      .select({
+        unitId: commerceOrderUnit.id,
+        unitGrossMinor: commerceOrderUnit.grossMinor,
+        unitStatus: commerceOrderUnit.lifecycleStatus,
+        unitExpiresAt: commerceOrderUnit.expiresAt,
+        redemptionId: orderRedemption.id,
+        redemptionStatus: orderRedemption.status,
+        orderId: productOrder.id,
+        orderStatus: productOrder.status,
+        payMethod: productOrder.payMethod,
+        venueId: productOrder.venueId,
+        venueSlug: venue.slug,
+        venueStatus: venue.status,
+        productName: venueProduct.name,
+        buyerName: productOrder.buyerName,
+        quantity: productOrder.quantity,
+        snapshotId: commerceOrderSnapshot.id,
+        fundingClassification: commerceOrderSnapshot.fundingClassification,
+        foundationBeneficiaryId: commerceOrderSnapshot.foundationBeneficiaryId,
+      })
+      .from(commerceOrderUnit)
+      .innerJoin(orderRedemption, eq(commerceOrderUnit.redemptionId, orderRedemption.id))
+      .innerJoin(
+        commerceOrderSnapshot,
+        eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+      )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .innerJoin(venue, eq(productOrder.venueId, venue.id))
+      .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+      .where(eq(commerceOrderUnit.orderSnapshotId, snapshotId))
+      .orderBy(asc(commerceOrderUnit.ordinal))
+      .for('update')
   }
 
   async #loadUnitForExpiry(
@@ -435,12 +569,21 @@ export class CommerceUnitService {
   async #findLifecycleOperation(
     transaction: FinanceTransactionConnection,
     operationKey: string
-  ): Promise<{ contentHash: string; unitId: string; kind: string } | undefined> {
+  ): Promise<
+    | {
+        contentHash: string
+        unitId: string
+        kind: string
+        detail: Record<string, string | number | boolean | null>
+      }
+    | undefined
+  > {
     const [row] = await transaction
       .select({
         contentHash: unitLifecycleOperation.contentHash,
         unitId: unitLifecycleOperation.unitId,
         kind: unitLifecycleOperation.kind,
+        detail: unitLifecycleOperation.detail,
       })
       .from(unitLifecycleOperation)
       .where(eq(unitLifecycleOperation.operationKey, operationKey))
@@ -451,7 +594,9 @@ export class CommerceUnitService {
   async #successResult(
     transaction: FinanceTransactionConnection,
     context: RedemptionContext,
-    duplicate: boolean
+    duplicate: boolean,
+    collectMinor: bigint | null,
+    fulfilledCount: number
   ): Promise<Extract<UnitRedemptionResult, { kind: 'redeemed' }>> {
     const [count] = await transaction
       .select({
@@ -467,9 +612,26 @@ export class CommerceUnitService {
       orderId: context.orderId,
       venueSlug: context.venueSlug,
       quantity: Number(context.quantity),
+      fulfilledCount,
       redeemedCount: Number(count?.value ?? 0),
-      collectMinor: context.payMethod === 'bar' ? context.unitGrossMinor : null,
+      collectMinor,
     }
+  }
+
+  #collectMinorFromOperation(
+    operation: { detail: Record<string, string | number | boolean | null> },
+    context: RedemptionContext
+  ): bigint | null {
+    if (context.payMethod !== 'bar') return null
+    const value = operation.detail.collectMinor
+    return typeof value === 'string' && /^\d+$/.test(value) ? BigInt(value) : context.unitGrossMinor
+  }
+
+  #fulfilledCountFromOperation(operation: {
+    detail: Record<string, string | number | boolean | null>
+  }): number {
+    const value = operation.detail.unitCount
+    return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : 1
   }
 
   async #loadCashReservation(

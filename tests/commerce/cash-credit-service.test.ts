@@ -510,11 +510,65 @@ describe('CashCreditService', () => {
     expect(blocked).toEqual({ kind: 'unavailable', reason: 'overdue-debt' })
   }, 30_000)
 
-  test('serializes different units of one cash order and marks it paid only after both', async () => {
+  test('redeems every unit and charges the full cash order with one scan', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const fixture = await seedVenue('cash-multi-unit', { limitMinor: BigInt(10_000) })
     const reserved = await createService(START).startOrder(
       input('cash-multi-unit', fixture.productId, 2)
+    )
+    if (reserved.kind !== 'reserved') throw new Error('Expected a cash reservation')
+    const units = new CommerceUnitService({ database: database.db, now: () => START })
+
+    const request = {
+      code: reserved.codes[0]!,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:cash-multi-unit:one-scan',
+    }
+    const redeemed = await units.redeem(request)
+    const retry = await units.redeem(request)
+    const secondCode = await units.redeem({
+      ...request,
+      code: reserved.codes[1]!,
+      operationKey: 'redeem:cash-multi-unit:other-scan',
+    })
+
+    expect(redeemed).toMatchObject({
+      kind: 'redeemed',
+      collectMinor: BigInt(20_000),
+      fulfilledCount: 2,
+      redeemedCount: 2,
+      duplicate: false,
+    })
+    expect(retry).toMatchObject({
+      kind: 'redeemed',
+      collectMinor: BigInt(20_000),
+      redeemedCount: 2,
+      duplicate: true,
+    })
+    expect(secondCode).toEqual({ kind: 'rejected', reason: 'already_redeemed' })
+    const [state] = await database.sql<
+      { status: string; debts: string; redeemed: string; outstanding: string }[]
+    >`
+      select o.status, count(d.id)::text as debts,
+             count(*) filter (where u.lifecycle_status = 'redeemed')::text as redeemed,
+             sum(d.outstanding_minor)::text as outstanding
+      from product_order o
+      join commerce_order_snapshot s on s.order_id = o.id
+      join commerce_order_unit u on u.order_snapshot_id = s.id
+      join credit_debt d on d.unit_id = u.id
+      where o.id = ${reserved.orderId}
+      group by o.status
+    `
+    expect(state).toEqual({ status: 'paid', debts: '2', redeemed: '2', outstanding: '10000' })
+  }, 30_000)
+
+  test('serializes simultaneous scans of two legacy codes for the same order', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedVenue('cash-multi-scan', { limitMinor: BigInt(10_000) })
+    const reserved = await createService(START).startOrder(
+      input('cash-multi-scan', fixture.productId, 2)
     )
     if (reserved.kind !== 'reserved') throw new Error('Expected a cash reservation')
     const units = new CommerceUnitService({ database: database.db, now: () => START })
@@ -526,22 +580,32 @@ describe('CashCreditService', () => {
           expectedVenueId: fixture.venueId,
           actorUserId: ACTOR_ID,
           actorIsPlatform: false,
-          operationKey: `redeem:cash-multi-unit:${index + 1}`,
+          operationKey: `redeem:cash-multi-scan:${index + 1}`,
         })
       )
     )
 
-    expect(results.every((result) => result.kind === 'redeemed')).toBe(true)
-    const [state] = await database.sql<{ status: string; debts: string }[]>`
-      select o.status, count(d.id)::text as debts
-      from product_order o
-      join commerce_order_snapshot s on s.order_id = o.id
-      join commerce_order_unit u on u.order_snapshot_id = s.id
-      join credit_debt d on d.unit_id = u.id
-      where o.id = ${reserved.orderId}
-      group by o.status
+    const accepted = results.filter((result) => result.kind === 'redeemed')
+    const rejected = results.filter((result) => result.kind === 'rejected')
+    expect(accepted).toHaveLength(1)
+    expect(accepted[0]).toMatchObject({
+      kind: 'redeemed',
+      collectMinor: BigInt(20_000),
+      fulfilledCount: 2,
+      redeemedCount: 2,
+    })
+    expect(rejected).toEqual([{ kind: 'rejected', reason: 'already_redeemed' }])
+
+    const [state] = await database.sql<{ debts: string; operations: string }[]>`
+      select count(distinct d.id)::text as debts,
+             count(distinct l.id)::text as operations
+      from credit_debt d
+      join commerce_order_unit u on u.id = d.unit_id
+      join commerce_order_snapshot s on s.id = u.order_snapshot_id
+      join unit_lifecycle_operation l on l.unit_id = u.id and l.kind = 'redeem'
+      where s.order_id = ${reserved.orderId}
     `
-    expect(state).toEqual({ status: 'paid', debts: '2' })
+    expect(state).toEqual({ debts: '2', operations: '2' })
   }, 30_000)
 
   test('applies verified repayments oldest-first without resetting debt age', async () => {

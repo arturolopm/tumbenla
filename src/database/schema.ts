@@ -1218,16 +1218,18 @@ export const productOrder = pgTable(
 )
 
 /**
- * The QR. ONE ROW PER UNIT PURCHASED.
+ * The internal redemption. ONE ROW PER UNIT PURCHASED.
  *
- * That is the whole guarantee: three drinks means three codes, so a venue
- * cannot deliver a fourth. It is not a check somebody has to remember to write
- * — there is simply no fourth row to redeem.
+ * Three drinks still means three immutable unit rows, so a venue cannot deliver
+ * a fourth. The buyer sees only the canonical code for the order; scanning it
+ * transitions every issued unit atomically while preserving per-unit finance
+ * and refund records.
  *
- * Only the hash is stored, never the code. The clear code travels in the QR and
- * in the email, exactly as venue_invitation.tokenHash already does.
+ * Clear codes are stored for the manual-entry fallback. Only the canonical one
+ * travels in the QR and email; the rest remain compatibility handles for orders
+ * created before the one-QR contract.
  *
- * Redeeming is ONE statement with the condition inside it:
+ * Each unit transition keeps the condition inside the statement:
  *
  *   update order_redemption set status = 'redeemed', ...
  *    where id = $1 and status = 'issued' returning *;

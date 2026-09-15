@@ -172,7 +172,7 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
   }
 })
 
-test('one guest bar order uses the default cupo and tells staff to collect', async ({
+test('one QR fulfills a multi-unit bar order and tells staff the full amount', async ({
   browser,
   page: guest,
 }, testInfo) => {
@@ -183,6 +183,7 @@ test('one guest bar order uses the default cupo and tells staff to collect', asy
     await expect(staff).toHaveURL(/\/panel\/bar-la-nona\/escanear$/)
 
     await guest.goto('/sitios/bar-la-nona/pedir/mojito-reconstruccion')
+    await guest.getByRole('button', { name: 'Uno más' }).click()
     await guest.getByRole('button', { name: /^En la barra/ }).click()
     await guest.getByLabel('Tu nombre').fill('Rumbero barra')
     await guest
@@ -191,29 +192,34 @@ test('one guest bar order uses the default cupo and tells staff to collect', asy
     await guest.getByRole('button', { name: /^Pedirlo/ }).click()
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
     await expect(guest.getByText('Muestra esto ANTES de pagar')).toBeVisible()
+    await expect(guest.locator('main svg')).toHaveCount(1)
 
     const token = /^\/orden\/([A-Za-z0-9_-]+)$/.exec(new URL(guest.url()).pathname)?.[1]
     if (!token) throw new Error('The cash order URL did not contain a bearer token')
     const initialStatus = await readOrderStatus(guest, token)
-    expect(initialStatus).toMatchObject({ entregadas: 0, total: 1 })
-    expect(initialStatus.unidades[0]?.estado).toBe('issued')
+    expect(initialStatus).toMatchObject({ entregadas: 0, total: 2 })
+    expect(initialStatus.unidades).toHaveLength(2)
+    expect(initialStatus.unidades.every((unit) => unit.estado === 'issued')).toBe(true)
 
     const formattedCode = await guest.locator('p.font-mono').first().innerText()
     const redemptionCode = formattedCode.replace(/[^A-Z0-9]/g, '')
     await staff.getByLabel('O escríbelo').fill(redemptionCode)
     await staff.getByRole('button', { name: 'Buscar' }).click()
-    await expect(staff.getByText(/^Cobrar /)).toBeVisible()
+    await expect(
+      staff.getByRole('button', { name: /Cobrar.*60\.000.*2 unidades en este pedido/ })
+    ).toBeVisible()
     await expect(staff.getByText('Cobra y entrégalo.')).toBeVisible()
+    await expect(staff.getByText('2 unidades en este pedido')).toBeVisible()
 
     await expect
       .poll(
         async () => {
           const status = await readOrderStatus(guest, token)
-          return status.unidades[0]?.estado
+          return status.unidades.map((unit) => unit.estado)
         },
         { message: 'the cash order should be redeemed after staff scans it', timeout: 10_000 }
       )
-      .toBe('redeemed')
+      .toEqual(['redeemed', 'redeemed'])
     await expect(guest.getByText('Confirmado', { exact: true })).toBeVisible()
   } finally {
     await staffContext.close()

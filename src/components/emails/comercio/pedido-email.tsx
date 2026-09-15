@@ -26,7 +26,7 @@ const pesos = (n: number) => `$${n.toLocaleString('es-CO')}`
  * formulario le promete que le llega el codigo al correo, asi que tiene que
  * llegar.
  *
- * Van LOS CODIGOS EN TEXTO ademas del enlace. Un correo que solo trae un boton
+ * Va EL CODIGO EN TEXTO ademas del enlace. Un correo que solo trae un boton
  * no sirve en la barra si la señal no da para abrirlo, y ocho caracteres se
  * dictan en voz alta.
  *
@@ -76,7 +76,7 @@ export function PedidoEmail({
       </Text>
 
       <Text style={baseStyles.paragraph}>
-        {codigos.length > 1 ? 'Tus códigos' : 'Tu código'}:{' '}
+        Tu código del pedido:{' '}
         <strong>{codigos.map((c) => `${c.slice(0, 4)}-${c.slice(4)}`).join(' · ')}</strong>
       </Text>
 

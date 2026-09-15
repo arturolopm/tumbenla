@@ -46,8 +46,13 @@ export default async function OrdenPage({
   // getBaseUrl() y no window.location.origin: este enlace se abre desde AFUERA
   // de la app, como los de los correos, asi que va la URL canonica.
   const base = getBaseUrl()
+  // Internally there is still one immutable lifecycle unit per drink, but the
+  // bar interaction is one order and therefore exposes one code. For an old
+  // partially redeemed order, show the first code that is still usable.
+  const redencionVisible =
+    orden.redenciones.find((redencion) => redencion.estado === 'issued') ?? orden.redenciones[0]
   const codigos = await Promise.all(
-    orden.redenciones.map(async (r) => ({
+    (redencionVisible ? [redencionVisible] : []).map(async (r) => ({
       id: r.id,
       unidadId: r.unidadId,
       estado: r.estado,
@@ -66,6 +71,9 @@ export default async function OrdenPage({
         publicToken: orden.publicToken,
         compradorNombre: orden.compradorNombre,
         cantidad: orden.cantidad,
+        entregadasIniciales: orden.redenciones.filter(
+          (redencion) => redencion.estado === 'redeemed'
+        ).length,
         precioUnitario: orden.precioUnitario,
         materialPorUnidad: orden.materialPorUnidad,
         sitioPorUnidad: orden.sitioPorUnidad,

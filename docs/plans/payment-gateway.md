@@ -147,10 +147,12 @@ Order responses return explicit unit IDs/states, deadlines, refund state, and do
 
 Use one documented lock order for operations sharing funds: treasury scope where necessary, venue, order, then units/allocations in stable order. External network calls run outside database locks.
 
-- Retain one redeemable record per unit and conditional single-use transitions.
+- Retain one redeemable record per unit and conditional single-use transitions, but expose one
+  canonical QR/code per order to the buyer and email.
 - Recheck authorization, venue, payment eligibility, expiry, suspension, and refund state inside the transaction.
 - Persist scanner operation IDs through retries and reloads. A replayed success clearly says it was already confirmed.
-- Return state by unit identity; support redeeming units in any order.
+- Lock the order before its units; one scan conditionally redeems every still-issued unit in stable
+  order and returns the full cash amount to collect. Keep state and accounting by unit identity.
 - QR redemption means preparation is confirmed. Preserve the customer message that staff will prepare and deliver the order.
 - Present an identical dedicated QR view for app/bar orders; keep customer payment details in a separate view.
 
@@ -446,8 +448,9 @@ passed before source integration. These facts do not close any external gate.
   distinct durable states.
 - Authoritative approval validates merchant, invoice/attempt, reference, transaction,
   gross, currency, and environment at both adapter and facade boundaries. The same
-  transaction records the charge, marks the compatibility order paid, issues exactly one
-  QR per immutable unit, links each QR to its unit, and posts a balanced V2 custody entry.
+  transaction records the charge, marks the compatibility order paid, issues exactly one internal
+  redemption per immutable unit, exposes one canonical order QR, links each internal redemption to
+  its unit, and posts a balanced V2 custody entry.
   A second approved charge is retained as an operator-review overpayment without issuing
   more units. Injected finance failure rolls every effect back.
 - Added the ePayco v2 browser launcher using the documented
@@ -798,3 +801,37 @@ passed before source integration. These facts do not close any external gate.
     and one pre-existing missing-radix advisory.
 - **Exact next action:** deploy this isolated policy change to Preview and repeat the staff/buyer
   acceptance flow against Preview's database before enabling the same rule in production.
+
+### 2026-09-14 — One visible QR and one scan per order
+
+- Per-unit finance and refund records remain intact, but they no longer leak into the bar UX. The
+  order page and email expose one canonical code. For an old partially redeemed order, the page
+  selects the first code that is still issued.
+- One scan locks the order before its units, validates every remaining unit/reservation, and
+  redeems all of them atomically in ordinal order. App-paid orders post every unit distribution;
+  bar orders consume every reservation, create every donation debt, mark the order paid, and tell
+  staff the full remaining amount to collect. Same-request retries return the same amount; a new
+  scan after completion is rejected.
+- No migration was required: one internal redemption remains linked to each immutable unit. This
+  preserves existing refund, expiry, allocation, and audit boundaries while giving the buyer and
+  staff a single order-level interaction.
+- Final regression evidence:
+  - focused lifecycle suite — **11 passed, 0 failed, 28 assertions**, including a two-unit app
+    distribution from one scan and safe completion of a legacy partial order.
+  - focused cash-credit suite — **19 passed, 0 failed, 60 assertions**, including two reservations,
+    two debts, full collection amount, idempotent retry, and simultaneous legacy-code scans. The
+    combined lifecycle/cash suites repeated five times produced **150 passed, 0 failed, 440
+    assertions**.
+  - `bun run typecheck` — passed.
+  - `bun run test:commerce` — **99 passed, 0 failed, 374 assertions** across 13 files in 4.97
+    seconds.
+  - `bun run test:e2e` — production build passed and **5 passed, 0 failed** in 10.1 seconds. The
+    two-mojito bar journey asserts one rendered QR, two issued units, one staff scan, COP 60,000 to
+    collect, both units redeemed, and buyer confirmation.
+- A mixed-product purchase is not one order today: `product_order` owns one `productId`, and the
+  public flow has no cart. Combining a mojito and a beer into one payment/QR requires an explicit
+  cart/order-line design; unrelated existing orders must not be silently grouped because a scan
+  could redeem an older purchase unintentionally.
+- **Exact next action:** deploy this isolated order-level QR change to Preview. If mixed-product
+  checkout is approved as the next product scope, add cart/order-line persistence and bind one
+  payment plus one canonical QR to that explicit cart.
