@@ -1,8 +1,10 @@
 import { config } from 'dotenv'
+import { and, desc, eq, gt, isNull, lte, or } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import process from 'node:process'
 import postgres from 'postgres'
 
+import { allocationPolicy, commerceBeneficiary } from '../src/database/commerce-schema'
 import {
   materialPurchase,
   materialPurchaseItem,
@@ -201,9 +203,27 @@ const purchases = [
     // Placeholder image with nothing personal on it, so it can be shown.
     receiptConsent: true,
     items: [
-      { name: 'Cemento gris 50 kg', quantity: '40.00', unit: 'bulto', unitCost: '32000.00', subtotal: '1280000.00' },
-      { name: 'Bloque estructural n.4', quantity: '600.00', unit: 'unidad', unitCost: '1900.00', subtotal: '1140000.00' },
-      { name: 'Arena de pega', quantity: '3.00', unit: 'm3', unitCost: '140000.00', subtotal: '420000.00' },
+      {
+        name: 'Cemento gris 50 kg',
+        quantity: '40.00',
+        unit: 'bulto',
+        unitCost: '32000.00',
+        subtotal: '1280000.00',
+      },
+      {
+        name: 'Bloque estructural n.4',
+        quantity: '600.00',
+        unit: 'unidad',
+        unitCost: '1900.00',
+        subtotal: '1140000.00',
+      },
+      {
+        name: 'Arena de pega',
+        quantity: '3.00',
+        unit: 'm3',
+        unitCost: '140000.00',
+        subtotal: '420000.00',
+      },
     ],
   },
   {
@@ -226,13 +246,30 @@ const purchases = [
     // page must withhold it.
     receiptConsent: false,
     items: [
-      { name: 'Teja de fibrocemento 2.44 m', quantity: '28.00', unit: 'lamina', unitCost: '48000.00', subtotal: '1344000.00' },
-      { name: 'Correa de madera 3 m', quantity: '22.00', unit: 'unidad', unitCost: '26000.00', subtotal: '572000.00' },
-      { name: 'Puntilla con arandela', quantity: '4.00', unit: 'unidad', unitCost: '11000.00', subtotal: '44000.00' },
+      {
+        name: 'Teja de fibrocemento 2.44 m',
+        quantity: '28.00',
+        unit: 'lamina',
+        unitCost: '48000.00',
+        subtotal: '1344000.00',
+      },
+      {
+        name: 'Correa de madera 3 m',
+        quantity: '22.00',
+        unit: 'unidad',
+        unitCost: '26000.00',
+        subtotal: '572000.00',
+      },
+      {
+        name: 'Puntilla con arandela',
+        quantity: '4.00',
+        unit: 'unidad',
+        unitCost: '11000.00',
+        subtotal: '44000.00',
+      },
     ],
   },
 ]
-
 
 /**
  * La carta de cada sitio.
@@ -296,27 +333,101 @@ const seedProductos = async (venueIds: Record<string, string>) => {
 async function main() {
   console.log('Seeding Tumbenla sample data...')
 
-  const existing = await db.select({ id: venue.id }).from(venue)
-  if (existing.length > 0) {
-    console.log(`Found ${existing.length} venues already. Nothing to do.`)
-    console.log('To reseed from scratch: bun run db:reset && bun run scripts/seed-tumbenla.ts')
-    return
+  const verifiedFoundations = await db
+    .select({ id: commerceBeneficiary.id })
+    .from(commerceBeneficiary)
+    .where(
+      and(eq(commerceBeneficiary.kind, 'foundation'), eq(commerceBeneficiary.status, 'verified'))
+    )
+
+  if (verifiedFoundations.length > 1) {
+    throw new Error('Payment testing requires exactly one verified foundation.')
+  }
+  if (verifiedFoundations.length === 0) {
+    await db
+      .insert(commerceBeneficiary)
+      .values({
+        id: createId('cbn'),
+        kind: 'foundation',
+        legalName: 'Fundación local de prueba',
+        legalIdentifierHash: 'local-sample-foundation-identifier',
+        status: 'verified',
+        verifiedAt: new Date(),
+      })
+      .onConflictDoNothing()
   }
 
-  await db.insert(venue).values(
-    venues.map((v) => ({ id: createId(ID_PREFIX.venue), ...v }))
+  const now = new Date()
+  const activePolicies = await db
+    .select({ id: allocationPolicy.id })
+    .from(allocationPolicy)
+    .where(
+      and(
+        lte(allocationPolicy.effectiveAt, now),
+        or(isNull(allocationPolicy.retiredAt), gt(allocationPolicy.retiredAt, now))
+      )
+    )
+
+  if (activePolicies.length === 0) {
+    const [latestPolicy] = await db
+      .select({ version: allocationPolicy.version })
+      .from(allocationPolicy)
+      .orderBy(desc(allocationPolicy.version))
+      .limit(1)
+
+    await db.insert(allocationPolicy).values({
+      id: createId('alp'),
+      version: (latestPolicy?.version ?? 0) + 1,
+      name: 'Política local de prueba',
+      effectiveAt: now,
+    })
+  }
+
+  const readyFoundations = await db
+    .select({ id: commerceBeneficiary.id })
+    .from(commerceBeneficiary)
+    .where(
+      and(eq(commerceBeneficiary.kind, 'foundation'), eq(commerceBeneficiary.status, 'verified'))
+    )
+  const readyPolicies = await db
+    .select({ id: allocationPolicy.id })
+    .from(allocationPolicy)
+    .where(
+      and(
+        lte(allocationPolicy.effectiveAt, now),
+        or(isNull(allocationPolicy.retiredAt), gt(allocationPolicy.retiredAt, now))
+      )
+    )
+
+  if (readyFoundations.length !== 1 || readyPolicies.length < 1) {
+    throw new Error('Could not create the local payment testing prerequisites.')
+  }
+  console.log('  payment prerequisites ready')
+
+  const insertedVenues = await db
+    .insert(venue)
+    .values(venues.map((v) => ({ id: createId(ID_PREFIX.venue), ...v })))
+    .onConflictDoNothing()
+    .returning({ slug: venue.slug })
+  console.log(
+    `  ${insertedVenues.length} venues added, ${venues.length - insertedVenues.length} already present`
   )
-  console.log(`  ${venues.length} venues`)
 
+  let insertedPurchaseCount = 0
   for (const { items, receiptConsent, ...purchase } of purchases) {
-    const purchaseId = createId(ID_PREFIX.materialPurchase)
+    const [insertedPurchase] = await db
+      .insert(materialPurchase)
+      .values({ id: createId(ID_PREFIX.materialPurchase), ...purchase })
+      .onConflictDoNothing()
+      .returning({ id: materialPurchase.id })
 
-    await db.insert(materialPurchase).values({ id: purchaseId, ...purchase })
+    if (!insertedPurchase) continue
+    insertedPurchaseCount += 1
 
     await db.insert(materialPurchaseItem).values(
       items.map((item, index) => ({
         id: createId(ID_PREFIX.materialPurchaseItem),
-        purchaseId,
+        purchaseId: insertedPurchase.id,
         position: (index * 10).toString(),
         ...item,
       }))
@@ -326,7 +437,7 @@ async function main() {
     // can carry a delivery address, so it goes through the same check.
     await db.insert(materialPurchaseMedia).values({
       id: createId(ID_PREFIX.materialPurchaseMedia),
-      purchaseId,
+      purchaseId: insertedPurchase.id,
       kind: 'receipt',
       url: '/image.png',
       caption: 'Recibo de ejemplo. Reemplazar con el real.',
@@ -334,7 +445,9 @@ async function main() {
       position: '0',
     })
   }
-  console.log(`  ${purchases.length} purchases with items and one receipt each`)
+  console.log(
+    `  ${insertedPurchaseCount} purchases added, ${purchases.length - insertedPurchaseCount} already present`
+  )
 
   const filas = await db.select({ id: venue.id, slug: venue.slug }).from(venue)
   await seedProductos(Object.fromEntries(filas.map((f) => [f.slug, f.id])))

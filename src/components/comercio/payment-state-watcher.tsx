@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
+import { Spinner } from '@/components/ui/spinner'
+
 type PaymentState = {
   state: 'checkout' | 'pending' | 'approved' | 'rejected'
   nextUrl?: string
@@ -27,7 +29,7 @@ export function PaymentStateWatcher({
 }) {
   const router = useRouter()
   const endpoint = `/api/comercio/pagos/${attemptId}/estado${wantsAccount ? '?cuenta=1' : ''}`
-  const { data, error, refetch } = useQuery({
+  const { data, error, isFetching, refetch } = useQuery({
     queryKey: ['commerce-payment', attemptId, wantsAccount],
     queryFn: () => readState(endpoint),
     initialData: initialState,
@@ -56,7 +58,9 @@ export function PaymentStateWatcher({
 
       if (data.state === 'approved' && data.nextUrl) {
         const account = wantsAccount || rememberedAccount
-        router.replace(`${data.nextUrl}${account && !data.nextUrl.includes('?') ? '?cuenta=1' : ''}`)
+        router.replace(
+          `${data.nextUrl}${account && !data.nextUrl.includes('?') ? '?cuenta=1' : ''}`
+        )
       }
       return
     }
@@ -67,7 +71,11 @@ export function PaymentStateWatcher({
 
   const rejected = data?.state === 'rejected'
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-margin-mobile py-10'>
+    <main
+      className='mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-margin-mobile py-10'
+      aria-busy={!rejected}
+    >
+      {!rejected ? <Spinner aria-hidden='true' className='size-9 text-primary' /> : null}
       <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
         {rejected ? 'El cobro no siguió' : 'Estamos verificando'}
       </h1>
@@ -83,10 +91,11 @@ export function PaymentStateWatcher({
       ) : null}
       <button
         type='button'
+        disabled={isFetching}
         onClick={() => void refetch()}
-        className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase'
+        className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase disabled:opacity-50'
       >
-        Revisar otra vez
+        {isFetching ? 'Consultando ePayco…' : 'Revisar otra vez'}
       </button>
       <Link
         href='/sitios'

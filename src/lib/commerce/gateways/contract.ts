@@ -76,7 +76,10 @@ export type CheckoutCreationResult =
 export type RawNotificationFields = Readonly<Record<string, string | readonly string[] | undefined>>
 
 export type AuthenticatedNotification = Readonly<{
+  /** Signed `x_ref_payco`, used as the canonical provider charge reference. */
   reference: string
+  /** Opaque `ref_payco` accepted only as the locator for authoritative lookup. */
+  lookupReference?: string
   transactionId: string
   /** Original string used in the provider signature. Do not parse before verification. */
   gross: string
@@ -103,6 +106,8 @@ export type AuthoritativePaymentQuery = Readonly<{
    */
   expected?: Readonly<{
     invoice?: string
+    /** Signed provider reference to compare with the authoritative record. */
+    providerReference?: string
     transactionId?: string
     gross?: Money
   }>

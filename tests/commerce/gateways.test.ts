@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import {
   EPAYCO_LOGIN_URL,
   EPAYCO_SESSION_URL,
+  EPAYCO_TRANSACTION_URL,
   EPAYCO_VALIDATION_ORIGIN,
   EpaycoCollectionGateway,
   FakeCollectionGateway,
@@ -17,7 +18,7 @@ import { resolveCommerceNewOperationsEnabled } from '../../src/lib/commerce/paym
 const EPAYCO_BINDING: GatewayBinding = {
   provider: 'epayco',
   configVersion: 'checkout-v2-2026-09',
-  accountId: '0001234567',
+  accountId: '1234567',
   environment: 'test',
 }
 
@@ -31,9 +32,10 @@ const CHECKOUT_REQUEST = {
 }
 
 const LOOKUP_QUERY = {
-  reference: '00009876543210987654',
+  reference: '68fb83729d094878e015be00',
   expected: {
     invoice: 'invoice_01',
+    providerReference: '987654321',
     transactionId: '0000000000000042',
     gross: { minorUnits: 3_000_000, currency: 'COP' },
   },
@@ -89,7 +91,7 @@ const signedNotification = (
   overrides: Partial<Record<string, string | readonly string[]>> = {}
 ): RawNotificationFields => {
   const fields: Record<string, string | readonly string[]> = {
-    x_ref_payco: '00009876543210987654',
+    x_ref_payco: LOOKUP_QUERY.expected.providerReference,
     x_transaction_id: '0000000000000042',
     x_amount: '30000.00',
     x_currency_code: 'COP',
@@ -113,13 +115,13 @@ const signedNotification = (
 const validationPayload = (overrides: Record<string, unknown> = {}) => ({
   success: true,
   data: {
-    x_cust_id_cliente: EPAYCO_BINDING.accountId,
+    x_cust_id_cliente: Number(EPAYCO_BINDING.accountId),
     x_id_invoice: LOOKUP_QUERY.expected.invoice,
-    x_ref_payco: LOOKUP_QUERY.reference,
+    x_ref_payco: Number(LOOKUP_QUERY.expected.providerReference),
     x_transaction_id: LOOKUP_QUERY.expected.transactionId,
-    x_amount: '30000.00',
+    x_amount: 30000,
     x_currency_code: 'COP',
-    x_test_request: 'true',
+    x_test_request: 'TRUE',
     x_response: 'Aceptada',
     x_transaction_state: 'Aceptada',
     ...overrides,
@@ -239,7 +241,7 @@ describe('ePayco notification authentication', () => {
     expect(gateway.authenticateNotification(fields)).toEqual({
       authenticated: true,
       notification: {
-        reference: '00009876543210987654',
+        reference: '987654321',
         transactionId: '0000000000000042',
         gross: '030000.00',
         currency: 'COP',
@@ -262,6 +264,19 @@ describe('ePayco notification authentication', () => {
     expect(modifiedUnsigned).not.toHaveProperty('notification.invoice')
     expect(modifiedUnsigned).not.toHaveProperty('notification.status')
     expect(modifiedUnsigned).not.toHaveProperty('notification.environment')
+  })
+
+  test('retains an optional ref_payco only as an authoritative lookup locator', () => {
+    const gateway = createGateway(unusedFetch)
+    expect(
+      gateway.authenticateNotification(signedNotification({ ref_payco: LOOKUP_QUERY.reference }))
+    ).toMatchObject({
+      authenticated: true,
+      notification: {
+        reference: LOOKUP_QUERY.expected.providerReference,
+        lookupReference: LOOKUP_QUERY.reference,
+      },
+    })
   })
 
   test('rejects missing, duplicate, malformed, and changed signed fields', () => {
@@ -290,18 +305,55 @@ describe('ePayco notification authentication', () => {
 })
 
 describe('ePayco authoritative lookup', () => {
+  test('uses authenticated APIFY lookup when a webhook supplies only x_ref_payco', async () => {
+    const queued = createQueuedFetch([
+      jsonResponse({ token: 'apify-token-placeholder' }),
+      jsonResponse({
+        success: true,
+        data: {
+          transaction: {
+            clientId: Number(EPAYCO_BINDING.accountId),
+            refPayco: Number(LOOKUP_QUERY.expected.providerReference),
+            invoice: LOOKUP_QUERY.expected.invoice,
+            transactionId: LOOKUP_QUERY.expected.transactionId,
+            amount: 30000,
+            currency: 'COP',
+            testMode: 'TRUE',
+            response: 'Aceptada',
+            status: 'Aceptada',
+          },
+        },
+      }),
+    ])
+    const query = {
+      ...LOOKUP_QUERY,
+      reference: LOOKUP_QUERY.expected.providerReference,
+    }
+
+    const result = await createGateway(queued.fetch).retrievePayment(query)
+
+    expect(result.kind).toBe('verified')
+    expect(queued.calls.map((call) => String(call.input))).toEqual([
+      EPAYCO_LOGIN_URL,
+      EPAYCO_TRANSACTION_URL,
+    ])
+    expect(queued.calls[1]?.init).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({ referencePayco: LOOKUP_QUERY.expected.providerReference }),
+      redirect: 'error',
+    })
+  })
+
   test('uses the fixed host, preserves the reference string, and verifies every expected field', async () => {
     const maliciousLookingReference = '0000//evil.example/path?amount=1'
     const query = { ...LOOKUP_QUERY, reference: maliciousLookingReference }
-    const queued = createQueuedFetch([
-      jsonResponse(validationPayload({ x_ref_payco: maliciousLookingReference })),
-    ])
+    const queued = createQueuedFetch([jsonResponse(validationPayload())])
 
     const result = await createGateway(queued.fetch).retrievePayment(query)
 
     expect(result.kind).toBe('verified')
     if (result.kind !== 'verified') throw new Error('Expected a verified fixture')
-    expect(result.payment.reference).toBe(maliciousLookingReference)
+    expect(result.payment.reference).toBe(LOOKUP_QUERY.expected.providerReference)
     expect(result.payment.transactionId).toBe('0000000000000042')
     expect(result.payment.gross).toEqual({ minorUnits: 3_000_000, currency: 'COP' })
     expect(result.payment.environment).toBe('test')
@@ -368,11 +420,11 @@ describe('ePayco authoritative lookup', () => {
     expect(result.payment.gross).toEqual({ minorUnits: 3_000_000, currency: 'COP' })
   })
 
-  test('fails closed as uncertain for malformed, non-string, and contradictory responses', async () => {
+  test('fails closed as uncertain for malformed and contradictory responses', async () => {
     const fixtures = [
-      validationPayload({ x_ref_payco: 987654321 }),
+      validationPayload({ x_ref_payco: { unexpected: true } }),
       validationPayload({ x_amount: '30000.001' }),
-      validationPayload({ x_test_request: 'TRUE' }),
+      validationPayload({ x_test_request: 'YES' }),
       validationPayload({ x_response: 'Aceptada', x_transaction_state: 'Rechazada' }),
       { success: true, data: null },
     ]

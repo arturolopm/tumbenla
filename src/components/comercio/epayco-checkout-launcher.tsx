@@ -4,6 +4,8 @@ import Script from 'next/script'
 import { useRouter } from 'next/navigation'
 import { useCallback, useRef, useState } from 'react'
 
+import { Spinner } from '@/components/ui/spinner'
+
 type CheckoutHooks = {
   onCreated?: (data: unknown) => void
   onResponse?: (data: unknown) => void
@@ -52,16 +54,23 @@ export function EpaycoCheckoutLauncher({
 }) {
   const router = useRouter()
   const checkout = useRef<EpaycoCheckout | null>(null)
+  const responseReceived = useRef(false)
   const [message, setMessage] = useState('Cargando el pago seguro…')
   const [ready, setReady] = useState(false)
+  const [phase, setPhase] = useState<
+    'loading' | 'opening' | 'open' | 'verifying' | 'closed' | 'error'
+  >('loading')
   const stateUrl = `/pago/estado/${attemptId}${wantsAccount ? '?cuenta=1' : ''}`
 
   const open = useCallback(() => {
     if (!window.ePayco) {
+      setPhase('error')
       setMessage('No pudimos cargar el pago seguro. Revisa tu conexión e intenta otra vez.')
       return
     }
 
+    setPhase('opening')
+    setMessage('Abriendo ePayco…')
     if (!checkout.current) {
       checkout.current = window.ePayco.checkout.configure({
         sessionId,
@@ -69,8 +78,13 @@ export function EpaycoCheckoutLauncher({
         test: testMode,
       })
       checkout.current.setHooks({
-        onCreated: () => setMessage('El pago seguro está listo.'),
+        onCreated: () => {
+          setPhase('open')
+          setMessage('ePayco está abierto. Completa allí los datos del medio de pago.')
+        },
         onResponse: (response) => {
+          responseReceived.current = true
+          setPhase('verifying')
           setMessage('Recibimos la respuesta. Estamos verificando el cobro con ePayco…')
           const reference = providerReference(response)
           if (reference) {
@@ -81,16 +95,30 @@ export function EpaycoCheckoutLauncher({
             router.replace(stateUrl)
           }
         },
-        onClosed: () => router.replace(stateUrl),
-        onErrors: () =>
-          setMessage('ePayco reportó un problema. No iniciaremos otro cobro automáticamente.'),
+        onClosed: () => {
+          if (responseReceived.current) return
+          setPhase('closed')
+          setMessage(
+            'Cerraste ePayco. No asumimos que el cobro falló ni iniciaremos otro automáticamente.'
+          )
+        },
+        onErrors: () => {
+          setPhase('error')
+          setMessage('ePayco reportó un problema. No iniciaremos otro cobro automáticamente.')
+        },
       })
     }
     checkout.current.open()
   }, [router, sessionId, stateUrl, testMode, wantsAccount])
 
+  const loading = phase === 'loading' || phase === 'opening' || phase === 'verifying'
+  const checkoutOpen = phase === 'open'
+
   return (
-    <main className='mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-margin-mobile py-10'>
+    <main
+      className='mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-5 px-margin-mobile py-10'
+      aria-busy={loading || checkoutOpen}
+    >
       <Script
         src={scriptUrl}
         strategy='afterInteractive'
@@ -98,28 +126,42 @@ export function EpaycoCheckoutLauncher({
           setReady(true)
           open()
         }}
-        onError={() =>
+        onError={() => {
+          setReady(false)
+          setPhase('error')
           setMessage('No pudimos cargar el pago seguro. Revisa tu conexión e intenta otra vez.')
-        }
+        }}
       />
       <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
         Pago seguro
       </h1>
-      <p role='status' aria-live='polite' className='text-body-lg text-muted-foreground'>
-        {message}
-      </p>
+      <div className='rounded-2xl border border-primary/30 bg-primary/5 p-5'>
+        {loading ? <Spinner aria-hidden='true' className='mb-4 size-8 text-primary' /> : null}
+        <p role='status' aria-live='polite' className='text-body-lg text-street-white'>
+          {message}
+        </p>
+      </div>
       <button
         type='button'
-        disabled={!ready}
+        disabled={!ready || loading || checkoutOpen}
         onClick={open}
         className='rounded-xl bg-primary px-6 py-4 font-display text-label-lg text-primary-foreground uppercase disabled:opacity-50'
       >
-        Abrir ePayco
+        {phase === 'loading'
+          ? 'Cargando ePayco…'
+          : phase === 'opening'
+            ? 'Abriendo ePayco…'
+            : phase === 'verifying'
+              ? 'Verificando cobro…'
+              : checkoutOpen
+                ? 'ePayco está abierto'
+                : 'Abrir ePayco'}
       </button>
       <button
         type='button'
+        disabled={loading || checkoutOpen}
         onClick={() => router.replace(stateUrl)}
-        className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase'
+        className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase disabled:opacity-50'
       >
         Revisar estado
       </button>

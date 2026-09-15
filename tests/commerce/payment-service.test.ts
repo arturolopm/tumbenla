@@ -692,6 +692,53 @@ describe('CommercePaymentService authoritative approval', () => {
 })
 
 describe('CommercePaymentService notifications', () => {
+  test('uses ref_payco for lookup and verifies the signed x_ref_payco separately', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const productId = await seedProduct('dual-provider-reference')
+    const gateway = new TestCollectionGateway()
+    gateway.authenticationBehavior = () => ({
+      authenticated: true,
+      notification: {
+        reference: 'signed-provider-reference',
+        lookupReference: 'opaque-lookup-reference',
+        transactionId: 'dual-reference-transaction',
+        gross: '30000.00',
+        currency: 'COP',
+      },
+    })
+    gateway.retrieveBehavior = async (query) => {
+      expect(query.reference).toBe('opaque-lookup-reference')
+      expect(query.expected?.providerReference).toBe('signed-provider-reference')
+      return {
+        kind: 'verified',
+        payment: {
+          merchantId: BINDING.accountId,
+          invoice: query.expected!.invoice!,
+          reference: query.expected!.providerReference!,
+          transactionId: query.expected!.transactionId!,
+          gross: query.expected!.gross!,
+          environment: 'test',
+          status: 'approved',
+          providerStatus: 'Aceptada',
+        },
+      }
+    }
+    const service = createService(gateway)
+    const checkout = expectCheckout(
+      await service.startPayment(paymentInput('dual-provider-reference', productId, 1))
+    )
+
+    const result = await service.processNotification('epayco', {
+      x_id_invoice: checkout.attemptId,
+    })
+
+    expect(result).toMatchObject({
+      accepted: true,
+      retryable: false,
+      result: { kind: 'applied', status: 'approved', issuedUnitCount: 1 },
+    })
+  }, 30_000)
+
   test('authenticates, looks up, applies, and deduplicates provider callbacks', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const productId = await seedProduct('webhook')

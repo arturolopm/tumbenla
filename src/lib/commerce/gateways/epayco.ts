@@ -20,6 +20,7 @@ import type {
 
 export const EPAYCO_LOGIN_URL = 'https://apify.epayco.co/login'
 export const EPAYCO_SESSION_URL = 'https://apify.epayco.co/payment/session/create'
+export const EPAYCO_TRANSACTION_URL = 'https://apify.epayco.co/payment/transaction'
 export const EPAYCO_VALIDATION_ORIGIN = 'https://secure.epayco.co'
 export const EPAYCO_CHECKOUT_SCRIPT_URL = 'https://checkout.epayco.co/checkout-v2.js'
 
@@ -58,6 +59,14 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 const readNonEmptyString = (record: UnknownRecord, key: string): string | undefined => {
   const value = record[key]
   return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+const readProviderScalar = (record: UnknownRecord, key: string): string | undefined => {
+  const value = record[key]
+  if (typeof value === 'string' && value.length > 0) return value
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  if (typeof value === 'boolean') return String(value)
+  return undefined
 }
 
 const readRawField = (
@@ -127,8 +136,9 @@ const normalizeProviderStatus = (value: string): PaymentStatus => {
 }
 
 const environmentFromProvider = (value: string): GatewayEnvironment | undefined => {
-  if (value === 'true') return 'test'
-  if (value === 'false') return 'live'
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true') return 'test'
+  if (normalized === 'false') return 'live'
   return undefined
 }
 
@@ -334,6 +344,9 @@ export class EpaycoCollectionGateway implements CollectionGateway {
       } else if (field.kind === 'value') values.set(key, field.value)
     }
 
+    const lookupField = readRawField(fields, 'ref_payco')
+    if (lookupField.kind === 'duplicate') invalidReason = 'duplicate-field'
+    const lookupReference = lookupField.kind === 'value' ? lookupField.value : undefined
     const reference = values.get('x_ref_payco') ?? ''
     const transactionId = values.get('x_transaction_id') ?? ''
     const gross = values.get('x_amount') ?? ''
@@ -355,7 +368,7 @@ export class EpaycoCollectionGateway implements CollectionGateway {
 
     return {
       authenticated: true,
-      notification: { reference, transactionId, gross, currency },
+      notification: { reference, lookupReference, transactionId, gross, currency },
     }
   }
 
@@ -373,20 +386,57 @@ export class EpaycoCollectionGateway implements CollectionGateway {
       return { kind: 'uncertain', reason: 'malformed-response' }
     }
 
-    const lookupUrl = new URL(
-      `/validation/v1/reference/${encodeURIComponent(query.reference)}`,
-      EPAYCO_VALIDATION_ORIGIN
-    )
+    const useAuthenticatedTransactionLookup = query.reference === query.expected?.providerReference
     let response: Response
-    try {
-      response = await this.#fetch(lookupUrl, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        redirect: 'error',
-        signal: AbortSignal.timeout(this.#requestTimeoutMs),
-      })
-    } catch {
-      return { kind: 'uncertain', reason: 'network' }
+    if (useAuthenticatedTransactionLookup) {
+      let loginResponse: Response
+      try {
+        loginResponse = await this.#fetch(EPAYCO_LOGIN_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${this.#publicKey}:${this.#privateKey}`).toString('base64')}`,
+            'Content-Type': 'application/json',
+          },
+          redirect: 'error',
+          signal: AbortSignal.timeout(this.#requestTimeoutMs),
+        })
+      } catch {
+        return { kind: 'uncertain', reason: 'network' }
+      }
+      if (!loginResponse.ok) return { kind: 'uncertain', reason: 'provider-unavailable' }
+      const loginPayload = await parseJson(loginResponse)
+      const token = isRecord(loginPayload) ? readNonEmptyString(loginPayload, 'token') : undefined
+      if (!token) return { kind: 'uncertain', reason: 'malformed-response' }
+
+      try {
+        response = await this.#fetch(EPAYCO_TRANSACTION_URL, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ referencePayco: query.reference }),
+          redirect: 'error',
+          signal: AbortSignal.timeout(this.#requestTimeoutMs),
+        })
+      } catch {
+        return { kind: 'uncertain', reason: 'network' }
+      }
+    } else {
+      const lookupUrl = new URL(
+        `/validation/v1/reference/${encodeURIComponent(query.reference)}`,
+        EPAYCO_VALIDATION_ORIGIN
+      )
+      try {
+        response = await this.#fetch(lookupUrl, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          redirect: 'error',
+          signal: AbortSignal.timeout(this.#requestTimeoutMs),
+        })
+      } catch {
+        return { kind: 'uncertain', reason: 'network' }
+      }
     }
 
     if (!response.ok) {
@@ -401,14 +451,29 @@ export class EpaycoCollectionGateway implements CollectionGateway {
       return { kind: 'uncertain', reason: 'malformed-response' }
     }
 
-    const data = payload.data
-    const merchantId = readNonEmptyString(data, 'x_cust_id_cliente')
-    const invoice = readNonEmptyString(data, 'x_id_invoice')
-    const reference = readNonEmptyString(data, 'x_ref_payco')
-    const transactionId = readNonEmptyString(data, 'x_transaction_id')
-    const grossString = readNonEmptyString(data, 'x_amount')
-    const currency = readNonEmptyString(data, 'x_currency_code')
-    const testRequest = readNonEmptyString(data, 'x_test_request')
+    let data = payload.data
+    if (useAuthenticatedTransactionLookup) {
+      const transaction = data.transaction
+      if (!isRecord(transaction)) return { kind: 'uncertain', reason: 'malformed-response' }
+      data = {
+        x_cust_id_cliente: transaction.clientId,
+        x_id_invoice: transaction.invoice,
+        x_ref_payco: transaction.refPayco,
+        x_transaction_id: transaction.transactionId,
+        x_amount: transaction.amount,
+        x_currency_code: transaction.currency,
+        x_test_request: transaction.testMode,
+        x_response: transaction.response,
+        x_transaction_state: transaction.status,
+      }
+    }
+    const merchantId = readProviderScalar(data, 'x_cust_id_cliente')
+    const invoice = readProviderScalar(data, 'x_id_invoice')
+    const reference = readProviderScalar(data, 'x_ref_payco')
+    const transactionId = readProviderScalar(data, 'x_transaction_id')
+    const grossString = readProviderScalar(data, 'x_amount')
+    const currency = readProviderScalar(data, 'x_currency_code')
+    const testRequest = readProviderScalar(data, 'x_test_request')
     const status = responseStatus(data)
     const grossMinorUnits = grossString ? parseProviderAmount(grossString) : undefined
     const environment = testRequest ? environmentFromProvider(testRequest) : undefined
@@ -430,7 +495,9 @@ export class EpaycoCollectionGateway implements CollectionGateway {
     if (merchantId !== this.binding.accountId) mismatchFields.push('merchant')
     if (query.expected?.invoice && invoice !== query.expected.invoice)
       mismatchFields.push('invoice')
-    if (reference !== query.reference) mismatchFields.push('reference')
+    if (query.expected?.providerReference && reference !== query.expected.providerReference) {
+      mismatchFields.push('reference')
+    }
     if (query.expected?.transactionId && transactionId !== query.expected.transactionId) {
       mismatchFields.push('transaction')
     }

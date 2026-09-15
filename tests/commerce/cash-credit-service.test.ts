@@ -28,7 +28,12 @@ beforeAll(async () => {
   `
   await database.sql`
     insert into allocation_policy (id, version, name, effective_at)
-    values ('cash-allocation-policy', 1, 'Política caja', now() - interval '1 day')
+    values (
+      'cash-allocation-policy',
+      1,
+      'Política caja',
+      ${new Date(START.getTime() - 60_000).toISOString()}
+    )
   `
 }, 120_000)
 

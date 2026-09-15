@@ -700,3 +700,70 @@ passed before source integration. These facts do not close any external gate.
 - **Exact next action:** with the required credentials and approvals supplied, execute the P2/P8
   account-backed sandbox and R2 checks in preview, preserve sanitized evidence, then run P10's
   card/debit/PSE, cash, refund, payout, and evidence acceptance before enabling live operations.
+
+### 2026-09-14 — Real ePayco sandbox gate and payment progress feedback
+
+- The fake browser journey remains a deterministic application test only. It proves order
+  persistence, idempotency, local payment-state transitions, QR issuance, and redemption, but it
+  does not prove ePayco authentication, Smart Checkout rendering, provider callbacks, signature
+  validation, or authoritative transaction lookup. P2 cannot be closed with the fake adapter.
+- The implemented adapter was compared with ePayco's current Smart Checkout v2 contract. It uses
+  Basic authentication at `https://apify.epayco.co/login`, creates a v2 session at
+  `https://apify.epayco.co/payment/session/create`, renders
+  `https://checkout.epayco.co/checkout-v2.js` in test mode, validates the documented SHA-256
+  confirmation signature, and resolves browser/webhook reports through
+  `https://secure.epayco.co/validation/v1/reference/{reference}` before granting entitlement.
+- The account-backed local gate requires the merchant's own `PUBLIC_KEY`, `PRIVATE_KEY`,
+  `P_CUST_ID_CLIENTE`, and `P_KEY`; ePayco does not publish a universal merchant key set. Store
+  them only in ignored `.env`, mapped to `EPAYCO_PUBLIC_KEY`, `EPAYCO_PRIVATE_KEY`,
+  `EPAYCO_CUSTOMER_ID`, and `EPAYCO_P_KEY`. Local return and confirmation URLs must use the same
+  temporary public HTTPS origin. Never record credential values or unredacted provider payloads
+  in this plan.
+- Official sandbox card cases selected for the first capture (expiry `12/2027`, CVV `123`): Visa
+  accepted `4575623182290326`; Visa insufficient funds `4151611527583283`; Mastercard failed
+  `5170394490379427`; American Express pending `373118856457642`. The approved case must issue one
+  QR only after authoritative validation; failed/insufficient cases must issue none; pending must
+  remain non-redeemable while bounded recovery continues. Test data source:
+  https://docs.epayco.com/docs/medios-de-pruebas-1
+- Immediate customer feedback was added across the entire transition: an order-submission overlay,
+  a route loading screen, explicit Smart Checkout loading/open/closed/error/verification phases,
+  and a visible spinner plus disabled manual refresh during provider-state polling. Closing the
+  ePayco modal without a response no longer redirects into an automatic reopen loop.
+- Local regression evidence after those UI changes:
+  - focused Biome check over the four payment UI files — passed.
+  - `bun run typecheck` — passed.
+  - `bun run test:commerce` — **91 passed, 0 failed, 350 assertions** in 7.55 seconds.
+  - `bun run test:e2e` — production build passed and **4 passed, 0 failed** in 7.4 seconds.
+  - repository lint completed with the same four unrelated unused-import warnings and one existing
+    missing-radix advisory; no new payment lint finding was introduced.
+- The merchant's four sandbox keys were added only to ignored `.env`. A real authenticated login,
+  Smart Checkout v2 session, and accepted sandbox card payment completed through the temporary
+  public HTTPS tunnel. The first callback exposed two integration defects that the fake journey
+  could not reveal: redirects derived from the proxied request URL returned the browser to HTTPS
+  `localhost`, and real provider JSON uses numeric scalars plus uppercase `TRUE`. Redirects now use
+  the configured public application origin and provider scalars are normalized before validation.
+- The real Smart Checkout v2 confirmation omitted opaque `ref_payco` and supplied only the signed
+  numeric `x_ref_payco`. The public validation endpoint therefore cannot reconcile this webhook by
+  itself. Webhook recovery now follows ePayco's official WooCommerce integration: it authenticates
+  to APIFY and posts the signed reference to `payment/transaction`. Browser returns continue to use
+  the opaque reference with the public validation endpoint. In both paths the authoritative result
+  must match the persisted merchant, invoice, signed provider reference when available,
+  transaction, amount, currency, and environment before issuing anything.
+- The already-approved sandbox payment was recovered without a second charge. Database evidence
+  after replay: attempt `approved`, order `paid`, signature verified, event handled as an error-free
+  duplicate, exactly one approved charge, one issued unit, and two posted ledger entries. Replaying
+  the exact signed callback returned HTTP 200 with `accepted: true` and `duplicate: true`.
+- Final regression evidence after the real-provider fixes:
+  - `bun run typecheck` — passed.
+  - `bun run test:commerce` — **94 passed, 0 failed, 358 assertions** across 13 files in 7.41
+    seconds.
+  - `bun run test:e2e` — production build passed and **4 passed, 0 failed** in 7.1 seconds.
+  - `bun run lint` — completed successfully with the same four unrelated unused-import warnings
+    and one pre-existing missing-radix advisory.
+- P2 remains open for the insufficient-funds, failed, and pending sandbox cases, sanitized provider
+  report evidence, and the same callback/return checks in Preview. Production remains disabled
+  until those cases and P10's operating sign-off pass.
+- **Exact next action:** in local sandbox, run one fresh order for each remaining official card
+  result and prove zero QR issuance for insufficient/failed plus a non-redeemable pending state.
+  Then deploy the isolated payment changes to Preview with its own test credentials and stable HTTPS
+  origin, repeat all four cases, and preserve only sanitized evidence before any live enablement.

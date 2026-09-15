@@ -6,6 +6,7 @@ import { useActionState, useEffect, useMemo, useState } from 'react'
 
 import { type PedidoState, crearPedidoAction } from '@/app/actions/pedidos'
 import { toastManager } from '@/components/ui/toast'
+import { Spinner } from '@/components/ui/spinner'
 import { KIND_LABEL, type KindDeProducto } from '@/lib/comercio/types'
 import { formatCOP } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/css'
@@ -88,12 +89,32 @@ export function FormularioDePedido({
 
   const total = useMemo(() => producto.precio * cantidad, [producto.precio, cantidad])
   const materialTotal = producto.material * cantidad
+  const preparando = enviando || estado.status === 'success'
 
   const error = (campo: string) =>
     estado.status === 'error' ? estado.fieldErrors?.[campo]?.[0] : undefined
 
   return (
-    <form action={enviar} className='flex flex-col gap-6'>
+    <form action={enviar} className='flex flex-col gap-6' aria-busy={preparando}>
+      {preparando ? (
+        <div
+          className='fixed inset-0 z-50 flex items-center justify-center bg-background/90 px-margin-mobile backdrop-blur-sm'
+          role='status'
+          aria-live='assertive'
+        >
+          <div className='w-full max-w-sm rounded-2xl border border-primary/40 bg-elevated p-7 text-center shadow-2xl'>
+            <Spinner aria-hidden='true' className='mx-auto size-10 text-primary' />
+            <p className='mt-5 font-display font-black text-2xl uppercase leading-tight'>
+              {metodo === 'app' ? 'Preparando el pago seguro' : 'Preparando tu código'}
+            </p>
+            <p className='mt-3 text-body-md text-muted-foreground'>
+              {metodo === 'app'
+                ? 'Estamos creando tu pedido y conectando con la pasarela. No cierres esta ventana ni vuelvas a pagar.'
+                : 'Estamos reservando tu pedido. Enseguida verás el código para mostrar en la barra.'}
+            </p>
+          </div>
+        </div>
+      ) : null}
       <input type='hidden' name='venueSlug' value={venueSlug} />
       <input type='hidden' name='productoSlug' value={producto.slug} />
       <input type='hidden' name='payMethod' value={metodo} />
@@ -257,11 +278,13 @@ export function FormularioDePedido({
 
       <button
         type='submit'
-        disabled={enviando}
+        disabled={preparando}
         className='rounded-xl bg-primary px-6 py-4 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 disabled:opacity-50'
       >
-        {enviando
-          ? 'Un momento…'
+        {preparando
+          ? metodo === 'app'
+            ? 'Preparando pago…'
+            : 'Preparando código…'
           : metodo === 'app'
             ? `Pagar ${formatCOP(total)}`
             : `Pedirlo · ${formatCOP(total)} en la barra`}

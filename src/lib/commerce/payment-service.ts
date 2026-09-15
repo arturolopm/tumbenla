@@ -255,13 +255,13 @@ const paymentMismatches = (
   payment: VerifiedPayment,
   context: AttemptContext,
   binding: GatewayBinding,
-  reference: string,
+  providerReference?: string,
   transactionId?: string
 ): readonly string[] => {
   const mismatches: string[] = []
   if (payment.merchantId !== binding.accountId) mismatches.push('merchant')
   if (payment.invoice !== context.attemptId) mismatches.push('invoice')
-  if (payment.reference !== reference) mismatches.push('reference')
+  if (providerReference && payment.reference !== providerReference) mismatches.push('reference')
   if (transactionId && payment.transactionId !== transactionId) mismatches.push('transaction')
   if (BigInt(payment.gross.minorUnits) !== context.grossMinor) mismatches.push('gross')
   if (payment.gross.currency !== 'COP') mismatches.push('currency')
@@ -325,6 +325,7 @@ export class CommercePaymentService {
   async reconcileAttempt(input: {
     attemptId: string
     reference: string
+    providerReference?: string
     transactionId?: string
     eventId?: string
   }): Promise<PaymentReconciliationResult> {
@@ -353,6 +354,7 @@ export class CommercePaymentService {
       reference: input.reference,
       expected: {
         invoice: context.attemptId,
+        providerReference: input.providerReference,
         transactionId: input.transactionId,
         gross: { minorUnits: amountAsSafeNumber(context.grossMinor), currency: 'COP' },
       },
@@ -361,7 +363,7 @@ export class CommercePaymentService {
     return this.#handleLookupResult({
       context,
       gateway,
-      reference: input.reference,
+      providerReference: input.providerReference,
       transactionId: input.transactionId,
       eventId: input.eventId,
       lookup,
@@ -395,7 +397,6 @@ export class CommercePaymentService {
       return this.#handleLookupResult({
         context,
         gateway,
-        reference: input.reference,
         lookup,
       })
     }
@@ -469,6 +470,8 @@ export class CommercePaymentService {
       processingError: null,
       verifiedFields: {
         reference: authentication.notification.reference,
+        lookupReference:
+          authentication.notification.lookupReference ?? authentication.notification.reference,
         transactionId: authentication.notification.transactionId,
         gross: authentication.notification.gross,
         currency: authentication.notification.currency,
@@ -491,7 +494,9 @@ export class CommercePaymentService {
 
     const result = await this.reconcileAttempt({
       attemptId: context.attemptId,
-      reference: authentication.notification.reference,
+      reference:
+        authentication.notification.lookupReference ?? authentication.notification.reference,
+      providerReference: authentication.notification.reference,
       transactionId: authentication.notification.transactionId,
       eventId: event.id,
     })
@@ -846,7 +851,7 @@ export class CommercePaymentService {
   async #handleLookupResult(input: {
     context: AttemptContext
     gateway: CollectionGateway
-    reference: string
+    providerReference?: string
     transactionId?: string
     eventId?: string
     lookup: AuthoritativePaymentResult
@@ -895,7 +900,7 @@ export class CommercePaymentService {
       input.lookup.payment,
       input.context,
       input.gateway.binding,
-      input.reference,
+      input.providerReference,
       input.transactionId
     )
     if (mismatches.length > 0) {
