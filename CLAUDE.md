@@ -316,6 +316,15 @@ locally. See `docs/email/providers.mdx`.
 - Manual testing recommended
 - Use Sentry for error tracking in production
 
+### Friction review
+
+Before adding or preserving a user or operator step, use
+`docs/ux-friction-review.md`. Every click, field, wait, or new screen must name
+the irreducible risk it prevents and why an existing check does not already
+cover it. If a human or technical verification has already covered that risk,
+remove the step or defer it until it returns value. Record durable decisions in
+`PRODUCT.md` and cross-product handoffs in `docs/plans/`.
+
 ## Important Notes
 
 1. **Bun Runtime**: This project uses Bun, not Node.js

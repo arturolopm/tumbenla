@@ -1,6 +1,6 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 
 import { CopiarTexto } from '@/components/sitios/copiar-texto'
 import { CORREO_CONTACTO, INSTAGRAM_VERIFICACION, urlInstagram } from '@/config/contacto'
@@ -52,15 +52,6 @@ export default async function EnviadaPage({
 
   if (!solicitud) notFound()
 
-  // Si ya hay cuenta amarrada no hace falta pedirla. Con `?id=` siempre la hay,
-  // porque esa rama exige sesion.
-  const yaTieneCuenta = params.t ? Boolean((solicitud as { userId?: string | null }).userId) : true
-
-  // Entro con OTRO correo. Decirlo de frente, porque la solicitud no se le va a
-  // amarrar nunca asi y desde afuera parece que no pasa nada (decision 29b).
-  const conOtroCorreo =
-    Boolean(session) && session?.user.email.toLowerCase() !== solicitud.contactEmail.toLowerCase()
-
   const mensaje = `Hola, soy de ${solicitud.name} y quiero registrarlo en Tumbenla. Mi correo es ${solicitud.contactEmail}`
 
   return (
@@ -111,44 +102,12 @@ export default async function EnviadaPage({
 
         <Paso numero={3} titulo='Nosotros hacemos el resto'>
           <p className='text-body-md text-muted-foreground'>
-            Cuando llegue tu mensaje confirmamos que la cuenta es tuya, publicamos el sitio y te
-            damos el panel para que armes tu primer trago.
+            Cuando confirmemos el mensaje y el correo, te avisamos si aprobamos el sitio. En ese
+            correo te contamos cómo entrar al panel con el mismo correo, sin invitaciones ni otro
+            paso de aprobación.
           </p>
         </Paso>
       </ol>
-
-      {/*
-        VA DESPUES DEL DM, NUNCA ANTES. Lo urgente ahora es el mensaje de
-        Instagram; la cuenta se puede terminar mientras espera la respuesta. Es
-        la misma colocacion —y por la misma razon— que la invitacion a crear
-        cuenta en la pantalla del QR, que va debajo del codigo y no encima.
-      */}
-      {!yaTieneCuenta ? (
-        <div className='mt-10 rounded-xl border-2 border-lime p-6'>
-          <p className='font-display font-bold text-headline-md text-lime uppercase'>
-            Crea tu cuenta con {solicitud.contactEmail}
-          </p>
-          <p className='mt-2 text-body-md text-muted-foreground'>
-            El panel del sitio va a esa cuenta. Créala con{' '}
-            <strong className='text-street-white'>ese mismo correo</strong> y tu solicitud se amarra
-            sola, sin que tengas que hacer nada más. Sin cuenta no podemos darte el panel, aunque el
-            mensaje llegue.
-          </p>
-          <Link
-            href={`/register?correo=${encodeURIComponent(solicitud.contactEmail)}&redirectAfter=/registrar-sitio`}
-            className='mt-4 inline-block rounded-xl bg-lime px-5 py-3 font-display text-background text-label-lg uppercase transition-opacity hover:opacity-90'
-          >
-            Crear la cuenta
-          </Link>
-        </div>
-      ) : null}
-
-      {conOtroCorreo ? (
-        <p className='mt-6 rounded-xl border border-primary border-dashed p-4 text-body-md text-muted-foreground'>
-          Estás dentro con otro correo. Para que esta solicitud quede a tu nombre, entra con{' '}
-          <strong className='text-street-white'>{solicitud.contactEmail}</strong>.
-        </p>
-      ) : null}
 
       <div className='mt-10 rounded-xl border border-border border-dashed p-6'>
         <p className='font-display font-bold text-headline-md uppercase'>

@@ -2,7 +2,7 @@ import { PedidoEmail } from '@/components/emails/comercio'
 import { render } from '@react-email/components'
 import { OTPVerificationEmail, ResetPasswordEmail, WelcomeEmail } from '@/components/emails/auth'
 import {
-  SolicitudDecisionEmail,
+  ApplicationDecisionEmail,
   SolicitudDmEmail,
   VenueInvitationEmail,
 } from '@/components/emails/venues'
@@ -59,10 +59,12 @@ export async function renderSolicitudDmEmail(params: {
   return await render(SolicitudDmEmail(params))
 }
 
-export async function renderSolicitudDecisionEmail(params: {
+export async function renderApplicationDecisionEmail(params: {
   venueName: string
-  aprobada: boolean
-  nota?: string
+  approved: boolean
+  note?: string
+  ownerIsReady?: boolean
+  contactEmail?: string
 }): Promise<string> {
-  return await render(SolicitudDecisionEmail(params))
+  return await render(ApplicationDecisionEmail(params))
 }

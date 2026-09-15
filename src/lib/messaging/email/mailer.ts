@@ -39,7 +39,7 @@ import type {
 
 import {
   getEmailSubject,
-  renderSolicitudDecisionEmail,
+  renderApplicationDecisionEmail,
   renderSolicitudDmEmail,
   renderPedidoEmail,
   renderVenueInvitationEmail,
@@ -339,18 +339,21 @@ export async function sendApplicationDmRequestEmail(params: {
 export async function sendApplicationDecisionEmail(params: {
   to: string
   venueName: string
-  aprobada: boolean
-  nota?: string
+  approved: boolean
+  note?: string
+  ownerIsReady?: boolean
 }): Promise<void> {
-  const html = await renderSolicitudDecisionEmail({
+  const html = await renderApplicationDecisionEmail({
     venueName: params.venueName,
-    aprobada: params.aprobada,
-    nota: params.nota,
+    approved: params.approved,
+    note: params.note,
+    ownerIsReady: params.ownerIsReady,
+    contactEmail: params.to,
   })
 
   const result = await sendEmail({
     to: params.to,
-    subject: getEmailSubject(params.aprobada ? 'solicitud-aprobada' : 'solicitud-rechazada'),
+    subject: getEmailSubject(params.approved ? 'solicitud-aprobada' : 'solicitud-rechazada'),
     html,
     from: getFromEmailAddress(),
     emailType: 'transactional',

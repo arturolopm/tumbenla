@@ -1,7 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const baseURL = 'http://127.0.0.1:3107'
-
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -34,12 +33,12 @@ export default defineConfig({
     env: {
       ...process.env,
       NODE_ENV: 'test',
-      ADMIN_EMAILS: 'operador@prueba.local',
+      ADMIN_EMAILS: process.env.ADMIN_EMAILS ?? 'operador@prueba.local',
       COMMERCE_BROWSER_TEST: 'true',
       COMMERCE_FUNDING_CLASSIFICATION: 'sandbox',
       COMMERCE_NEW_OPERATIONS_ENABLED: 'true',
       COMMERCE_PAYMENT_PROVIDER: 'fake',
-      EMAIL_PROVIDER: 'log',
+      EMAIL_PROVIDER: process.env.EMAIL_PROVIDER ?? 'log',
       NEXT_PUBLIC_APP_URL: baseURL,
     },
   },

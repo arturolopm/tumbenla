@@ -751,18 +751,13 @@ export const venueApplication = pgTable(
       .primaryKey()
       .$defaultFn(() => createId(ID_PREFIX.venueApplication)),
     /**
-     * Quien aplica, y quien queda de dueno si se aprueba.
+     * The account that may eventually own this venue.
      *
-     * NULLABLE A PROPOSITO (decision 35). El formulario ya no exige sesion: la
-     * solicitud la crea quien llene cuatro campos, y se amarra a una cuenta
-     * despues, cuando esa persona entra con el correo VERIFICADO que coincide
-     * —el mismo mecanismo de los pedidos de invitado, decision 29b—. Exigir
-     * cuenta primero ponia el paso mas caro, registrarse y verificar, delante
-     * del mas barato.
-     *
-     * Una solicitud sin dueno NO SE PUEDE APROBAR: aprobar es lo que entrega la
-     * propiedad y no hay a quien entregarsela. Se hace cumplir en
-     * saveVenueAction, no solo escondiendo el boton en la cola.
+     * Nullable on purpose (decision 35): the short public form does not require
+     * a session. An operator can approve after the manual DM + contact-email
+     * check even when this is null. Ownership is granted only to an account
+     * whose verified email matches contactEmail, either during approval or when
+     * that account later enters through /entrar.
      */
     userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
     /** Solo cuando reclama un sitio que ya existe. Null = propone uno nuevo. */

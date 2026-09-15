@@ -115,9 +115,9 @@ export const solicitarSitioAction = async (
   _previous: ReclamoState,
   formData: FormData
 ): Promise<ReclamoState> => {
-  // La sesion se lee, pero NO se exige (decision 35). Si la hay, la solicitud
-  // nace amarrada y esa persona nunca pasa por el amarre diferido. Si no, nace
-  // sin dueno y se amarra despues, al entrar con el correo verificado.
+  // A session alone is never evidence that this applicant owns the contact
+  // email. The application is linked immediately only when that exact address
+  // is already verified; every other case follows the same delayed claim path.
   const session = await auth.api.getSession({ headers: await headers() })
 
   // Los vacios NO se descartan, a diferencia del formulario de admin. Si un
@@ -141,6 +141,10 @@ export const solicitarSitioAction = async (
   }
 
   const datos = parsed.data
+  const trustedApplicantId =
+    session?.user.emailVerified && session.user.email.trim().toLowerCase() === datos.contactEmail
+      ? session.user.id
+      : null
 
   // Si dice reclamar un sitio que ya existe, tiene que existir de verdad y no
   // tener dueno. El id viene del formulario, asi que se comprueba contra la
@@ -173,13 +177,13 @@ export const solicitarSitioAction = async (
    * sesion se busca por userId, que no se puede escribir desde el formulario.
    * Sin sesion, solo se inserta.
    */
-  const [propia] = session
+  const [propia] = trustedApplicantId
     ? await db
         .select({ id: venueApplication.id })
         .from(venueApplication)
         .where(
           and(
-            eq(venueApplication.userId, session.user.id),
+            eq(venueApplication.userId, trustedApplicantId),
             sql`${venueApplication.status} in ('pending', 'verifying')`
           )
         )
@@ -187,7 +191,7 @@ export const solicitarSitioAction = async (
     : []
 
   const valores = {
-    userId: session?.user.id ?? null,
+    userId: trustedApplicantId,
     venueId: datos.venueId,
     name: datos.name,
     instagram: datos.instagram,
@@ -355,8 +359,8 @@ export const rechazarSolicitudAction = async (
     await sendApplicationDecisionEmail({
       to: solicitud.contactEmail,
       venueName: solicitud.name,
-      aprobada: false,
-      nota: nota?.trim() || undefined,
+      approved: false,
+      note: nota?.trim() || undefined,
     })
   } catch {
     // El rechazo ya quedo guardado; que el correo falle no lo revierte.

@@ -54,7 +54,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Alta de sitio: solicitud corta verificada por DM | Construido |
 | Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
 | Liquidación del sitio y transparencia | Construida y probada localmente: deducciones revisadas, asignación exacta, transferencias manuales con evidencia y vistas V2. Falta ejecutar la operación real en preview/live. |
-| Alta en 4 campos, sin cuenta por delante | Por construir (decisiones 35 y 36) |
+| Alta en 4 campos, aprobación sin cuenta y reclamo por correo verificado | Construido (decisión 35) |
 | Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
 | Gate de ciudad (Manizales si, resto no) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
@@ -187,13 +187,19 @@ Estan aca para no volver a discutirlas cada dos semanas.
     decia al dueno de verdad "ya tiene dueno".
     *(El guardarrail eran tres columnas `NOT NULL`, no dos: `pledge_type` era la
     tercera y se fue con la decision 34. Lat/lng bastan, pero conviene saber que
-    el margen se angosto.)*
-20b. **El DM verifica la CUENTA; el correo citado verifica a la PERSONA.**
+    el margen se angosto.)* La aprobacion escribe sitio, solicitud y —solo si
+    ya existe una cuenta confiable— su membresia de dueno en una transaccion.
+    Una solicitud aprobada sin dueno es valida: no publica el sitio por si sola
+    y espera el reclamo automatico por correo verificado.
+20b. **El DM verifica el control de Instagram; el correo citado identifica a la
+    persona.**
     Que el mensaje llegue desde el Instagram del bar prueba que quien escribe
     controla esa cuenta, no que sea quien lleno el formulario. Por eso el DM
     tiene que citar el `contactEmail` de la solicitud. Hacen falta las dos, o no
     se aprueba: sin la segunda, quien maneja las redes de un bar podria quedarse
-    con el sitio de otro.
+    con el sitio de otro. **No hace falta una cuenta antes de aprobar:** esa
+    comprobacion humana ya cubre la autorizacion operativa; la cuenta solo
+    entrega el panel despues de que su correo exacto este verificado.
 20c. **El formulario largo de un sitio no se le muestra a nadie de la calle.**
     Estuvo colgado en `/registrar-sitio/nuevo` y era la peor pantalla del
     producto. Ademas su buscador de direcciones llama a `/api/geocode`, que
@@ -316,15 +322,18 @@ Estan aca para no volver a discutirlas cada dos semanas.
     tambien se borra el auto-reporte de aportes: no habia como reportar sin
     contradecir esto.
 35. **El formulario de alta solo pregunta lo que prueba que quien escribe es el
-    dueno, y la cuenta va al final.** Cuatro campos: nombre, Instagram, correo y
-    WhatsApp. Ni tipo, ni ciudad, ni direccion, ni los ocho opcionales. Todo eso
-    lo pone operacion al aprobar, o el bar despues en su panel, cuando ya tiene
-    algo que ganar llenandolo.
+    dueno, y la cuenta llega despues de aprobar.** Cuatro campos: nombre,
+    Instagram, correo y WhatsApp. Ni tipo, ni ciudad, ni direccion, ni los ocho
+    opcionales. Todo eso lo pone operacion al aprobar, o el bar despues en su
+    panel, cuando ya tiene algo que ganar llenandolo.
     **Y no se pide cuenta para verlo.** Antes habia que registrarse Y verificar
     el correo antes de ver el formulario: el paso mas caro iba de primero. Es la
     decision 29 aplicada al otro lado del mercado —iniciar sesion AGREGA, nunca
     restringe— y se amarra igual, por correo verificado, con el mismo mecanismo
-    de la decision 29b.
+    de la decision 29b. Cuando operacion aprueba tras comprobar el DM y el
+    correo, crea el sitio aunque todavia no haya cuenta. Si ya hay una con ese
+    correo exacto y verificado, recibe `owner` en la aprobacion; si no, la
+    primera que lo verifique lo reclama al entrar. No hay invitacion que aceptar.
     **El DM no desaparece, se corre de lugar.** La decision 20b sigue mandando:
     sin el DM no se aprueba. Pero se cuenta DESPUES de enviar, no como una lista
     de pasos futuros encima de un formulario vacio.
@@ -366,6 +375,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     pantalla hacían parecer que eran bolsas distintas o cifras para sumar. Las tres públicas contestan
     cuánto entró para reconstruir, cuánto ya tiene factura y cuánto sigue esperando esa factura, sin
     ocultar el intervalo operativo ni confundirlo con ingreso de Tumbenla.
+40. **Cada paso tiene que ganarse su friccion.** Antes de exigir un clic, un
+    campo, una pantalla o una espera, se escribe que riesgo irreductible evita y
+    por que una comprobacion anterior no lo cubre. Si una verificacion humana o
+    tecnica ya cubre ese riesgo, el paso se quita o se mueve al momento en que
+    si entrega valor. La revision vive en `docs/ux-friction-review.md`: es una
+    puerta de implementacion y validacion, no una sugerencia de copy.
 
 ---
 
@@ -386,9 +401,10 @@ poder seguir.
 | WhatsApp | Como se persigue una solicitud que se quedo quieta. Es el canal por el que de verdad contesta un bar en Manizales |
 
 **Quien queda de dueno sale del CORREO VERIFICADO, no de la sesion.** Ya no hay
-que entrar antes de aplicar (decision 35): la solicitud nace sin dueno, y se
-amarra cuando esa persona entra con ese correo verificado, con el mismo
-mecanismo de los pedidos de invitado (decision 29b).
+que entrar antes de aplicar (decision 35): operacion puede aprobar la solicitud
+sin dueno tras validar DM+correo. Una cuenta solo recibe `owner` si su correo es
+exactamente ese y ya esta verificado; si no existia, la primera que lo verifique
+lo reclama al entrar, sin invitacion ni aceptacion adicional.
 
 **Ya no se piden** —y esta es la lista de lo que se quito, no de lo que falta—:
 tipo, ciudad, direccion, TikTok, telefono, barrio, sitio web, horario,
@@ -409,7 +425,7 @@ logo.
 | Dos personas piden el mismo bar | Indice unico PARCIAL sobre `lower(instagram)` con `status in ('pending','verifying')`: una sola solicitud viva a la vez, y aun asi se puede volver a aplicar tras un rechazo |
 | El bar ya esta en el directorio | Lo cruza OPERACION al revisar, no un buscador antes del formulario: el buscador "¿Ya lo tenemos cargado?" se quito porque cobraba una decision antes de la primera letra |
 | El sitio ya tiene dueno | Lo ve el operador en la cola y rechaza con nota |
-| Aplica y nunca crea la cuenta | La solicitud queda sin dueno. **No se puede aprobar**: aprobar es lo que entrega la propiedad y no hay a quien entregarsela. La cola lo dice y deshabilita el boton |
+| Aplica y nunca crea la cuenta | Operacion puede aprobar tras validar DM+correo. El sitio queda aprobado sin dueno y no se publica salvo que el operador elija `published`; cuando alguien verifique ese correo, recibe `owner` automaticamente |
 | El DM nunca llega | Se queda en `verifying`. Sin caducidad: la cola es corta y una solicitud vieja es alguien esperando |
 | Se equivoco en los datos | Vuelve a mandar el formulario y se actualiza mientras siga viva |
 | La ciudad no es Manizales | Se acepta y se guarda; es la lista de espera para abrir ciudad |
@@ -421,7 +437,7 @@ logo.
 |---|---|---|
 | Verificacion manual por DM | Pasadas ~10 solicitudes por semana, o al abrir la segunda ciudad | Login de Instagram/Meta Business, o un codigo pegado en la bio |
 | La identidad se amarra con el correo citado en el DM | Cuando un sitio tenga varias personas manejando redes | Verificacion de dominio del correo, o registro mercantil (NIT) |
-| Un solo dueno al aprobar | Cuando haya dos socios de igual a igual | Ya resuelto: el dueno puede nombrar mas duenos en su panel |
+| Un solo dueno por correo verificado | Cuando haya dos socios de igual a igual | Ya resuelto: el dueno puede nombrar mas duenos en su panel |
 | El operador escribe pin y compromiso a mano | Con muchos sitios por semana | Que el sitio proponga y el operador solo apruebe |
 | Sin caducidad de solicitudes | Cuando la cola no quepa en una pantalla | Caducar `verifying` a los 30 dias con aviso |
 | Sin auditoria mas alla de `reviewedBy` | Con mas operadores | Bitacora aparte |

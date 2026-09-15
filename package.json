@@ -26,7 +26,8 @@
     "db:logs": "docker compose logs -f db",
     "db:psql": "docker compose exec db psql -U postgres -d shipfree",
     "setup": "bun run db:up && bun run migrate:local",
-    "prueba:alta": "bun --conditions react-server ./scripts/prueba-vincular.ts"
+    "prueba:alta": "bun --conditions react-server ./scripts/prueba-vincular.ts",
+    "e2e:alta": "bun e2e/run.ts e2e/alta-sitio.spec.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

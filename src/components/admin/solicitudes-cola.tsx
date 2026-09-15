@@ -37,10 +37,6 @@ export type Solicitud = {
   venueId: string | null
   venueSlug: string | null
   venueNombre: string | null
-  /** null = todavia nadie creo la cuenta. No se puede aprobar asi. */
-  userId: string | null
-  solicitante: string | null
-  solicitanteEmail: string | null
 }
 
 export function SolicitudesCola({
@@ -137,44 +133,17 @@ export function SolicitudesCola({
                   </div>
                 </div>
 
-                {!s.userId ? (
-                  // Sin cuenta no hay a quien darle la propiedad. Se dice de
-                  // frente y con la salida a la mano, porque desde afuera esto
-                  // parece que la solicitud esta bien y no avanza sola.
-                  <div className='mt-3 rounded-lg border border-primary border-dashed p-3'>
-                    <p className='font-display text-label-lg text-primary-text uppercase'>
-                      Sin cuenta todavía — no se puede aprobar
-                    </p>
-                    <p className='mt-1 text-body-md text-muted-foreground'>
-                      Mandó la solicitud sin registrarse. Se amarra sola cuando cree la cuenta con{' '}
-                      <strong className='text-street-white'>{s.contactEmail}</strong> y verifique el
-                      correo. Pásale este enlace cuando le contestes el DM:{' '}
-                      <span className='break-all text-primary-text'>
-                        /register?correo={s.contactEmail}
-                      </span>
-                    </p>
-                  </div>
-                ) : (
-                  <div className='mt-3 text-body-md'>
-                    <span className='text-muted-foreground'>Queda de dueño: </span>
-                    {s.solicitante}{' '}
-                    <a
-                      href={`mailto:${s.solicitanteEmail}`}
-                      className='text-primary-text hover:underline'
-                    >
-                      {s.solicitanteEmail}
-                    </a>
-                    {s.solicitanteEmail !== s.contactEmail ? (
-                      // No es un error, y por eso es un aviso y no un bloqueo: es
-                      // normal aplicar con el correo personal y poner el del bar
-                      // como contacto. Pero el DM cita el de contacto, asi que el
-                      // operador tiene que verlo antes de comparar.
-                      <span className='ml-2 text-muted-foreground text-xs'>
-                        (distinto del correo de contacto)
-                      </span>
-                    ) : null}
-                  </div>
-                )}
+                <div className='mt-3 rounded-lg border border-primary border-dashed p-3'>
+                  <p className='font-display text-label-lg text-primary-text uppercase'>
+                    La cuenta no bloquea la aprobación
+                  </p>
+                  <p className='mt-1 text-body-md text-muted-foreground'>
+                    Cuando confirmes el DM y este correo, puedes aprobar. Si ya hay una cuenta con
+                    <strong className='text-street-white'> {s.contactEmail} </strong> verificado,
+                    recibe el panel ahora; si no, el correo de aprobación le muestra cómo crearlo y
+                    se amarra solo al verificarlo.
+                  </p>
+                </div>
 
                 {s.venueId ? (
                   <p className='mt-2 text-body-md'>
@@ -223,31 +192,12 @@ export function SolicitudesCola({
                     </button>
                   ) : null}
 
-                  {/* Aprobar no es un boton que resuelva solo: lleva al
-                      formulario del sitio, donde el operador pone el pin y la
-                      direccion. Guardar ahi es lo que crea el sitio y asigna al
-                      dueno, en un solo acto.
-
-                      SIN CUENTA VA DESHABILITADO, y no es la proteccion:
-                      saveVenueAction lo rechaza igual, antes de crear nada.
-                      Esto solo evita que el operador llene un formulario largo
-                      para que se lo boten al guardar. */}
-                  {s.userId ? (
-                    <Link
-                      href={`/admin/sitios/nuevo?solicitud=${s.id}`}
-                      className='rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase'
-                    >
-                      Aprobar y crear el sitio
-                    </Link>
-                  ) : (
-                    <span
-                      aria-disabled='true'
-                      title='La solicitud todavía no tiene cuenta amarrada'
-                      className='cursor-not-allowed rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase opacity-40'
-                    >
-                      Aprobar y crear el sitio
-                    </span>
-                  )}
+                  <Link
+                    href={`/admin/sitios/nuevo?solicitud=${s.id}`}
+                    className='rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase'
+                  >
+                    Aprobar y crear el sitio
+                  </Link>
 
                   <button
                     type='button'

@@ -8,10 +8,9 @@ import { getApplication } from '@/lib/venues/claims'
  * Crear un sitio, a mano o aprobando una solicitud.
  *
  * Con ?solicitud=<id> el formulario llega prellenado con lo que el sitio ya
- * dijo, y guardar hace las tres cosas de una: crea el sitio, mete al
- * solicitante como dueno y cierra la solicitud. Se hace asi para que no exista
- * el estado intermedio "aprobada pero sin sitio", que dejaria a alguien
- * esperando un panel que nadie va a crear.
+ * dijo, y guardar cierra la solicitud junto con el sitio. Si ya hay una cuenta
+ * que verificó el mismo correo, recibe el panel en esa transacción; si no, lo
+ * reclama cuando verifique ese correo después de la aprobación.
  */
 export const dynamic = 'force-dynamic'
 
@@ -57,57 +56,34 @@ export default async function NuevoSitioPage({
               el tipo, la dirección y el punto en el mapa
             </strong>
             . Sácalos del Instagram del bar, que es donde ya estás mirando para verificar el DM. Al
-            guardar, el sitio queda creado y el panel queda a nombre de quien lo pidió.
+            guardar, el sitio queda creado. Si esa persona ya verificó el correo citado, recibe el
+            panel de una; si no, el correo de aprobación le explica cómo reclamarlo sin invitación.
           </p>
         </div>
       ) : null}
 
-      {/* Sin cuenta amarrada, el formulario NO se pinta. saveVenueAction lo
-          rechaza igual —esa es la proteccion de verdad—, pero dejar el
-          formulario a la vista significaria llenar veinte campos para que te lo
-          boten al guardar. */}
-      {solicitud && !solicitud.userId ? (
-        <div className='rounded-xl border-2 border-primary border-dashed p-6'>
-          <p className='font-display font-bold text-headline-md uppercase'>
-            Esta solicitud todavía no tiene cuenta
-          </p>
-          <p className='mt-2 text-body-md text-muted-foreground'>
-            Aprobar es lo que entrega la propiedad del sitio, y aquí no hay a quién entregársela. Se
-            amarra sola cuando esa persona cree la cuenta con{' '}
-            <strong className='text-street-white'>{solicitud.contactEmail}</strong> y verifique el
-            correo. Pásale{' '}
-            <span className='text-primary-text'>/register?correo={solicitud.contactEmail}</span>{' '}
-            cuando le contestes el DM.
-          </p>
-          <p className='mt-2 text-body-md text-muted-foreground'>
-            Si nunca la crea y el bar igual quiere entrar: crea el sitio con “Agregar un sitio”, sin
-            solicitud, e invita al dueño por correo desde el panel del sitio.
-          </p>
-        </div>
-      ) : (
-        <VenueForm
-          prefill={
-            solicitud
-              ? {
-                  solicitudId: solicitud.id,
-                  name: solicitud.name,
-                  type: solicitud.type,
-                  city: solicitud.city,
-                  addressLine: solicitud.addressLine,
-                  neighborhood: solicitud.neighborhood,
-                  instagram: solicitud.instagram,
-                  tiktok: solicitud.tiktok,
-                  email: solicitud.contactEmail,
-                  whatsapp: solicitud.whatsapp,
-                  phone: solicitud.phone,
-                  website: solicitud.website,
-                  openingHours: solicitud.openingHours,
-                  description: solicitud.description,
-                }
-              : undefined
-          }
-        />
-      )}
+      <VenueForm
+        prefill={
+          solicitud
+            ? {
+                solicitudId: solicitud.id,
+                name: solicitud.name,
+                type: solicitud.type,
+                city: solicitud.city,
+                addressLine: solicitud.addressLine,
+                neighborhood: solicitud.neighborhood,
+                instagram: solicitud.instagram,
+                tiktok: solicitud.tiktok,
+                email: solicitud.contactEmail,
+                whatsapp: solicitud.whatsapp,
+                phone: solicitud.phone,
+                website: solicitud.website,
+                openingHours: solicitud.openingHours,
+                description: solicitud.description,
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }

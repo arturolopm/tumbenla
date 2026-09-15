@@ -6,7 +6,9 @@ if (process.env.NODE_ENV === 'production') {
   throw new Error('Browser tests cannot run from a production process')
 }
 
-const databaseName = `tumbenla_e2e_${crypto.randomUUID().replaceAll('-', '')}`
+const runId = crypto.randomUUID().toLowerCase()
+const operatorEmail = `e2e-operator-${runId}@prueba.local`
+const databaseName = `tumbenla_e2e_${runId.replaceAll('-', '')}`
 if (!/^tumbenla_e2e_[a-zA-Z0-9_]+$/.test(databaseName)) {
   throw new Error('Refusing to create an unsafe browser-test database name')
 }
@@ -24,13 +26,19 @@ const browserEnvironment = {
   ...process.env,
   NODE_ENV: 'test',
   DATABASE_URL: testUrl.toString(),
-  ADMIN_EMAILS: 'operador@prueba.local',
+  ADMIN_EMAILS: `operador@prueba.local,${operatorEmail}`,
   COMMERCE_BROWSER_TEST: 'true',
   COMMERCE_FUNDING_CLASSIFICATION: 'sandbox',
   COMMERCE_NEW_OPERATIONS_ENABLED: 'true',
   COMMERCE_PAYMENT_PROVIDER: 'fake',
-  EMAIL_PROVIDER: 'log',
+  EMAIL_PROVIDER: 'nodemailer',
+  E2E_RUN_ID: runId,
   NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:3107',
+  SMTP_HOST: '127.0.0.1',
+  SMTP_PORT: '1025',
+  SMTP_USER: 'mailpit',
+  SMTP_PASS: 'mailpit',
+  SMTP_SECURE: 'false',
 }
 
 let activeChild: ReturnType<typeof Bun.spawn> | undefined
