@@ -100,6 +100,70 @@ Ver `org/crecimiento/RETENCION.md`.
 
 ---
 
+### EXP-004 — Value prop "Datos te devuelven clientes" vs "Causa social"
+**Estado:** Propuesto | **Lado:** sitio | **Abierto:** 2026-09-14
+
+**Hipotesis.** Si el pitch B2B enfatiza "recuperas clientes con data" vs "apoyas
+reconstruccion", entonces la tasa reunion→alta sube, porque el dueño decide por
+interes propio, no moral.
+**Metrica.** Tasa reunion→alta (alta_iniciada / reuniones_agendadas).
+**Tamano minimo que importa.** 10 reuniones por variante.
+**Ventana.** 4 semanas.
+
+- [ ] Datos — metrica existe (`venueApplication` → `venue` publicado)
+- [ ] Producto — no choca; es mensaje, no codigo
+- [ ] Crecimiento — dos guiones de pitch listos (pasar por `VOZ.md`)
+
+---
+
+### EXP-005 — Promo automática "cumpleaños" genera 2da visita
+**Estado:** Propuesto | **Lado:** lazo | **Abierto:** 2026-09-14
+
+**Hipotesis.** Si al cumplir años el usuario recibe "Tu trago en [Bar Frecuente]
+nos cuenta la mitad", entonces sube % usuarios con 2da noche en mes de
+cumpleaños vs mes anterior.
+**Metrica.** Usuarios con ≥2 `photoClaim` en mes de cumpleaños / total usuarios
+con cumpleaños registrado.
+**Tamano minimo que importa.** 50 usuarios con birthdate verificado.
+**Ventana.** 3 meses.
+
+- [ ] Datos — falta `user.birthdate` + consentimiento + trigger automático
+- [ ] Producto — requiere decisión: ¿birthdate obligatorio u opcional?
+- [ ] Crecimiento — pieza: email/WhatsApp template (VOZ.md)
+
+---
+
+### EXP-006 — Benchmark anonimizado en panel mueve decisiones de carta
+**Estado:** Propuesto | **Lado:** sitio | **Abierto:** 2026-09-14
+
+**Hipotesis.** Si el panel muestra "Tu ticket medio: $X vs. promedio ciudad: $Y
+vs. promedio tu segmento: $Z", entonces el dueño cambia precio/producto en 30
+días.
+**Metrica.** % venues que editan `venue_product.price` o `reparto_pct` tras ver
+benchmark.
+**Tamano minimo que importa.** 20 venues con ≥30 días datos.
+**Ventana.** 60 días tras lanzamiento benchmark.
+
+- [ ] Datos — consulta agregada anonimizada por ciudad/segmento
+- [ ] Producto — UI en `/panel/[slug]/carta` + consentimiento data pooling
+- [ ] Crecimiento — comunicación: "Esto te ayuda a ganar más"
+
+---
+
+### EXP-007 — Notificación impacto compartido aumenta 2da visita y orgullo bar
+**Estado:** Propuesto | **Lado:** lazo | **Abierto:** 2026-09-14
+
+**Hipotesis.** Si al verificarse una compra de material (`material_purchase.status = 'published'`) tanto el bar como el cliente reciben notificación con evidencia visual (foto material, factura, ubicación, testimonio), entonces sube: (a) % usuarios que ven evidencia y hacen 2da visita en 30 días, y (b) % bars que comparten evidencia en redes propias, porque el lazo emocional "juntos hicimos esto" refuerza ambos lados.
+**Metrica.** (a) Usuarios con `impact_notification.read_at` no nulo → 2do `order_redemption` en 30 días / total usuarios notificados. (b) Bars con `impact_notification.read_at` no nulo → `venue_member` action: compartir en redes / 30 días.
+**Tamano minimo que importa.** 20 notificaciones entregadas (10 bars + 10 usuarios) para ver señal direccional.
+**Ventana.** 6 semanas (ciclo completo: pedido → verificación → compra → entrega → notificación).
+
+- [ ] Datos — falta tabla `impact_notification` + worker + consulta atribución
+- [ ] Producto — requiere migración #5 + worker + templates VOZ.md
+- [ ] Crecimiento — templates push/email/WhatsApp (VOZ.md: "Tu trago en X puso $Y en material para Z")
+
+---
+
 ## Cerrados
 
 *(Ninguno todavia. Cuando cierre el primero, el resultado va aca y la conclusion

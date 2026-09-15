@@ -217,6 +217,7 @@ alimentan estas dos cifras.
 | Ordenes sin escanear | `product_order` pagada, sin redención, viva | medible como diagnóstico; no prueba cobro real |
 | Sitios activos | con `party_night` en las ultimas 3 semanas | medible |
 | Sitios en silencio | publicados, sin `party_night` en 3 semanas | medible |
+| **Notificación impacto vista (bar)** | `impact_notification` donde `recipient_type='venue'` y `read_at` no nulo | **NO existe aun** — falta tabla + worker |
 | **Origen de la solicitud** | de donde llego el bar | **NO existe** — ver abajo |
 
 **Activacion de un sitio:** su **primer trago entregado** — la primera
@@ -261,6 +262,11 @@ having max(n.happened_at) < now() - interval '21 days' or max(n.happened_at) is 
 | Tragos pedidos | `product_order` por `created_at`, separando app/bar y estado | medible como pedidos, no como cobros |
 | **Pedido → escaneado** | `order_redemption.redeemed_at - product_order.created_at` | **NO existe aun** |
 | Cuanta gente ve el mapa | — | **NO existe** — ver abajo |
+| **Patrón de consumo por venue** | `product_order` × `venue_id` × `product_id` × `user_id` × hora/día/semana | **medible** — esquema completo, falta consulta + UI |
+| **Frecuencia por usuario/venue** | días entre `order_redemption` consecutivos por `user_id` + `venue_id` | **medible** — requiere ventana móvil |
+| **LTV estimado por usuario/venue** | suma `product_order.total_amount` por `user_id` + `venue_id` | **medible** — consulta simple, falta UI |
+| **Cumpleaños registrados** | `user.birthdate` no nulo + `marketing_consent = true` | **NO existe aun** — falta columna + consentimiento |
+| **Notificación impacto vista** | `impact_notification` donde `recipient_type='user'` y `read_at` no nulo | **NO existe aun** — falta tabla + worker |
 
 **Activacion de un rumbero:** su primer `photo_claim` **o su primer trago
 pedido**, lo que pase primero. La foto sigue contando: es el camino por el que
