@@ -11,6 +11,7 @@ import {
   getCustomerContributionStages,
   getFoundationTransparencyStages,
 } from '../../src/lib/commerce/transparency-service'
+import { listCustomerOrders, summarizeNonRealOrders } from '../../src/lib/commerce/customer-history'
 import { getVenueFinanceView } from '../../src/lib/commerce/venue-finance-view'
 import type { StorageObjectMetadata } from '../../src/lib/storage'
 import { getPurchaseBySlugFrom } from '../../src/lib/transparency/queries'
@@ -762,6 +763,10 @@ describe('V2 transparency stages', () => {
       actorUserId: ACTOR_ID,
     })
     const stages = await getFoundationTransparencyStages(database.db)
+    expect(stages.totalDonatedMinor - baseline.totalDonatedMinor).toBe(BigInt(8_000))
+    expect(stages.deliveredMinor - baseline.deliveredMinor).toBe(BigInt(4_000))
+    expect(stages.pendingDeliveryMinor - baseline.pendingDeliveryMinor).toBe(BigInt(4_000))
+    expect(stages.totalDonatedMinor).toBe(stages.deliveredMinor + stages.pendingDeliveryMinor)
     expect(stages.allocatedMinor - baseline.allocatedMinor).toBe(BigInt(10_000))
     expect(stages.backedMinor - baseline.backedMinor).toBe(BigInt(7_000))
     expect(stages.transferredMinor - baseline.transferredMinor).toBe(BigInt(5_500))
@@ -772,9 +777,21 @@ describe('V2 transparency stages', () => {
 
     const customer = await getCustomerContributionStages(database.db, userId)
     expect(customer).toEqual({
+      spentMinor: BigInt(40_000),
       pendingAllocationUnits: 1,
-      finalDonationMinor: BigInt(10_000),
+      donatedMinor: BigInt(8_000),
       transferredMinor: BigInt(1_500),
+    })
+
+    const customerOrders = await listCustomerOrders(database.db, userId)
+    expect(customerOrders).toHaveLength(6)
+    expect(
+      customerOrders.filter((order) => order.fundingClassification === 'sandbox')
+    ).toHaveLength(1)
+    expect(summarizeNonRealOrders(customerOrders)).toEqual({
+      spentMinor: BigInt(10_000),
+      promisedDonationMinor: BigInt(5_000),
+      orderCount: 1,
     })
 
     const venueFinances = await getVenueFinanceView(database.db, venueId, NOW)

@@ -3,13 +3,13 @@ import { headers } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { MisPedidos } from '@/components/comercio/mis-pedidos'
-import { MiHistoriaGaleria } from '@/components/fiestas/mi-historia-galeria'
+import { CustomerOrders } from '@/components/commerce/customer-orders'
+import { MiHistoriaGaleria as CustomerHistoryGallery } from '@/components/fiestas/mi-historia-galeria'
 import { db } from '@/database'
 import { auth } from '@/lib/auth/auth'
-import { misPedidos } from '@/lib/comercio/queries'
+import { listCustomerOrders, summarizeNonRealOrders } from '@/lib/commerce/customer-history'
 import { getCustomerContributionStages } from '@/lib/commerce/transparency-service'
-import { vincularPedidosDeInvitado } from '@/lib/comercio/vincular'
+import { vincularPedidosDeInvitado as linkGuestOrders } from '@/lib/comercio/vincular'
 import { getHistorySummary, listMyClaimedPhotos } from '@/lib/fiestas/queries'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 import { formatCOP, formatNumber } from '@/lib/utils/format'
@@ -20,30 +20,29 @@ export const metadata: Metadata = {
     description: 'Tus noches, tus fotos y lo que has puesto para reconstruir.',
     canonical: '/mi-historia',
   }),
-  // Es una pagina personal. No tiene nada que hacer en un indice.
+  // Personal history must never appear in a search index.
   robots: { index: false, follow: false },
 }
 
-export default async function MiHistoriaPage() {
+export default async function CustomerHistoryPage() {
   const session = await auth.api.getSession({ headers: await headers() })
   if (!session) redirect('/login?redirectAfter=/mi-historia')
 
-  // Antes de leer nada: amarrar los pedidos que hizo como invitado con este
-  // mismo correo. Es lo que hace que "seguir como invitado" no sea un callejon
-  // sin salida — y exige el correo verificado, porque el correo de un pedido lo
-  // escribe cualquiera en un formulario publico.
-  await vincularPedidosDeInvitado({
+  // Link guest orders before reading the history. A verified email is required because anyone can
+  // type somebody else's address into the public checkout form.
+  await linkGuestOrders({
     id: session.user.id,
     email: session.user.email,
     emailVerified: session.user.emailVerified,
   })
 
-  const [resumen, fotos, pedidos, aporte] = await Promise.all([
+  const [historySummary, photos, orders, contribution] = await Promise.all([
     getHistorySummary(session.user.id),
     listMyClaimedPhotos(session.user.id),
-    misPedidos(session.user.id),
+    listCustomerOrders(db, session.user.id),
     getCustomerContributionStages(db, session.user.id),
   ])
+  const nonRealSummary = summarizeNonRealOrders(orders)
 
   return (
     <div className='w-full px-margin-mobile py-section-gap lg:px-margin-desktop'>
@@ -64,11 +63,9 @@ export default async function MiHistoriaPage() {
         </p>
       </header>
 
-      {/* La condicion mira TAMBIEN los pedidos. Con solo `nights === 0`, quien
-          acaba de crear su cuenta para guardar el trago que compro hace un
-          minuto entraba aca y leia "todavia no tienes nada" — justo despues de
-          que le prometimos lo contrario. */}
-      {resumen.nights === 0 && pedidos.length === 0 ? (
+      {/* Orders also make a history: a customer who just created an account after checkout must not
+          land on an empty state while their order is already linked. */}
+      {historySummary.nights === 0 && orders.length === 0 ? (
         <div className='mx-auto mt-12 max-w-5xl rounded-xl border border-border border-dashed p-8'>
           <p className='font-display font-bold text-headline-md uppercase'>
             Todavía no tienes noches guardadas.
@@ -86,37 +83,51 @@ export default async function MiHistoriaPage() {
         </div>
       ) : (
         <>
-          <section className='mx-auto mt-12 grid max-w-5xl gap-4 sm:grid-cols-3'>
-            <Dato label='Noches' valor={formatNumber(resumen.nights)} />
-            <Dato label='Sitios' valor={formatNumber(resumen.venues)} />
-            <Dato label='Fotos guardadas' valor={formatNumber(resumen.photos)} />
+          <section className='mx-auto mt-12 max-w-5xl' aria-labelledby='memory-title'>
+            <div className='mb-4'>
+              <h2
+                id='memory-title'
+                className='font-display text-label-lg uppercase tracking-widest'
+              >
+                Tus recuerdos
+              </h2>
+              <p className='mt-1 text-body-md text-muted-foreground'>
+                Estas cifras salen de las fotos que guardaste, no de tus pedidos.
+              </p>
+            </div>
+            <div className='grid gap-4 sm:grid-cols-3'>
+              <MetricCard label='Noches' value={formatNumber(historySummary.nights)} />
+              <MetricCard label='Sitios' value={formatNumber(historySummary.venues)} />
+              <MetricCard label='Fotos guardadas' value={formatNumber(historySummary.photos)} />
+            </div>
           </section>
 
           <section className='mx-auto mt-4 max-w-5xl rounded-xl border-2 border-primary bg-primary/5 p-8'>
             <p className='font-display text-label-lg text-muted-foreground uppercase tracking-widest'>
-              Tu aporte a reconstruir
+              Tus pedidos reales
             </p>
             <div className='mt-3 grid gap-4 sm:grid-cols-2'>
-              <DatoDeAporte
-                label='Reparto final'
-                value={formatCOP(Number(aporte.finalDonationMinor) / 100)}
+              <ContributionMetric
+                label='Total gastado'
+                value={formatCOP(Number(contribution.spentMinor) / 100)}
               />
-              <DatoDeAporte
-                label='Ya transferido'
-                value={formatCOP(Number(aporte.transferredMinor) / 100)}
+              <ContributionMetric
+                label='Total donado'
+                value={formatCOP(Number(contribution.donatedMinor) / 100)}
               />
             </div>
 
             <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
-              El reparto final cuenta únicamente unidades entregadas con cálculo financiero
-              terminado. Lo transferido exige confirmación bancaria y puede ir detrás del reparto.
+              El total gastado cuenta las unidades reales pagadas y aún no devueltas. El total
+              donado suma únicamente el reparto final de las unidades entregadas; por eso puede
+              actualizarse después de tu pedido.
             </p>
 
-            {aporte.pendingAllocationUnits > 0 ? (
+            {contribution.pendingAllocationUnits > 0 ? (
               <p className='mt-3 rounded-lg border border-border bg-card px-3 py-2 text-body-md'>
-                {aporte.pendingAllocationUnits === 1
+                {contribution.pendingAllocationUnits === 1
                   ? 'Tienes 1 entrega esperando reparto final.'
-                  : `Tienes ${aporte.pendingAllocationUnits} entregas esperando reparto final.`}
+                  : `Tienes ${contribution.pendingAllocationUnits} entregas esperando reparto final.`}
               </p>
             ) : null}
 
@@ -128,33 +139,69 @@ export default async function MiHistoriaPage() {
             </Link>
           </section>
 
-          <MisPedidos pedidos={pedidos.map((p) => ({ ...p, fecha: p.fecha.toISOString() }))} />
+          {nonRealSummary.orderCount > 0 ? (
+            <section className='mx-auto mt-4 max-w-5xl rounded-xl border border-warning/40 bg-warning/5 p-6'>
+              <p className='font-display text-label-lg text-warning uppercase tracking-widest'>
+                Pedidos que no cuentan en los totales reales
+              </p>
+              <div className='mt-3 grid gap-4 sm:grid-cols-2'>
+                <ContributionMetric
+                  label='Gastado en pruebas o históricos'
+                  value={formatCOP(Number(nonRealSummary.spentMinor) / 100)}
+                  muted
+                />
+                <ContributionMetric
+                  label='Reparto mostrado al pedir'
+                  value={formatCOP(Number(nonRealSummary.promisedDonationMinor) / 100)}
+                  muted
+                />
+              </div>
+              <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
+                Sirven para comprobar el recorrido completo, pero no representan plata real ni se
+                mezclan con las cifras públicas de Tumbenla.
+              </p>
+            </section>
+          ) : null}
 
-          <MiHistoriaGaleria fotos={fotos} />
+          <CustomerOrders orders={orders} />
+
+          <CustomerHistoryGallery fotos={photos} />
         </>
       )}
     </div>
   )
 }
 
-function Dato({ label, valor }: { label: string; valor: string }) {
+function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div className='rounded-xl border border-border bg-card p-6'>
       <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
         {label}
       </p>
-      <p className='mt-1 font-display font-black text-4xl tabular-nums'>{valor}</p>
+      <p className='mt-1 font-display font-black text-4xl tabular-nums'>{value}</p>
     </div>
   )
 }
 
-function DatoDeAporte({ label, value }: { label: string; value: string }) {
+function ContributionMetric({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string
+  value: string
+  muted?: boolean
+}) {
   return (
     <div>
       <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
         {label}
       </p>
-      <p className='mt-1 font-display font-black text-3xl text-primary-text tabular-nums'>
+      <p
+        className={`mt-1 font-display font-black text-3xl tabular-nums ${
+          muted ? 'text-foreground' : 'text-primary-text'
+        }`}
+      >
         {value}
       </p>
     </div>

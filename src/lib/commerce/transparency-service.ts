@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, inArray, or, sql } from 'drizzle-orm'
 
 import type { db } from '@/database'
 import {
@@ -22,6 +22,9 @@ import { materialPurchase, productOrder } from '@/database/schema'
 type CommerceDatabase = typeof db
 
 export type FoundationTransparencyStages = Readonly<{
+  totalDonatedMinor: bigint
+  deliveredMinor: bigint
+  pendingDeliveryMinor: bigint
   allocatedMinor: bigint
   backedMinor: bigint
   transferredMinor: bigint
@@ -32,8 +35,8 @@ export type FoundationTransparencyStages = Readonly<{
 const total = (value: bigint | string | number | null | undefined): bigint => BigInt(value ?? 0)
 
 /**
- * Each value is a stage of the same real-money lifecycle. Callers must render
- * them independently and never sum them as if they were separate donations.
+ * Raw audit stages remain available, while the three public values form one explicit equation:
+ * total donated = receipt-backed delivery + pending delivery.
  */
 export const getFoundationTransparencyStages = async (
   database: CommerceDatabase
@@ -42,6 +45,7 @@ export const getFoundationTransparencyStages = async (
     database
       .select({
         allocated: sql<bigint>`coalesce(sum(case when ${paymentCharge.status} in ('approved', 'disputed') then ${unitAllocation.donationMinor} else 0 end), 0)`,
+        donated: sql<bigint>`coalesce(sum(case when ${paymentCharge.status} = 'approved' then ${unitAllocation.donationMinor} else 0 end), 0)`,
         backed: sql<bigint>`coalesce(sum(case when ${paymentCharge.status} = 'approved' and ${paymentCharge.clearedAt} is not null then ${unitAllocation.donationMinor} else 0 end), 0)`,
       })
       .from(unitAllocation)
@@ -139,11 +143,20 @@ export const getFoundationTransparencyStages = async (
       ),
   ])
 
+  const allocatedMinor = total(app[0]?.allocated) + total(cash[0]?.allocated)
+  const totalDonatedMinor = total(app[0]?.donated) + total(cash[0]?.allocated)
+  const verifiedPurchaseMinor = total(verifiedPurchases[0]?.value)
+  const deliveredMinor =
+    verifiedPurchaseMinor > totalDonatedMinor ? totalDonatedMinor : verifiedPurchaseMinor
+
   return {
-    allocatedMinor: total(app[0]?.allocated) + total(cash[0]?.allocated),
+    totalDonatedMinor,
+    deliveredMinor,
+    pendingDeliveryMinor: totalDonatedMinor - deliveredMinor,
+    allocatedMinor,
     backedMinor: total(app[0]?.backed) + total(cash[0]?.backed),
     transferredMinor: total(transfers[0]?.value),
-    verifiedPurchaseMinor: total(verifiedPurchases[0]?.value),
+    verifiedPurchaseMinor,
     publishedPurchaseTotalMinor: total(publishedPurchases[0]?.value),
   }
 }
@@ -152,8 +165,9 @@ export const getCustomerContributionStages = async (
   database: CommerceDatabase,
   userId: string
 ): Promise<{
+  spentMinor: bigint
   pendingAllocationUnits: number
-  finalDonationMinor: bigint
+  donatedMinor: bigint
   transferredMinor: bigint
 }> => {
   const finalAllocations = database
@@ -161,17 +175,39 @@ export const getCustomerContributionStages = async (
       id: unitAllocation.id,
       unitId: unitAllocation.unitId,
       donationMinor: unitAllocation.donationMinor,
+      chargeStatus: paymentCharge.status,
     })
     .from(unitAllocation)
     .innerJoin(allocationRun, eq(unitAllocation.allocationRunId, allocationRun.id))
+    .innerJoin(paymentCharge, eq(allocationRun.chargeId, paymentCharge.id))
     .where(eq(allocationRun.status, 'final'))
     .as('customer_final_allocations')
 
-  const [app, cash, transferred] = await Promise.all([
+  const [spend, app, cash, transferred] = await Promise.all([
+    database
+      .select({
+        value: sql<bigint>`coalesce(sum(${commerceOrderUnit.grossMinor}), 0)`,
+      })
+      .from(commerceOrderUnit)
+      .innerJoin(
+        commerceOrderSnapshot,
+        eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+      )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .where(
+        and(
+          eq(productOrder.userId, userId),
+          eq(commerceOrderSnapshot.fundingClassification, 'real'),
+          or(
+            inArray(commerceOrderUnit.lifecycleStatus, ['issued', 'redeemed', 'refund_reserved']),
+            and(eq(productOrder.payMethod, 'app'), eq(commerceOrderUnit.lifecycleStatus, 'expired'))
+          )
+        )
+      ),
     database
       .select({
         pending: sql<number>`count(*) filter (where ${finalAllocations.id} is null)`,
-        final: sql<bigint>`coalesce(sum(${finalAllocations.donationMinor}), 0)`,
+        final: sql<bigint>`coalesce(sum(case when ${finalAllocations.chargeStatus} = 'approved' then ${finalAllocations.donationMinor} else 0 end), 0)`,
       })
       .from(commerceOrderUnit)
       .innerJoin(
@@ -231,8 +267,9 @@ export const getCustomerContributionStages = async (
   ])
 
   return {
+    spentMinor: total(spend[0]?.value),
     pendingAllocationUnits: Number(app[0]?.pending ?? 0),
-    finalDonationMinor: total(app[0]?.final) + total(cash[0]?.value),
+    donatedMinor: total(app[0]?.final) + total(cash[0]?.value),
     transferredMinor: total(transferred[0]?.value),
   }
 }

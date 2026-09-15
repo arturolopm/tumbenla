@@ -835,3 +835,25 @@ passed before source integration. These facts do not close any external gate.
 - **Exact next action:** deploy this isolated order-level QR change to Preview. If mixed-product
   checkout is approved as the next product scope, add cart/order-line persistence and bind one
   payment plus one canonical QR to that explicit cart.
+
+### 2026-09-15 — Public and personal contribution summaries
+
+- Product decision 39 replaces the four accounting-stage cards with three public figures that form
+  one equation: `Total donado = Ya entregado + Pendiente por entregar`. Internal allocated, backed,
+  transferred, and receipt-attribution stages remain available for audit and administration.
+- `Total donado` is not gross revenue. It includes only final reconstruction allocations from real,
+  redeemed units with an approved app charge, plus real bar-order debt created on redemption. It
+  excludes sandbox, unverified legacy data, refunds, void units, and disputed app charges.
+- `Ya entregado` is capped to the amount attributed from verified bank transfers to verified,
+  published material purchases with a published receipt. `Pendiente por entregar` is the remaining
+  donation allocation; public copy explains that this interval is not Tumbenla income and may cover
+  reconciliation, money in transit from a venue, or the wait for the next bulk material purchase.
+- `/mi-historia` now separates a customer's real gross spend from their final donation allocation.
+  Sandbox and unverified legacy orders remain visible for manual acceptance and support, but appear
+  in a separate test/history summary and carry explicit labels instead of inflating real totals.
+- The canonical definitions and SQL were added to `org/datos/METRICAS.md`; regression coverage lives
+  in `tests/commerce/foundation-transparency.test.ts`.
+- Validation after the change: `bun run typecheck` passed; the complete commerce suite passed with
+  **99 tests, 0 failures, and 381 assertions**; the isolated production-build browser harness passed
+  **7 tests, 0 failures**, including the public three-number summary and a signed-in customer's
+  sandbox/real separation. Repository lint retains only the pre-existing unrelated advisories.

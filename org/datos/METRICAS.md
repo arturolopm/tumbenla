@@ -130,6 +130,74 @@ La transferencia al receptor y la compra verificada no son la misma metrica ni s
 suman entre sí: primero se confirma el recibo, después se puede verificar una o
 varias compras contra evidencia y límites de atribución.
 
+### Resumen público vigente
+
+Las cuatro etapas contables internas se conservan para operación y auditoría. La pantalla pública
+las resume en tres cifras comparables, siempre con `funding_classification = 'real'`:
+
+| Métrica | Definición canónica |
+|---|---|
+| Total donado | Asignación final para reconstruir de unidades entregadas. En app exige cobro `approved`; en barra es el principal de la deuda nacida al entregar. Excluye disputas, sandbox y legado sin verificar. |
+| Ya entregado | Parte del total anterior atribuida a una compra de material `verified`, publicada y con recibo público. La atribución está limitada por el giro bancario verificado y nunca puede exceder `Total donado`. |
+| Pendiente por entregar | `Total donado - Ya entregado`. No es ingreso de Tumbenla; es la asignación que todavía no tiene una compra de material publicada contra ella. |
+
+La consulta canónica vive en `getFoundationTransparencyStages` de
+`src/lib/commerce/transparency-service.ts`. Su forma relacional es:
+
+```sql
+with donado_app as (
+  select coalesce(sum(a.donation_minor), 0) as amount_minor
+  from unit_allocation a
+  join allocation_run r on r.id = a.allocation_run_id and r.status = 'final'
+  join commerce_order_unit u on u.id = a.unit_id and u.lifecycle_status = 'redeemed'
+  join commerce_order_snapshot s on s.id = u.order_snapshot_id
+  join payment_charge c on c.id = r.charge_id and c.status = 'approved'
+  where s.funding_classification = 'real'
+), donado_barra as (
+  select coalesce(sum(d.principal_minor), 0) as amount_minor
+  from credit_debt d
+  join commerce_order_unit u on u.id = d.unit_id
+  join commerce_order_snapshot s on s.id = u.order_snapshot_id
+  where s.funding_classification = 'real'
+), compras_con_recibo as (
+  select coalesce(sum(pfa.amount_minor), 0) as amount_minor
+  from purchase_funding_allocation pfa
+  join foundation_purchase fp on fp.id = pfa.foundation_purchase_id
+  join material_purchase mp on mp.id = fp.material_purchase_id
+  join finance_evidence e on e.id = fp.receipt_evidence_id
+  join financial_operation_allocation foa on foa.id = pfa.payout_allocation_id
+  join financial_operation fo on fo.id = foa.operation_id
+  join beneficiary_bank_version bbv on bbv.id = fo.beneficiary_bank_version_id
+  where fp.status = 'verified'
+    and mp.status = 'published'
+    and e.status = 'published'
+    and e.kind = 'purchase_receipt'
+    and fo.kind = 'foundation_payout'
+    and fo.status = 'bank_verified'
+    and fo.funding_classification = 'real'
+    and foa.source_type = 'foundation_unit_allocation'
+    and bbv.beneficiary_id = fp.beneficiary_id
+)
+select
+  donado_app.amount_minor + donado_barra.amount_minor as total_donado_minor,
+  least(
+    compras_con_recibo.amount_minor,
+    donado_app.amount_minor + donado_barra.amount_minor
+  ) as ya_entregado_minor,
+  greatest(
+    donado_app.amount_minor + donado_barra.amount_minor - compras_con_recibo.amount_minor,
+    0
+  ) as pendiente_por_entregar_minor
+from donado_app, donado_barra, compras_con_recibo;
+```
+
+En `/mi-historia`, `Total gastado` suma `commerce_order_unit.gross_minor` para la persona y la
+clasificación real, incluyendo unidades `issued`, `redeemed` o `refund_reserved`, y unidades app
+`expired` que todavía conservan el pasivo de devolución. Excluye `pending_payment`, `void` y
+`refunded`. `Total donado` aplica los mismos filtros de asignación final del resumen público, además
+del `product_order.user_id`. Los pedidos no reales pueden mostrarse como historial, pero nunca
+alimentan estas dos cifras.
+
 ---
 
 ## Lado sitio

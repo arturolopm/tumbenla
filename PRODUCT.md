@@ -353,6 +353,19 @@ Estan aca para no volver a discutirlas cada dos semanas.
     política manual existente —incluido un límite de cero o una suspensión—
     siempre gana y el sistema no la reemplaza. La deuda vencida sigue bloqueando
     pedidos nuevos y no deshabilita el pago por ePayco.
+39. **La transparencia pública resume el ciclo en tres cifras que sí se pueden comparar.**
+    `Total donado` suma exclusivamente la asignación final para reconstruir de unidades reales
+    entregadas y con cobro aprobado; nunca suma el ingreso completo, pruebas, legado sin verificar
+    ni cobros en disputa. `Ya entregado` es la parte de ese total atribuida, sin excederla, a compras
+    de material verificadas con recibo público. `Pendiente por entregar` es exactamente la
+    diferencia entre las dos. En `/mi-historia`, `Total gastado` muestra las unidades reales pagadas
+    y no devueltas de esa persona, mientras `Total donado` usa la misma asignación final. Los pedidos
+    `sandbox` y `legacy_unverified` siguen visibles para soporte y pruebas, pero rotulados y separados
+    de cualquier total real.
+    **Por qué:** las cuatro etapas contables siguen siendo necesarias internamente, pero juntas en la
+    pantalla hacían parecer que eran bolsas distintas o cifras para sumar. Las tres públicas contestan
+    cuánto entró para reconstruir, cuánto ya tiene factura y cuánto sigue esperando esa factura, sin
+    ocultar el intervalo operativo ni confundirlo con ingreso de Tumbenla.
 
 ---
 
@@ -1025,11 +1038,11 @@ base desde ahi.
    No publicar magnitud ni damnificados sin fuente oficial (SGC o UNGRD).
 5. **Terminos del proveedor de tiles.** Los basemaps gratuitos de CARTO apuntan a
    uso de bajo volumen. La salida esta descrita arriba.
-6. **El aporte exacto no es una factura individual.** `/mi-historia` suma la
-   parte congelada de cada pedido pagado, por eso la cifra es exacta. Aun asi no
-   podemos atribuir una compra concreta de reconstrucción a un trago: las
-   liquidaciones se gastan en bloque. La transparencia debe conservar esa
-   distinción.
+6. **El aporte exacto no es una factura individual.** `/mi-historia` separa el gasto bruto real de
+   la asignación final para reconstruir; no presenta el reparto previo a deducciones como una cifra
+   final. Aun así no podemos atribuir una compra concreta de reconstrucción a un trago: las
+   liquidaciones se gastan en bloque. La transparencia conserva esa distinción mostrando la compra
+   verificada a nivel agregado, no inventando una factura por pedido.
 7. **Intermediacion de pagos.** Al cobrar en la app recaudamos plata que en
    parte es del sitio, y al cobrar en la barra el sitio recauda plata que en
    parte es nuestra. Son dos figuras distintas: en la primera somos custodios de

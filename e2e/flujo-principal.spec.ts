@@ -64,6 +64,20 @@ test.beforeAll(async () => {
   authStates = { operator, ownerA, ownerB, staff }
 })
 
+test('public transparency shows one donation total and its delivered split', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/transparencia')
+  await expect(page.getByText('Total donado', { exact: true })).toBeVisible()
+  await expect(page.getByText('Ya entregado', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pendiente por entregar', { exact: true })).toBeVisible()
+  await expect(page.getByText('no es una comisión ni plata que Tumbenla se quede')).toBeVisible()
+  await expect(page.getByText('Asignado', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Con respaldo', { exact: true })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false
+  )
+})
+
 test('owner can read the published menu in the first isolated context', async ({ browser }) => {
   const context = await authenticatedContext(browser, 'ownerA')
   try {
@@ -71,6 +85,40 @@ test('owner can read the published menu in the first isolated context', async ({
     await page.goto('/panel/bar-la-nona/carta')
     await expect(page.getByRole('heading', { name: 'La carta' })).toBeVisible()
     await expect(page.getByText('Mojito Reconstrucción')).toBeVisible()
+  } finally {
+    await context.close()
+  }
+})
+
+test('personal history separates sandbox orders from real spend and donations', async ({
+  browser,
+}) => {
+  const context = await authenticatedContext(browser, 'ownerA')
+  try {
+    const page = await context.newPage()
+    await page.goto('/sitios/bar-la-nona/pedir/mojito-reconstruccion')
+    await page.getByRole('button', { name: /^Pagar / }).click()
+    await expect(page).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
+
+    await page.goto('/mi-historia')
+    await expect(page.getByRole('heading', { name: 'Mi historia' })).toBeVisible()
+
+    const realTotals = page.getByText('Tus pedidos reales').locator('..')
+    await expect(realTotals.getByText('Total gastado', { exact: true })).toBeVisible()
+    await expect(realTotals.getByText('Total donado', { exact: true })).toBeVisible()
+    await expect(realTotals.getByText('$ 0', { exact: true })).toHaveCount(2)
+
+    const nonRealTotals = page
+      .getByText('Pedidos que no cuentan en los totales reales')
+      .locator('..')
+    await expect(nonRealTotals).toContainText('Gastado en pruebas o históricos')
+    await expect(nonRealTotals).toContainText('$ 30.000')
+    await expect(nonRealTotals).toContainText('Reparto mostrado al pedir')
+    await expect(nonRealTotals).toContainText('$ 24.000')
+
+    const order = page.getByRole('link', { name: /Mojito Reconstrucción/ })
+    await expect(order).toContainText('Prueba')
+    await expect(order).toContainText('Reparto mostrado al pedir: $ 24.000 para reconstruir')
   } finally {
     await context.close()
   }

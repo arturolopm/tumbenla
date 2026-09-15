@@ -16,23 +16,20 @@ export const metadata: Metadata = buildMetadata({
 export const revalidate = 300
 
 /**
- * "A donde va la plata", con el tratamiento de Stitch: el total grande y el
- * reparto en barras porcentuales.
+ * Public proof of what entered the reconstruction allocation and which amount already has a
+ * verified, published material-purchase receipt.
  *
- * Las categorias del reparto en la maqueta eran fijas (Pintura, Sonido, Olla
- * Comun, Admin) con porcentajes inventados. Aca el reparto se CALCULA sobre las
- * compras publicadas, agrupadas por municipio. Si no hay compras, no hay
- * barras: no se dibuja un grafico de cero.
+ * Municipality bars are calculated from published purchases. When there are no purchases, the
+ * page does not manufacture an empty chart.
  */
-export default async function TransparenciaPage() {
+export default async function TransparencyPage() {
   const [totals, purchases, stages] = await Promise.all([
     getTransparencyTotals(),
     listPublishedPurchases(),
     getFoundationTransparencyStages(db),
   ])
 
-  // Reparto real por municipio, de mayor a menor.
-  const porMunicipio = Object.entries(
+  const purchasesByMunicipality = Object.entries(
     purchases.reduce<Record<string, number>>((acc, purchase) => {
       acc[purchase.municipality] = (acc[purchase.municipality] ?? 0) + purchase.totalAmount
       return acc
@@ -45,7 +42,7 @@ export default async function TransparenciaPage() {
     }))
     .sort((a, b) => b.amount - a.amount)
 
-  const TONES = ['bg-primary', 'bg-party', 'bg-lime', 'bg-destructive'] as const
+  const tones = ['bg-primary', 'bg-party', 'bg-lime', 'bg-destructive'] as const
 
   return (
     <div className='w-full px-margin-mobile py-section-gap lg:px-margin-desktop'>
@@ -68,16 +65,29 @@ export default async function TransparenciaPage() {
       </header>
 
       <section className='mx-auto mt-12 max-w-4xl'>
-        <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
-          <Stage label='Asignado' amount={Number(stages.allocatedMinor) / 100} />
-          <Stage label='Con respaldo' amount={Number(stages.backedMinor) / 100} />
-          <Stage label='Transferido' amount={Number(stages.transferredMinor) / 100} />
-          <Stage label='Con recibo' amount={Number(stages.verifiedPurchaseMinor) / 100} />
+        <div className='grid gap-3 md:grid-cols-3'>
+          <Stage
+            label='Total donado'
+            amount={Number(stages.totalDonatedMinor) / 100}
+            description='La suma del reparto final para reconstruir, sin incluir la parte de los sitios.'
+            emphasized
+          />
+          <Stage
+            label='Ya entregado'
+            amount={Number(stages.deliveredMinor) / 100}
+            description='La parte que ya tiene una compra de material verificada y su recibo publicado.'
+          />
+          <Stage
+            label='Pendiente por entregar'
+            amount={Number(stages.pendingDeliveryMinor) / 100}
+            description='Lo contabilizado para reconstruir que todavía no aparece en una compra publicada.'
+          />
         </div>
-        <p className='mt-3 text-body-md text-muted-foreground'>
-          Son etapas de la misma plata, no montos para sumar. “Asignado” exige entrega y reparto
-          final; “con respaldo”, recaudo conciliado; “transferido”, confirmación bancaria; y “con
-          recibo”, una compra verificada y atribuida sin exceder el giro.
+        <p className='mt-4 max-w-3xl text-pretty text-body-md text-muted-foreground'>
+          Pendiente por entregar no es una comisión ni plata que Tumbenla se quede. Los aportes
+          llegan antes de que podamos comprar el material en bloque y publicar la factura; durante
+          ese intervalo pueden seguir conciliándose, venir en camino desde el sitio o esperar la
+          siguiente compra.
         </p>
       </section>
 
@@ -115,7 +125,7 @@ export default async function TransparenciaPage() {
               <h2 className='font-display text-label-lg text-lime uppercase tracking-widest'>
                 Reparto por municipio
               </h2>
-              {porMunicipio.map((row, index) => (
+              {purchasesByMunicipality.map((row, index) => (
                 <div key={row.municipality}>
                   <div className='mb-1 flex justify-between font-display text-label-sm uppercase'>
                     <span className='text-street-white'>{row.municipality}</span>
@@ -123,7 +133,7 @@ export default async function TransparenciaPage() {
                   </div>
                   <div className='h-2 w-full rounded-full bg-secondary'>
                     <div
-                      className={`h-2 rounded-full ${TONES[index % TONES.length]}`}
+                      className={`h-2 rounded-full ${tones[index % tones.length]}`}
                       style={{ width: `${row.pct}%` }}
                     />
                   </div>
@@ -173,15 +183,30 @@ export default async function TransparenciaPage() {
   )
 }
 
-function Stage({ label, amount }: { label: string; amount: number }) {
+function Stage({
+  label,
+  amount,
+  description,
+  emphasized = false,
+}: {
+  label: string
+  amount: number
+  description: string
+  emphasized?: boolean
+}) {
   return (
-    <div className='rounded-xl border border-border bg-card p-4'>
+    <div
+      className={`rounded-xl border p-5 ${
+        emphasized ? 'border-primary bg-primary/10' : 'border-border bg-card'
+      }`}
+    >
       <p className='font-display text-label-sm text-muted-foreground uppercase tracking-widest'>
         {label}
       </p>
       <p className='mt-2 font-display font-black text-2xl text-primary-text tabular-nums'>
         {formatCOP(amount)}
       </p>
+      <p className='mt-3 text-pretty text-muted-foreground text-sm'>{description}</p>
     </div>
   )
 }
