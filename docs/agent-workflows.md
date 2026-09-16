@@ -126,6 +126,13 @@ if it remains stale, regardless of agent brand.
 
 ## Loops and handoffs
 
+### Push and deployment authorization
+
+Treat every push to a deployed branch as a separate release decision. Automated validation never
+grants that authority. Push only when the active request explicitly authorizes an automatic push;
+otherwise hand off the locally validated change and ask whether the user will test it manually or
+wants the agent to push it. Do not carry a prior push instruction forward to a later fix.
+
 The supported baseline for `marketing-loops`, social listening and PR/news monitoring is one
 bounded, manually invoked Codex run. No `/loop`, `ScheduleWakeup`, `CronCreate`, daemon or scheduler
 is assumed. First specify the trigger, inputs, permitted actions, stopping condition and next due

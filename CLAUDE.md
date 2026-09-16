@@ -63,6 +63,14 @@ mandan sobre todas ellas estan en `.agents/product-marketing.md`.
 Todo PR va contra `preview`. A `main` solo llega lo que ya se valido alli, y
 `.github/workflows/ci.yml` lo hace cumplir. Detalles y trampas en `PRODUCT.md`.
 
+### Puerta obligatoria antes de cualquier push
+
+**Nunca se empuja automaticamente a una rama desplegada.** Que lint, tipos, pruebas y build pasen
+demuestra que el cambio esta listo para probar; no autoriza publicarlo. Si la solicitud activa no
+dice expresamente que este cambio se puede empujar, el agente termina la validacion local y pregunta
+si el usuario lo va a probar manualmente o si autoriza el push automatico. Una autorizacion para
+empujar un cambio anterior no queda abierta para arreglos posteriores.
+
 ## Overview
 
 ShipFree is a production-ready Next.js boilerplate designed to help developers ship startups

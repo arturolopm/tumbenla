@@ -16,6 +16,10 @@ Below are only the things that most often trip an agent up here. Everything else
 
 ## Gotchas worth knowing before you touch anything
 
+- **Never push automatically to a deployed branch.** A green test suite is evidence, not release
+  authorization. Unless the active user request explicitly says this change may be pushed, stop
+  after local validation and ask whether the user will test it manually or authorizes an automatic
+  push. A push instruction from an earlier change is not standing permission for later fixes.
 - **This repo is run as an organization, not a codebase.** Three departments with their own standing
   docs and subagents: Producto (`PRODUCT.md`), Crecimiento (`org/crecimiento/`), Datos (the schema).
   The charter is `org/ORG.md` and they only talk through `org/crecimiento/EXPERIMENTOS.md`. The 50
