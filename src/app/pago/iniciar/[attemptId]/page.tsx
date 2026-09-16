@@ -30,6 +30,9 @@ export default async function StartPaymentPage({
   if (result.kind === 'pending') {
     redirect(`/pago/estado/${result.attemptId}${wantsAccount ? '?cuenta=1' : ''}`)
   }
+  if (result.kind === 'checkout-unavailable') {
+    redirect(`/pago/estado/${result.attemptId}${wantsAccount ? '?cuenta=1' : ''}`)
+  }
   if (result.kind === 'checkout') {
     return (
       <EpaycoCheckoutLauncher

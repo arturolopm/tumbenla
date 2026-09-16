@@ -31,6 +31,12 @@ export async function GET(
         { headers: { 'cache-control': 'no-store' } }
       )
     }
+    if (result.kind === 'checkout-unavailable') {
+      return NextResponse.json(
+        { state: 'checkout-unavailable', nextUrl: result.retryUrl },
+        { headers: { 'cache-control': 'no-store' } }
+      )
+    }
     return NextResponse.json(
       { state: result.kind === 'rejected' ? 'rejected' : 'pending' },
       { headers: { 'cache-control': 'no-store' } }

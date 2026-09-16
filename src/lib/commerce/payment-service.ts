@@ -71,6 +71,13 @@ export type StartPaymentResult =
       status: 'submitted' | 'pending' | 'uncertain' | 'operator_review'
     }>
   | Readonly<{
+      kind: 'checkout-unavailable'
+      attemptId: string
+      orderToken: string
+      retryUrl: string
+      reason: string
+    }>
+  | Readonly<{
       kind: 'rejected'
       attemptId: string
       orderToken: string
@@ -121,7 +128,9 @@ type AttemptContext = Readonly<{
   buyerName: string
   buyerEmail: string
   productName: string
+  productSlug: string
   venueName: string
+  venueSlug: string
   quantity: number
   grossMinor: bigint
   status: string
@@ -185,6 +194,9 @@ const validStartInput = (input: StartPaymentInput): boolean =>
   Number.isInteger(input.quantity) &&
   input.quantity >= 1 &&
   input.quantity <= MAX_CHECKOUT_UNITS
+
+const retryUrlFor = (context: Pick<AttemptContext, 'venueSlug' | 'productSlug'>): string =>
+  `/sitios/${encodeURIComponent(context.venueSlug)}/pedir/${encodeURIComponent(context.productSlug)}`
 
 const uniqueConstraint = (error: unknown): string | undefined => {
   if (typeof error !== 'object' || error === null) return undefined
@@ -745,9 +757,10 @@ export class CommercePaymentService {
         })
         .where(and(eq(paymentAttempt.id, attemptId), eq(paymentAttempt.status, 'submitted')))
       return {
-        kind: 'rejected',
+        kind: 'checkout-unavailable',
         attemptId,
         orderToken: context.orderToken,
+        retryUrl: retryUrlFor(context),
         reason: creation.reason,
       }
     }
@@ -763,10 +776,11 @@ export class CommercePaymentService {
         })
         .where(and(eq(paymentAttempt.id, attemptId), eq(paymentAttempt.status, 'submitted')))
       return {
-        kind: 'pending',
+        kind: 'checkout-unavailable',
         attemptId,
         orderToken: context.orderToken,
-        status: 'uncertain',
+        retryUrl: retryUrlFor(context),
+        reason: creation.reason,
       }
     }
 
@@ -800,6 +814,20 @@ export class CommercePaymentService {
   #startResultFromContext(context: AttemptContext): StartPaymentResult | undefined {
     if (context.status === 'approved') {
       return { kind: 'approved', attemptId: context.attemptId, orderToken: context.orderToken }
+    }
+    if (
+      (context.status === 'uncertain' ||
+        context.status === 'operator_review' ||
+        context.status === 'declined') &&
+      !context.checkoutSessionId
+    ) {
+      return {
+        kind: 'checkout-unavailable',
+        attemptId: context.attemptId,
+        orderToken: context.orderToken,
+        retryUrl: retryUrlFor(context),
+        reason: 'checkout-session-unavailable',
+      }
     }
     if (context.status === 'declined' || context.status === 'cancelled') {
       return {
@@ -1330,7 +1358,9 @@ export class CommercePaymentService {
         buyerName: productOrder.buyerName,
         buyerEmail: productOrder.buyerEmail,
         productName: commerceOrderSnapshot.productName,
+        productSlug: venueProduct.slug,
         venueName: commerceOrderSnapshot.venueName,
+        venueSlug: venue.slug,
         quantity: commerceOrderSnapshot.quantity,
         unitGrossMinor: commerceOrderSnapshot.unitGrossMinor,
         status: paymentAttempt.status,
@@ -1347,6 +1377,8 @@ export class CommercePaymentService {
         eq(paymentAttempt.orderSnapshotId, commerceOrderSnapshot.id)
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+      .innerJoin(venue, eq(productOrder.venueId, venue.id))
       .where(eq(paymentAttempt.id, attemptId))
       .limit(1)
 

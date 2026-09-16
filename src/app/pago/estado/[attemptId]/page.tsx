@@ -35,6 +35,15 @@ export default async function PaymentStatePage({
   if (state.kind === 'checkout') {
     redirect(`/pago/iniciar/${state.attemptId}${wantsAccount ? '?cuenta=1' : ''}`)
   }
+  if (state.kind === 'checkout-unavailable') {
+    return (
+      <PaymentStateWatcher
+        attemptId={attemptId}
+        wantsAccount={wantsAccount}
+        initialState={{ state: 'checkout-unavailable', nextUrl: state.retryUrl }}
+      />
+    )
+  }
 
   return (
     <PaymentStateWatcher

@@ -165,6 +165,13 @@ export const crearPedidoAction = async (
           url: `/pago/estado/${result.attemptId}${sufijoDeCuenta}`,
         }
       }
+      if (result.kind === 'checkout-unavailable') {
+        return {
+          status: 'success',
+          token: result.orderToken,
+          url: `/pago/estado/${result.attemptId}${sufijoDeCuenta}`,
+        }
+      }
       if (result.kind === 'conflict') {
         return {
           status: 'error',

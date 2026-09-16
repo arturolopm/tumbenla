@@ -175,6 +175,25 @@ const parseJson = async (response: Response): Promise<unknown | undefined> => {
   }
 }
 
+const logUnexpectedCheckoutResponse = (
+  stage: 'login' | 'session',
+  response: Response,
+  payload: unknown
+): void => {
+  const record = isRecord(payload) ? payload : undefined
+  const data = record && isRecord(record.data) ? record.data : undefined
+  console.warn('[commerce.epayco.checkout] Unexpected provider response', {
+    stage,
+    status: response.status,
+    contentType: response.headers.get('content-type'),
+    payloadType: Array.isArray(payload) ? 'array' : typeof payload,
+    success: typeof record?.success === 'boolean' ? record.success : undefined,
+    hasData: data !== undefined,
+    dataKeys: data ? Object.keys(data).sort() : [],
+    hasSessionId: data ? typeof data.sessionId === 'string' && data.sessionId.length > 0 : false,
+  })
+}
+
 export class EpaycoCollectionGateway implements CollectionGateway {
   readonly binding: GatewayBinding
   readonly capabilities = EPAYCO_CAPABILITIES
@@ -252,7 +271,10 @@ export class EpaycoCollectionGateway implements CollectionGateway {
 
     const loginPayload = await parseJson(loginResponse)
     const token = isRecord(loginPayload) ? readNonEmptyString(loginPayload, 'token') : undefined
-    if (!token) return { kind: 'uncertain', reason: 'malformed-response' }
+    if (!token) {
+      logUnexpectedCheckoutResponse('login', loginResponse, loginPayload)
+      return { kind: 'uncertain', reason: 'malformed-response' }
+    }
 
     let sessionResponse: Response
     try {
@@ -294,15 +316,23 @@ export class EpaycoCollectionGateway implements CollectionGateway {
     }
 
     const sessionPayload = await parseJson(sessionResponse)
+    if (isRecord(sessionPayload) && sessionPayload.success === false) {
+      logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload)
+      return { kind: 'rejected', reason: 'provider-rejected' }
+    }
     if (
       !isRecord(sessionPayload) ||
       sessionPayload.success !== true ||
       !isRecord(sessionPayload.data)
     ) {
+      logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload)
       return { kind: 'uncertain', reason: 'malformed-response' }
     }
     const sessionId = readNonEmptyString(sessionPayload.data, 'sessionId')
-    if (!sessionId) return { kind: 'uncertain', reason: 'malformed-response' }
+    if (!sessionId) {
+      logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload)
+      return { kind: 'uncertain', reason: 'malformed-response' }
+    }
 
     return {
       kind: 'created',

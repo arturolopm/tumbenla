@@ -280,7 +280,7 @@ describe('CommercePaymentService checkout idempotency', () => {
     expect(count?.value).toBe('1')
   }, 30_000)
 
-  test('keeps an uncertain provider submission durable and does not issue another checkout', async () => {
+  test('makes a checkout without a provider session explicitly retryable', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const productId = await seedProduct('uncertain')
     const gateway = new TestCollectionGateway()
@@ -291,13 +291,45 @@ describe('CommercePaymentService checkout idempotency', () => {
     const first = await service.startPayment(input)
     const retry = await service.startPayment(input)
 
-    expect(first).toMatchObject({ kind: 'pending', status: 'uncertain' })
-    expect(retry).toMatchObject({ kind: 'pending', status: 'uncertain' })
+    expect(first).toMatchObject({
+      kind: 'checkout-unavailable',
+      retryUrl: '/sitios/venue-uncertain/pedir/product-uncertain',
+    })
+    expect(retry).toMatchObject({
+      kind: 'checkout-unavailable',
+      retryUrl: '/sitios/venue-uncertain/pedir/product-uncertain',
+    })
     expect(gateway.createCalls).toBe(1)
     const [attempt] = await database.sql<{ status: string }[]>`
       select status from payment_attempt where submission_key = ${input.submissionKey}
     `
     expect(attempt?.status).toBe('uncertain')
+  }, 30_000)
+
+  test('makes a provider rejection before session creation explicitly retryable', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const productId = await seedProduct('session-rejected')
+    const gateway = new TestCollectionGateway()
+    gateway.createBehavior = async () => ({ kind: 'rejected', reason: 'provider-rejected' })
+    const service = createService(gateway)
+    const input = paymentInput('session-rejected', productId)
+
+    const first = await service.startPayment(input)
+    const retry = await service.startPayment(input)
+
+    expect(first).toMatchObject({
+      kind: 'checkout-unavailable',
+      retryUrl: '/sitios/venue-session-rejected/pedir/product-session-rejected',
+    })
+    expect(retry).toMatchObject({
+      kind: 'checkout-unavailable',
+      retryUrl: '/sitios/venue-session-rejected/pedir/product-session-rejected',
+    })
+    expect(gateway.createCalls).toBe(1)
+    const [attempt] = await database.sql<{ status: string }[]>`
+      select status from payment_attempt where submission_key = ${input.submissionKey}
+    `
+    expect(attempt?.status).toBe('declined')
   }, 30_000)
 
   test('creates a distinct order and checkout for a genuine second purchase', async () => {

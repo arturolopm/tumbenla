@@ -203,6 +203,14 @@ describe('ePayco checkout session creation', () => {
       kind: 'rejected',
       reason: 'provider-rejected',
     })
+
+    const rejectedSessionWithOkStatus = createQueuedFetch([
+      jsonResponse({ token: 'apify-token-placeholder' }),
+      jsonResponse({ success: false }),
+    ])
+    expect(
+      await createGateway(rejectedSessionWithOkStatus.fetch).createCheckout(CHECKOUT_REQUEST)
+    ).toEqual({ kind: 'rejected', reason: 'provider-rejected' })
   })
 
   test('treats malformed success payloads and provider errors as uncertain', async () => {
