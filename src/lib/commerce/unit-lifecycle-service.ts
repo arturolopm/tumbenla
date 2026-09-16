@@ -15,7 +15,14 @@ import {
   unitLifecycleOperation,
   venueCreditPolicy,
 } from '@/database/commerce-schema'
-import { orderRedemption, productOrder, venue, venueMember, venueProduct } from '@/database/schema'
+import {
+  customerOrder,
+  orderRedemption,
+  productOrder,
+  venue,
+  venueMember,
+  venueProduct,
+} from '@/database/schema'
 import { createId } from '@/lib/utils/id'
 import { postUnitDistribution } from './allocation-service'
 import {
@@ -44,6 +51,12 @@ export type UnitRedemptionResult =
       kind: 'redeemed'
       duplicate: boolean
       productName: string
+      lines: readonly {
+        productOrderId: string
+        productName: string
+        productKind: string
+        quantity: number
+      }[]
       buyerName: string
       orderId: string
       venueSlug: string
@@ -68,6 +81,9 @@ type RedemptionContext = Readonly<{
   unitExpiresAt: Date | null
   redemptionId: string
   redemptionStatus: string
+  customerOrderId: string | null
+  customerOrderStatus: string | null
+  customerOrderTotalUnits: number | null
   orderId: string
   orderStatus: string
   payMethod: string
@@ -75,6 +91,8 @@ type RedemptionContext = Readonly<{
   venueSlug: string
   venueStatus: string
   productName: string
+  productKind: string
+  lineOrdinal: number | null
   buyerName: string
   quantity: string
   snapshotId: string
@@ -147,20 +165,39 @@ export class CommerceUnitService {
         if (!membership) return { kind: 'rejected', reason: 'unauthorized' } as const
       }
 
-      // One scan now owns the whole order. Lock the order before any unit so
-      // two old, still-open QR screens cannot deadlock by scanning different
-      // unit codes at the same time.
-      await this.#lockOrder(transaction, found.orderId)
-      const orderUnits = await this.#loadOrderRedemptions(transaction, found.snapshotId)
+      // One scan owns the parent before any line or unit. Stable line/unit order
+      // prevents two still-open QR screens from deadlocking on different codes.
+      if (found.customerOrderId) {
+        await this.#lockCustomerOrder(transaction, found.customerOrderId)
+      } else {
+        await this.#lockOrder(transaction, found.orderId)
+      }
+      const orderUnits = await this.#loadOrderRedemptions(
+        transaction,
+        found.customerOrderId,
+        found.snapshotId
+      )
       const context = orderUnits.find((unit) => unit.redemptionId === found.redemptionId)
       if (!context) return { kind: 'rejected', reason: 'operator_review' } as const
-      if (orderUnits.length !== Number(context.quantity)) {
+      const expectedUnitCount = context.customerOrderTotalUnits ?? Number(context.quantity)
+      if (orderUnits.length !== expectedUnitCount) {
+        return { kind: 'rejected', reason: 'operator_review' } as const
+      }
+      if (
+        orderUnits.some(
+          (unit) =>
+            unit.customerOrderId !== context.customerOrderId ||
+            unit.venueId !== context.venueId ||
+            unit.payMethod !== context.payMethod ||
+            unit.fundingClassification !== context.fundingClassification
+        )
+      ) {
         return { kind: 'rejected', reason: 'operator_review' } as const
       }
 
       const operationHash = digest({
         kind: 'redeem_order',
-        orderId: context.orderId,
+        orderId: context.customerOrderId ?? context.orderId,
         expectedVenueId: input.expectedVenueId,
         actorUserId: input.actorUserId,
         actorIsPlatform: input.actorIsPlatform,
@@ -188,11 +225,10 @@ export class CommerceUnitService {
       ) {
         return { kind: 'rejected', reason: 'operator_review' } as const
       }
+      const orderStatus = context.customerOrderStatus ?? context.orderStatus
       if (
-        (context.payMethod === 'app' && context.orderStatus !== 'paid') ||
-        (context.payMethod === 'bar' &&
-          context.orderStatus !== 'pending' &&
-          context.orderStatus !== 'paid')
+        (context.payMethod === 'app' && orderStatus !== 'paid') ||
+        (context.payMethod === 'bar' && orderStatus !== 'pending' && orderStatus !== 'paid')
       ) {
         return { kind: 'rejected', reason: 'unpaid' } as const
       }
@@ -271,7 +307,7 @@ export class CommerceUnitService {
           actorUserId: input.actorUserId,
           detail: {
             venueId: context.venueId,
-            orderId: context.orderId,
+            orderId: context.customerOrderId ?? context.orderId,
             unitCount: issuedUnits.length,
             collectMinor: collectMinor?.toString() ?? null,
           },
@@ -312,7 +348,7 @@ export class CommerceUnitService {
               operationKey: unitOperationKey,
               contentHash: digest({
                 kind: 'redeem_order_unit',
-                orderId: context.orderId,
+                orderId: context.customerOrderId ?? context.orderId,
                 unitId: unit.unitId,
                 parentOperationKey: input.operationKey,
               }),
@@ -322,7 +358,7 @@ export class CommerceUnitService {
               actorUserId: input.actorUserId,
               detail: {
                 venueId: context.venueId,
-                orderId: context.orderId,
+                orderId: context.customerOrderId ?? context.orderId,
                 parentOperationKey: input.operationKey,
               },
               createdAt: now,
@@ -387,7 +423,11 @@ export class CommerceUnitService {
     const now = input.now ?? this.#now()
     const limit = Math.min(Math.max(input.limit ?? 250, 1), 1_000)
     const candidates = await this.#database
-      .select({ id: commerceOrderUnit.id })
+      .select({
+        id: commerceOrderUnit.id,
+        orderId: productOrder.id,
+        customerOrderId: productOrder.customerOrderId,
+      })
       .from(commerceOrderUnit)
       .innerJoin(
         commerceOrderSnapshot,
@@ -409,6 +449,11 @@ export class CommerceUnitService {
     for (const candidate of candidates) {
       try {
         const result = await this.#database.transaction(async (transaction) => {
+          if (candidate.customerOrderId) {
+            await this.#lockCustomerOrder(transaction, candidate.customerOrderId)
+          } else {
+            await this.#lockOrder(transaction, candidate.orderId)
+          }
           const context = await this.#loadUnitForExpiry(transaction, candidate.id)
           if (
             !context ||
@@ -449,6 +494,9 @@ export class CommerceUnitService {
         unitExpiresAt: commerceOrderUnit.expiresAt,
         redemptionId: orderRedemption.id,
         redemptionStatus: orderRedemption.status,
+        customerOrderId: productOrder.customerOrderId,
+        customerOrderStatus: customerOrder.status,
+        customerOrderTotalUnits: customerOrder.totalUnits,
         orderId: productOrder.id,
         orderStatus: productOrder.status,
         payMethod: productOrder.payMethod,
@@ -456,7 +504,9 @@ export class CommerceUnitService {
         venueSlug: venue.slug,
         venueStatus: venue.status,
         productName: venueProduct.name,
-        buyerName: productOrder.buyerName,
+        productKind: venueProduct.kind,
+        lineOrdinal: productOrder.lineOrdinal,
+        buyerName: sql<string>`coalesce(${customerOrder.buyerName}, ${productOrder.buyerName})`,
         quantity: productOrder.quantity,
         snapshotId: commerceOrderSnapshot.id,
         fundingClassification: commerceOrderSnapshot.fundingClassification,
@@ -469,6 +519,7 @@ export class CommerceUnitService {
         eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .leftJoin(customerOrder, eq(productOrder.customerOrderId, customerOrder.id))
       .innerJoin(venue, eq(productOrder.venueId, venue.id))
       .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
       .where(eq(orderRedemption.code, code))
@@ -486,8 +537,22 @@ export class CommerceUnitService {
     if (!locked) throw new Error('The redemption order disappeared')
   }
 
+  async #lockCustomerOrder(
+    transaction: FinanceTransactionConnection,
+    customerOrderId: string
+  ): Promise<void> {
+    const [locked] = await transaction
+      .select({ id: customerOrder.id })
+      .from(customerOrder)
+      .where(eq(customerOrder.id, customerOrderId))
+      .limit(1)
+      .for('update')
+    if (!locked) throw new Error('The customer order disappeared during redemption')
+  }
+
   async #loadOrderRedemptions(
     transaction: FinanceTransactionConnection,
+    customerOrderId: string | null,
     snapshotId: string
   ): Promise<RedemptionContext[]> {
     return transaction
@@ -498,6 +563,9 @@ export class CommerceUnitService {
         unitExpiresAt: commerceOrderUnit.expiresAt,
         redemptionId: orderRedemption.id,
         redemptionStatus: orderRedemption.status,
+        customerOrderId: productOrder.customerOrderId,
+        customerOrderStatus: customerOrder.status,
+        customerOrderTotalUnits: customerOrder.totalUnits,
         orderId: productOrder.id,
         orderStatus: productOrder.status,
         payMethod: productOrder.payMethod,
@@ -505,7 +573,9 @@ export class CommerceUnitService {
         venueSlug: venue.slug,
         venueStatus: venue.status,
         productName: venueProduct.name,
-        buyerName: productOrder.buyerName,
+        productKind: venueProduct.kind,
+        lineOrdinal: productOrder.lineOrdinal,
+        buyerName: sql<string>`coalesce(${customerOrder.buyerName}, ${productOrder.buyerName})`,
         quantity: productOrder.quantity,
         snapshotId: commerceOrderSnapshot.id,
         fundingClassification: commerceOrderSnapshot.fundingClassification,
@@ -518,11 +588,16 @@ export class CommerceUnitService {
         eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .leftJoin(customerOrder, eq(productOrder.customerOrderId, customerOrder.id))
       .innerJoin(venue, eq(productOrder.venueId, venue.id))
       .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
-      .where(eq(commerceOrderUnit.orderSnapshotId, snapshotId))
-      .orderBy(asc(commerceOrderUnit.ordinal))
-      .for('update')
+      .where(
+        customerOrderId
+          ? eq(productOrder.customerOrderId, customerOrderId)
+          : eq(commerceOrderUnit.orderSnapshotId, snapshotId)
+      )
+      .orderBy(asc(productOrder.lineOrdinal), asc(commerceOrderUnit.ordinal))
+      .for('update', { of: commerceOrderUnit })
   }
 
   async #loadUnitForExpiry(
@@ -538,6 +613,9 @@ export class CommerceUnitService {
         grossMinor: commerceOrderUnit.grossMinor,
         redemptionId: orderRedemption.id,
         redemptionStatus: orderRedemption.status,
+        customerOrderId: productOrder.customerOrderId,
+        customerOrderStatus: customerOrder.status,
+        customerOrderTotalUnits: customerOrder.totalUnits,
         orderId: productOrder.id,
         orderStatus: productOrder.status,
         payMethod: productOrder.payMethod,
@@ -545,7 +623,9 @@ export class CommerceUnitService {
         venueSlug: venue.slug,
         venueStatus: venue.status,
         productName: venueProduct.name,
-        buyerName: productOrder.buyerName,
+        productKind: venueProduct.kind,
+        lineOrdinal: productOrder.lineOrdinal,
+        buyerName: sql<string>`coalesce(${customerOrder.buyerName}, ${productOrder.buyerName})`,
         quantity: productOrder.quantity,
         snapshotId: commerceOrderSnapshot.id,
         fundingClassification: commerceOrderSnapshot.fundingClassification,
@@ -558,11 +638,12 @@ export class CommerceUnitService {
         eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .leftJoin(customerOrder, eq(productOrder.customerOrderId, customerOrder.id))
       .innerJoin(venue, eq(productOrder.venueId, venue.id))
       .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
       .where(eq(commerceOrderUnit.id, unitId))
       .limit(1)
-      .for('update')
+      .for('update', { of: commerceOrderUnit })
     return row
   }
 
@@ -598,22 +679,41 @@ export class CommerceUnitService {
     collectMinor: bigint | null,
     fulfilledCount: number
   ): Promise<Extract<UnitRedemptionResult, { kind: 'redeemed' }>> {
-    const [count] = await transaction
-      .select({
-        value: sql<string>`count(*) filter (where ${commerceOrderUnit.lifecycleStatus} = 'redeemed')`,
-      })
-      .from(commerceOrderUnit)
-      .where(eq(commerceOrderUnit.orderSnapshotId, context.snapshotId))
+    const units = await this.#loadOrderRedemptions(
+      transaction,
+      context.customerOrderId,
+      context.snapshotId
+    )
+    const lines = new Map<
+      string,
+      { productOrderId: string; productName: string; productKind: string; quantity: number }
+    >()
+    for (const unit of units) {
+      const current = lines.get(unit.orderId)
+      if (current) {
+        current.quantity += 1
+      } else {
+        lines.set(unit.orderId, {
+          productOrderId: unit.orderId,
+          productName: unit.productName,
+          productKind: unit.productKind,
+          quantity: 1,
+        })
+      }
+    }
+    const orderedLines = [...lines.values()]
     return {
       kind: 'redeemed',
       duplicate,
-      productName: context.productName,
+      productName:
+        orderedLines.length === 1 ? context.productName : `${orderedLines.length} productos`,
+      lines: orderedLines,
       buyerName: context.buyerName,
-      orderId: context.orderId,
+      orderId: context.customerOrderId ?? context.orderId,
       venueSlug: context.venueSlug,
-      quantity: Number(context.quantity),
+      quantity: units.length,
       fulfilledCount,
-      redeemedCount: Number(count?.value ?? 0),
+      redeemedCount: units.filter((unit) => unit.unitStatus === 'redeemed').length,
       collectMinor,
     }
   }
@@ -707,6 +807,7 @@ export class CommerceUnitService {
       kind: 'cash_debt_incurred',
       currency: 'COP',
       orderSnapshotId: context.snapshotId,
+      customerOrderId: context.customerOrderId ?? undefined,
       createdByUserId: actorUserId,
       entries: [
         { accountId: venueReceivable, amountMinor: reservation.amountMinor },
@@ -726,6 +827,27 @@ export class CommerceUnitService {
         .update(productOrder)
         .set({ status: 'paid', paidAt: now, updatedAt: now })
         .where(and(eq(productOrder.id, context.orderId), eq(productOrder.status, 'pending')))
+    }
+    if (context.customerOrderId) {
+      const [remainingInParent] = await transaction
+        .select({
+          count: sql<string>`count(*) filter (where ${commerceOrderUnit.lifecycleStatus} = 'issued')`,
+        })
+        .from(commerceOrderUnit)
+        .innerJoin(
+          commerceOrderSnapshot,
+          eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+        )
+        .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+        .where(eq(productOrder.customerOrderId, context.customerOrderId))
+      if (Number(remainingInParent?.count ?? 0) === 0) {
+        await transaction
+          .update(customerOrder)
+          .set({ status: 'paid', paidAt: now, updatedAt: now })
+          .where(
+            and(eq(customerOrder.id, context.customerOrderId), eq(customerOrder.status, 'pending'))
+          )
+      }
     }
   }
 
@@ -779,6 +901,14 @@ export class CommerceUnitService {
       .update(productOrder)
       .set({ status: 'expired', updatedAt: now })
       .where(and(eq(productOrder.id, context.orderId), eq(productOrder.status, 'pending')))
+    if (context.customerOrderId) {
+      await transaction
+        .update(customerOrder)
+        .set({ status: 'expired', updatedAt: now })
+        .where(
+          and(eq(customerOrder.id, context.customerOrderId), eq(customerOrder.status, 'pending'))
+        )
+    }
     await transaction.insert(financeAuditEvent).values({
       id: createId('fae'),
       entityType: 'credit_reservation',
@@ -833,6 +963,7 @@ export class CommerceUnitService {
         venueMinor: row.venueMinor as MinorUnits,
       },
       snapshotId: context.snapshotId,
+      customerOrderId: context.customerOrderId,
       foundationBeneficiaryId: context.foundationBeneficiaryId,
       venueId: context.venueId,
       chargeId: row.chargeId,
@@ -887,6 +1018,12 @@ export class CommerceUnitService {
       .update(productOrder)
       .set({ status: 'expired', updatedAt: now })
       .where(and(eq(productOrder.id, context.orderId), eq(productOrder.status, 'paid')))
+    if (context.customerOrderId) {
+      await transaction
+        .update(customerOrder)
+        .set({ status: 'expired', updatedAt: now })
+        .where(and(eq(customerOrder.id, context.customerOrderId), eq(customerOrder.status, 'paid')))
+    }
     await transaction.insert(financeAuditEvent).values({
       id: createId('fae'),
       entityType: 'commerce_order_unit',

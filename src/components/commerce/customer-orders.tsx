@@ -43,8 +43,7 @@ export function CustomerOrders({ orders }: { orders: readonly CustomerOrder[] })
                 <div className='min-w-0'>
                   <div className='flex flex-wrap items-center gap-2'>
                     <p className='font-display font-bold transition-colors group-hover:text-party'>
-                      {order.quantity > 1 ? `${order.quantity} × ` : null}
-                      {order.productName}
+                      Pedido en {order.venueName}
                     </p>
                     {nonReal ? (
                       <span className='rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 font-display text-warning text-xs uppercase tracking-wider'>
@@ -55,6 +54,17 @@ export function CustomerOrders({ orders }: { orders: readonly CustomerOrder[] })
                   <p className='mt-1 text-muted-foreground text-sm'>
                     {order.venueName} · {formatDate(order.createdAt)}
                   </p>
+                  <ul
+                    className='mt-2 space-y-1 text-muted-foreground text-sm'
+                    aria-label='Productos del pedido'
+                  >
+                    {order.lines.map((line) => (
+                      <li key={line.productOrderId}>
+                        {line.quantity > 1 ? `${line.quantity} × ` : null}
+                        {line.productName}
+                      </li>
+                    ))}
+                  </ul>
                   <p className='mt-1 text-muted-foreground text-sm'>
                     Reparto mostrado al pedir:{' '}
                     <span className='text-foreground'>

@@ -219,7 +219,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         ) : null}
       </div>
 
-      {carta.length > 0 ? <CartaPublica slug={venue.slug} productos={carta} /> : null}
+      {carta.length > 0 ? (
+        <CartaPublica venueId={venue.id} slug={venue.slug} productos={carta} />
+      ) : null}
 
       {aportes.length > 0 ? (
         <section className='mt-10 rounded-xl border border-lime p-8'>

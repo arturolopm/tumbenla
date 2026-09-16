@@ -109,6 +109,14 @@ type FinancialFixture = Readonly<{
   venueBankVersionId: string
 }>
 
+type MixedRefundFixture = Readonly<{
+  customerOrderId: string
+  firstOrderId: string
+  secondOrderId: string
+  firstUnitId: string
+  secondUnitId: string
+}>
+
 const createVerifiedVenueBeneficiary = async (suffix: string, venueId: string): Promise<string> => {
   if (!database) throw new Error('Commerce test database was not initialized')
   const beneficiary = new BeneficiaryService({ database: database.db, now: () => NOW })
@@ -315,6 +323,114 @@ const seedFinancialUnit = async (input: {
     venueId,
     venueBankVersionId,
   }
+}
+
+const extendToMixedRefundOrder = async (
+  fixture: FinancialFixture,
+  suffix: string
+): Promise<MixedRefundFixture> => {
+  if (!database) throw new Error('Commerce test database was not initialized')
+  const customerOrderId = `financial-customer-order-${suffix}`
+  const secondProductId = `financial-product-${suffix}-second`
+  const secondOrderId = `financial-order-${suffix}-second`
+  const secondSnapshotId = `financial-snapshot-${suffix}-second`
+  const secondRedemptionId = `financial-redemption-${suffix}-second`
+  const secondUnitId = `financial-unit-${suffix}-second`
+
+  await database.sql`
+    insert into customer_order
+      (id, venue_id, buyer_name, buyer_email, total_units, total_amount, public_token,
+       pay_method, status, provider, provider_reference, paid_at)
+    values
+      (${customerOrderId}, ${fixture.venueId}, 'Persona', 'persona@example.test', 2, 200.00,
+       ${`customer-token-${suffix}`}, 'app', 'paid', 'epayco', ${`reference-${suffix}`}, now())
+  `
+  await database.sql`
+    update product_order
+    set customer_order_id = ${customerOrderId}, line_ordinal = 1
+    where id = ${fixture.orderId}
+  `
+  await database.sql`
+    insert into venue_product
+      (id, venue_id, slug, name, kind, price, currency, donation_percentage, status)
+    values
+      (${secondProductId}, ${fixture.venueId}, ${secondProductId}, 'Second product', 'cerveza',
+       100.00, 'COP', 40.00, 'published')
+  `
+  await database.sql`
+    insert into product_order
+      (id, customer_order_id, line_ordinal, product_id, venue_id, buyer_name, buyer_email,
+       quantity, unit_price, donation_percentage, unit_donation_amount, unit_venue_amount,
+       total_amount, public_token, pay_method, status, paid_at)
+    values
+      (${secondOrderId}, ${customerOrderId}, 2, ${secondProductId}, ${fixture.venueId}, 'Persona',
+       'persona@example.test', 1, 100.00, 40.00, 40.00, 60.00, 100.00,
+       ${`line-token-${suffix}-second`}, 'app', 'paid', now())
+  `
+  await database.sql`
+    insert into commerce_order_snapshot
+      (id, order_id, product_name, product_kind, venue_name, currency, quantity,
+       unit_gross_minor, donation_basis_points, allocation_policy_id,
+       foundation_beneficiary_id, foundation_legal_name, policy_disclosure,
+       funding_classification)
+    values
+      (${secondSnapshotId}, ${secondOrderId}, 'Second product', 'cerveza', ${`Venue ${suffix}`},
+       'COP', 1, 10000, 4000, 'financial-operations-policy', ${foundationId},
+       'Fundación verificada', 'Reparto de prueba', 'sandbox')
+  `
+  await database.sql`
+    insert into order_redemption (id, order_id, code, status)
+    values (${secondRedemptionId}, ${secondOrderId}, ${`CODE-${suffix}-SECOND`}, 'issued')
+  `
+  await database.sql`
+    insert into commerce_order_unit
+      (id, order_snapshot_id, redemption_id, ordinal, gross_minor, lifecycle_status)
+    values (${secondUnitId}, ${secondSnapshotId}, ${secondRedemptionId}, 1, 10000, 'issued')
+  `
+  await database.sql`
+    update payment_attempt set customer_order_id = ${customerOrderId}
+    where order_snapshot_id = ${fixture.snapshotId}
+  `
+  await database.sql`
+    update payment_charge set gross_minor = 20000 where id = ${fixture.chargeId}
+  `
+  await database.sql`
+    update finance_account set owner_key = ${customerOrderId}
+    where kind = 'customer_funds_held' and owner_key = ${fixture.snapshotId}
+  `
+  return {
+    customerOrderId,
+    firstOrderId: fixture.orderId,
+    secondOrderId,
+    firstUnitId: fixture.unitId,
+    secondUnitId,
+  }
+}
+
+const bindFixtureToCustomerOrder = async (
+  fixture: FinancialFixture,
+  suffix: string
+): Promise<string> => {
+  if (!database) throw new Error('Commerce test database was not initialized')
+  const customerOrderId = `financial-customer-order-${suffix}`
+  await database.sql`
+    insert into customer_order
+      (id, venue_id, buyer_name, buyer_email, total_units, total_amount, public_token,
+       pay_method, status, provider, provider_reference, paid_at)
+    select ${customerOrderId}, venue_id, buyer_name, buyer_email, quantity::integer, total_amount,
+           ${`customer-token-${suffix}`}, pay_method, status, provider, provider_reference, paid_at
+    from product_order where id = ${fixture.orderId}
+  `
+  await database.sql`
+    update product_order
+    set customer_order_id = ${customerOrderId}, line_ordinal = 1
+    where id = ${fixture.orderId}
+  `
+  await database.sql`
+    update payment_attempt set customer_order_id = ${customerOrderId}
+    where order_snapshot_id = ${fixture.snapshotId}
+  `
+  return customerOrderId
 }
 
 const reviewedOperationEvidence = async (operationId: string, suffix: string): Promise<string> => {
@@ -607,6 +723,95 @@ describe('reviewed payouts', () => {
 })
 
 describe('reviewed refunds and treasury coverage', () => {
+  test('keeps a mixed parent paid after a partial-line refund and refunds it after every line', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const base = await seedFinancialUnit({
+      suffix: 'refund-mixed-parent',
+      fundingClassification: 'sandbox',
+      redeemed: false,
+    })
+    const fixture = await extendToMixedRefundOrder(base, 'refund-mixed-parent')
+    const refunds = new CommerceRefundService({ database: database.db, now: () => NOW })
+
+    const first = await refunds.reserveRefund({
+      operationKey: 'refund:mixed-parent:first-line',
+      orderId: fixture.customerOrderId,
+      unitIds: [fixture.firstUnitId],
+      destinationFingerprint: destination('refund-mixed-parent'),
+      requestedByUserId: ACTOR_ID,
+    })
+    const firstEvidence = await reviewedOperationEvidence(first.operationId, 'refund-mixed-first')
+    await refunds.confirm({
+      operationId: first.operationId,
+      externalReference: 'BANK-REFUND-MIXED-1',
+      bankEvidenceId: firstEvidence,
+      destinationFingerprint: destination('refund-mixed-parent'),
+      verifiedByUserId: ACTOR_ID,
+    })
+
+    const afterFirst = await database.sql<
+      { id: string; status: string; parent_status: string; ledger_parent: string | null }[]
+    >`
+      select o.id, o.status, c.status as parent_status, t.customer_order_id as ledger_parent
+      from product_order o
+      join customer_order c on c.id = o.customer_order_id
+      left join finance_transaction t on t.operation_id = ${first.operationId}
+      where o.customer_order_id = ${fixture.customerOrderId}
+      order by o.line_ordinal
+    `
+    expect([...afterFirst]).toEqual([
+      {
+        id: fixture.firstOrderId,
+        status: 'refunded',
+        parent_status: 'paid',
+        ledger_parent: fixture.customerOrderId,
+      },
+      {
+        id: fixture.secondOrderId,
+        status: 'paid',
+        parent_status: 'paid',
+        ledger_parent: fixture.customerOrderId,
+      },
+    ])
+
+    const second = await refunds.reserveRefund({
+      operationKey: 'refund:mixed-parent:second-line',
+      orderId: fixture.customerOrderId,
+      unitIds: [fixture.secondUnitId],
+      destinationFingerprint: destination('refund-mixed-parent'),
+      requestedByUserId: ACTOR_ID,
+    })
+    const secondEvidence = await reviewedOperationEvidence(
+      second.operationId,
+      'refund-mixed-second'
+    )
+    await addOperatingCash('sandbox', BigInt(10_000), 'refund-mixed-second')
+    await refunds.confirm({
+      operationId: second.operationId,
+      externalReference: 'BANK-REFUND-MIXED-2',
+      bankEvidenceId: secondEvidence,
+      destinationFingerprint: destination('refund-mixed-parent'),
+      verifiedByUserId: ACTOR_ID,
+    })
+
+    const afterSecond = await database.sql<
+      { parent_status: string; line_statuses: string[]; refunded_units: string }[]
+    >`
+      select c.status as parent_status,
+             array_agg(distinct o.status order by o.status) as line_statuses,
+             count(*) filter (where u.lifecycle_status = 'refunded')::text as refunded_units
+      from customer_order c
+      join product_order o on o.customer_order_id = c.id
+      join commerce_order_snapshot s on s.order_id = o.id
+      join commerce_order_unit u on u.order_snapshot_id = s.id
+      where c.id = ${fixture.customerOrderId}
+      group by c.status
+    `
+    expect([...afterSecond]).toEqual([
+      { parent_status: 'refunded', line_statuses: ['refunded'], refunded_units: '2' },
+    ])
+  }, 30_000)
+
   test('refunds full gross only after operating cash and reviewed destination evidence exist', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const fixture = await seedFinancialUnit({
@@ -752,6 +957,10 @@ describe('charge disputes', () => {
       fundingClassification: 'real',
       redeemed: true,
     })
+    const disputeCustomerOrderId = await bindFixtureToCustomerOrder(
+      disputed,
+      'dispute-after-payout'
+    )
     const nextPayout = await seedFinancialUnit({
       suffix: 'dispute-next-payout',
       fundingClassification: 'real',
@@ -876,12 +1085,18 @@ describe('charge disputes', () => {
     expect(afterLoss.disputeCoverageMinor).toBe(before.disputeCoverageMinor)
     expect(afterLoss.cashMinor).toBe(before.cashMinor - BigInt(10_000))
     const [state] = await database.sql<
-      { charge_status: string; loss_postings: string; balance: string }[]
+      {
+        charge_status: string
+        loss_postings: string
+        balance: string
+        customer_order_id: string | null
+      }[]
     >`
       select
         c.status as charge_status,
         count(distinct t.id)::text as loss_postings,
-        coalesce(sum(e.amount_minor), 0)::text as balance
+        coalesce(sum(e.amount_minor), 0)::text as balance,
+        max(t.customer_order_id) as customer_order_id
       from payment_charge c
       left join finance_transaction t
         on t.operation_key = ${`charge-dispute-loss:${opened.disputeId}`}
@@ -889,7 +1104,12 @@ describe('charge disputes', () => {
       where c.id = ${disputed.chargeId}
       group by c.status
     `
-    expect(state).toEqual({ charge_status: 'disputed', loss_postings: '1', balance: '0' })
+    expect(state).toEqual({
+      charge_status: 'disputed',
+      loss_postings: '1',
+      balance: '0',
+      customer_order_id: disputeCustomerOrderId,
+    })
   }, 30_000)
 
   test('restores an approved charge when reviewed evidence shows the dispute was won', async () => {

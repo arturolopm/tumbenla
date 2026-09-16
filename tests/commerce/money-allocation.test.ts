@@ -108,6 +108,60 @@ describe('deterministic net allocation', () => {
     })
   })
 
+  test('applies each line split after deterministic cart-wide deduction residuals', () => {
+    const result = allocateNetProceeds({
+      units: [
+        {
+          id: 'line-3-unit-1',
+          ordinal: 3,
+          grossMinor: parseMinorUnits('1.00'),
+          donationBasisPoints: 10_000,
+        },
+        {
+          id: 'line-1-unit-1',
+          ordinal: 1,
+          grossMinor: parseMinorUnits('1.00'),
+          donationBasisPoints: 4_000,
+        },
+        {
+          id: 'line-2-unit-1',
+          ordinal: 2,
+          grossMinor: parseMinorUnits('1.00'),
+          donationBasisPoints: 5_000,
+        },
+      ],
+      deductions: [{ amount: decimalString('0.020000'), kind: 'gateway_fee', finality: 'final' }],
+    })
+
+    expect(
+      result.map((unit) => ({
+        unitId: unit.unitId,
+        deductionMinor: String(unit.deductionMinor),
+        donationMinor: String(unit.donationMinor),
+        venueMinor: String(unit.venueMinor),
+      }))
+    ).toEqual([
+      {
+        unitId: 'line-1-unit-1',
+        deductionMinor: '1',
+        donationMinor: '40',
+        venueMinor: '59',
+      },
+      {
+        unitId: 'line-2-unit-1',
+        deductionMinor: '1',
+        donationMinor: '50',
+        venueMinor: '49',
+      },
+      {
+        unitId: 'line-3-unit-1',
+        deductionMinor: '0',
+        donationMinor: '100',
+        venueMinor: '0',
+      },
+    ])
+  })
+
   test('rejects invalid or impossible allocations', () => {
     expect(() => allocateWeighted(parseMinorUnits('0.01'), [])).toThrow('without units')
     expect(() =>

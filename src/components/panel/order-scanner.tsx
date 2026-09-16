@@ -299,10 +299,9 @@ function ScannerResult({ state, onContinue }: { state: ScannerState; onContinue:
 
   const { delivery } = state
   const chargeAtBar = delivery.cobrar !== null
-  const units =
-    delivery.cantidadAEntregar > 1
-      ? `${delivery.cantidadAEntregar} unidades de ${delivery.producto}`
-      : delivery.producto
+  const deliveryLabel = delivery.lines
+    .map((line) => `${line.quantity > 1 ? `${line.quantity} × ` : ''}${line.productName}`)
+    .join(', ')
 
   return (
     <button
@@ -326,13 +325,13 @@ function ScannerResult({ state, onContinue }: { state: ScannerState; onContinue:
                 Cobra en la barra {formatCOP(delivery.cobrar ?? 0)}
               </p>
               <p className='mt-2 text-body-lg'>
-                Este pedido no está pagado. Cobra el total aquí y entrega {units}.
+                Este pedido no está pagado. Cobra el total aquí y entrega {deliveryLabel}.
               </p>
             </>
           ) : (
             <>
               <p className='font-display font-black text-3xl text-lime uppercase'>Ya pagado</p>
-              <p className='mt-2 text-body-lg'>No cobres nada. Entrega {units}.</p>
+              <p className='mt-2 text-body-lg'>No cobres nada. Entrega {deliveryLabel}.</p>
             </>
           )}
         </div>
@@ -380,8 +379,12 @@ function RecentOrders({ orders }: { orders: RecentVenueOrder[] }) {
             >
               <div className='min-w-0'>
                 <p className='font-medium'>
-                  {order.quantity > 1 ? `${order.quantity} × ` : ''}
-                  {order.productName}
+                  {order.lines
+                    .map(
+                      (line) =>
+                        `${line.quantity > 1 ? `${line.quantity} × ` : ''}${line.productName}`
+                    )
+                    .join(' · ')}
                 </p>
                 <p className='truncate text-muted-foreground text-sm'>{order.buyerName}</p>
                 <p className='mt-0.5 text-xs'>

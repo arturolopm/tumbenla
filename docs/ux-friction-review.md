@@ -28,6 +28,20 @@ la operación. La verificación del correo sí es necesaria antes de entregar
 `owner`, porque prueba control del buzón que recibirá el panel. Por eso ocurre
 después de la aprobación y se completa sin invitación ni aceptación adicional.
 
+## Pedido con varios productos del mismo bar
+
+El riesgo irreductible antes de cobrar es que todos los productos sigan publicados en el mismo bar
+y con el precio, porcentaje, moneda y beneficiario que el servidor reconoce. Una pantalla de carrito
+separada no reduce ese riesgo: la validación autoritativa al enviar sí. Por eso **Pedirlo** abre el
+checkout con una unidad ya agregada y el checkout ofrece **Agregar algo más**, cantidades, medio de
+pago y datos en la misma superficie.
+
+Para una bebida se conserva el camino actual: elegir y pagar. Para dos distintas se agrega solo la
+elección de la segunda. El carrito persistido evita repetir trabajo por una recarga, pero no puede
+autorizar dinero: si el catálogo cambió, el checkout muestra la versión fresca y exige una nueva
+acción de pago. Un carrito no cruza bares porque entrega, crédito, deuda y liquidación pertenecen a
+un sitio concreto. El tope de 20 unidades es agregado y se aplica en controles y servidor.
+
 ## Al validar
 
 - Probar el camino mínimo completo, no solo cada pantalla aislada.
@@ -37,3 +51,5 @@ después de la aprobación y se completa sin invitación ni aceptación adiciona
   no por haber terminado un paso anterior.
 - Si la regla cambia un comportamiento reusable, registrarla en `PRODUCT.md` y
   preparar un handoff en `docs/plans/` para Hermes.
+- Medir el camino mínimo: una bebida no suma pasos; dos bebidas distintas requieren una sola acción
+  adicional antes de pagar. Reload, volver atrás y reabrir el navegador no pueden duplicar el seed.

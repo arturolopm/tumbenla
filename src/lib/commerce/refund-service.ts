@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { createHash } from 'node:crypto'
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, eq, inArray, ne, or } from 'drizzle-orm'
 
 import type { db } from '@/database'
 import {
@@ -14,7 +14,7 @@ import {
   paymentCharge,
   unitLifecycleOperation,
 } from '@/database/commerce-schema'
-import { orderRedemption, productOrder } from '@/database/schema'
+import { customerOrder, orderRedemption, productOrder } from '@/database/schema'
 import { createId } from '@/lib/utils/id'
 import { assertReviewedEvidence } from './finance-evidence-service'
 import {
@@ -43,6 +43,8 @@ type RefundableUnit = Readonly<{
   grossMinor: bigint
   redemptionId: string | null
   snapshotId: string
+  orderId: string
+  customerOrderId: string | null
   fundingClassification: string
   orderStatus: string
   payMethod: string
@@ -95,10 +97,22 @@ export class CommerceRefundService {
     const now = this.#now()
 
     return this.#database.transaction(async (transaction) => {
+      const orderContext = await this.#resolveOrderContext(transaction, input.orderId)
+      if (orderContext.customerOrderId) {
+        await this.#lockCustomerOrder(transaction, orderContext.customerOrderId)
+      }
       const units = await this.#loadUnits(transaction, input.orderId, unitIds)
       if (units.length !== unitIds.length) throw new Error('One or more refund units do not exist')
       const snapshotId = units[0]?.snapshotId
-      if (!snapshotId || units.some((unit) => unit.snapshotId !== snapshotId)) {
+      const customerOrderId = units[0]?.customerOrderId ?? null
+      if (
+        !snapshotId ||
+        units.some((unit) =>
+          customerOrderId
+            ? unit.customerOrderId !== customerOrderId
+            : unit.customerOrderId !== null || unit.snapshotId !== snapshotId
+        )
+      ) {
         throw new Error('Refund units must belong to one immutable order')
       }
       if (
@@ -111,7 +125,7 @@ export class CommerceRefundService {
         throw new Error('Only verified app-payment units can use the V2 refund workflow')
       }
 
-      if (!(await this.#hasApprovedCharge(transaction, snapshotId))) {
+      if (!(await this.#hasApprovedCharge(transaction, snapshotId, customerOrderId))) {
         throw new Error('The order has no authoritative approved charge')
       }
       const classification = fundingClassification(units[0]?.fundingClassification ?? '')
@@ -296,6 +310,8 @@ export class CommerceRefundService {
     }
     const now = this.#now()
     return this.#database.transaction(async (transaction) => {
+      const customerOrderId = await this.#peekRefundCustomerOrderId(transaction, input.operationId)
+      if (customerOrderId) await this.#lockCustomerOrder(transaction, customerOrderId)
       const classification = await this.#peekRefundClassification(transaction, input.operationId)
       const liquidity = await treasurySnapshot(transaction, classification, true)
       const operation = await this.#loadRefundOperation(transaction, input.operationId)
@@ -341,7 +357,13 @@ export class CommerceRefundService {
       if (
         !snapshotId ||
         !orderId ||
-        units.some((unit) => unit.snapshotId !== snapshotId || unit.orderId !== orderId)
+        units.some((unit) =>
+          customerOrderId
+            ? unit.customerOrderId !== customerOrderId
+            : unit.customerOrderId !== null ||
+              unit.snapshotId !== snapshotId ||
+              unit.orderId !== orderId
+        )
       ) {
         throw new Error('Refund units do not belong to one immutable order')
       }
@@ -350,7 +372,7 @@ export class CommerceRefundService {
       }
       const held = await ensureFinanceAccount(transaction, {
         kind: 'customer_funds_held',
-        ownerKey: snapshotId,
+        ownerKey: customerOrderId ?? snapshotId,
         currency: 'COP',
         fundingClassification: operation.fundingClassification,
       })
@@ -365,6 +387,7 @@ export class CommerceRefundService {
         kind: 'refund',
         currency: 'COP',
         orderSnapshotId: snapshotId,
+        customerOrderId: customerOrderId ?? undefined,
         operationId: operation.id,
         createdByUserId: input.verifiedByUserId,
         entries: [
@@ -418,21 +441,50 @@ export class CommerceRefundService {
           updatedAt: now,
         })
         .where(eq(financialOperation.id, operation.id))
-      const remaining = await transaction
-        .select({ id: commerceOrderUnit.id })
-        .from(commerceOrderUnit)
-        .where(
-          and(
-            eq(commerceOrderUnit.orderSnapshotId, snapshotId),
-            ne(commerceOrderUnit.lifecycleStatus, 'refunded')
+      for (const affectedOrderId of new Set(units.map((unit) => unit.orderId))) {
+        const remainingInLine = await transaction
+          .select({ id: commerceOrderUnit.id })
+          .from(commerceOrderUnit)
+          .innerJoin(
+            commerceOrderSnapshot,
+            eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
           )
-        )
-        .limit(1)
-      if (remaining.length === 0) {
-        await transaction
-          .update(productOrder)
-          .set({ status: 'refunded', updatedAt: now })
-          .where(eq(productOrder.id, orderId))
+          .where(
+            and(
+              eq(commerceOrderSnapshot.orderId, affectedOrderId),
+              ne(commerceOrderUnit.lifecycleStatus, 'refunded')
+            )
+          )
+          .limit(1)
+        if (remainingInLine.length === 0) {
+          await transaction
+            .update(productOrder)
+            .set({ status: 'refunded', updatedAt: now })
+            .where(eq(productOrder.id, affectedOrderId))
+        }
+      }
+      if (customerOrderId) {
+        const remainingInOrder = await transaction
+          .select({ id: commerceOrderUnit.id })
+          .from(commerceOrderUnit)
+          .innerJoin(
+            commerceOrderSnapshot,
+            eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+          )
+          .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+          .where(
+            and(
+              eq(productOrder.customerOrderId, customerOrderId),
+              ne(commerceOrderUnit.lifecycleStatus, 'refunded')
+            )
+          )
+          .limit(1)
+        if (remainingInOrder.length === 0) {
+          await transaction
+            .update(customerOrder)
+            .set({ status: 'refunded', updatedAt: now })
+            .where(eq(customerOrder.id, customerOrderId))
+        }
       }
       await transaction.insert(financeAuditEvent).values({
         id: createId('fae'),
@@ -469,6 +521,8 @@ export class CommerceRefundService {
     if (input.reason.trim().length === 0) throw new Error('A refund failure reason is required')
     const now = this.#now()
     return this.#database.transaction(async (transaction) => {
+      const customerOrderId = await this.#peekRefundCustomerOrderId(transaction, input.operationId)
+      if (customerOrderId) await this.#lockCustomerOrder(transaction, customerOrderId)
       const operation = await this.#loadRefundOperation(transaction, input.operationId)
       if (operation.status === 'failed') {
         return { operationId: operation.id, status: operation.status, duplicate: true }
@@ -582,6 +636,8 @@ export class CommerceRefundService {
         grossMinor: commerceOrderUnit.grossMinor,
         redemptionId: commerceOrderUnit.redemptionId,
         snapshotId: commerceOrderSnapshot.id,
+        orderId: productOrder.id,
+        customerOrderId: productOrder.customerOrderId,
         fundingClassification: commerceOrderSnapshot.fundingClassification,
         orderStatus: productOrder.status,
         payMethod: productOrder.payMethod,
@@ -593,21 +649,32 @@ export class CommerceRefundService {
         eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
-      .where(and(eq(productOrder.id, orderId), inArray(commerceOrderUnit.id, unitIds)))
-      .orderBy(commerceOrderUnit.ordinal)
-      .for('update')
+      .where(
+        and(
+          or(eq(productOrder.id, orderId), eq(productOrder.customerOrderId, orderId)),
+          inArray(commerceOrderUnit.id, unitIds)
+        )
+      )
+      .orderBy(productOrder.lineOrdinal, commerceOrderUnit.ordinal)
+      .for('update', { of: commerceOrderUnit })
   }
 
   async #hasApprovedCharge(
     transaction: FinanceTransactionConnection,
-    snapshotId: string
+    snapshotId: string,
+    customerOrderId: string | null
   ): Promise<boolean> {
     const [row] = await transaction
       .select({ id: paymentCharge.id })
       .from(paymentCharge)
       .innerJoin(paymentAttempt, eq(paymentCharge.attemptId, paymentAttempt.id))
       .where(
-        and(eq(paymentAttempt.orderSnapshotId, snapshotId), eq(paymentCharge.status, 'approved'))
+        and(
+          customerOrderId
+            ? eq(paymentAttempt.customerOrderId, customerOrderId)
+            : eq(paymentAttempt.orderSnapshotId, snapshotId),
+          eq(paymentCharge.status, 'approved')
+        )
       )
       .limit(1)
     return Boolean(row)
@@ -656,6 +723,53 @@ export class CommerceRefundService {
     return fundingClassification(operation.fundingClassification ?? '')
   }
 
+  async #resolveOrderContext(transaction: FinanceTransactionConnection, orderId: string) {
+    const [line] = await transaction
+      .select({ customerOrderId: productOrder.customerOrderId })
+      .from(productOrder)
+      .where(or(eq(productOrder.id, orderId), eq(productOrder.customerOrderId, orderId)))
+      .orderBy(productOrder.lineOrdinal)
+      .limit(1)
+    if (!line) throw new Error('Refund order does not exist')
+    return line
+  }
+
+  async #peekRefundCustomerOrderId(
+    transaction: FinanceTransactionConnection,
+    operationId: string
+  ): Promise<string | null> {
+    const [row] = await transaction
+      .select({ customerOrderId: productOrder.customerOrderId })
+      .from(financialOperationAllocation)
+      .innerJoin(commerceOrderUnit, eq(financialOperationAllocation.sourceId, commerceOrderUnit.id))
+      .innerJoin(
+        commerceOrderSnapshot,
+        eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+      )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .where(
+        and(
+          eq(financialOperationAllocation.operationId, operationId),
+          eq(financialOperationAllocation.sourceType, 'order_unit')
+        )
+      )
+      .limit(1)
+    return row?.customerOrderId ?? null
+  }
+
+  async #lockCustomerOrder(
+    transaction: FinanceTransactionConnection,
+    customerOrderId: string
+  ): Promise<void> {
+    const [locked] = await transaction
+      .select({ id: customerOrder.id })
+      .from(customerOrder)
+      .where(eq(customerOrder.id, customerOrderId))
+      .limit(1)
+      .for('update')
+    if (!locked) throw new Error('Customer order does not exist')
+  }
+
   async #loadOperationUnits(transaction: FinanceTransactionConnection, operationId: string) {
     return transaction
       .select({
@@ -666,6 +780,7 @@ export class CommerceRefundService {
         expiresAt: commerceOrderUnit.expiresAt,
         snapshotId: commerceOrderSnapshot.id,
         orderId: commerceOrderSnapshot.orderId,
+        customerOrderId: productOrder.customerOrderId,
       })
       .from(financialOperationAllocation)
       .innerJoin(commerceOrderUnit, eq(financialOperationAllocation.sourceId, commerceOrderUnit.id))
@@ -673,13 +788,14 @@ export class CommerceRefundService {
         commerceOrderSnapshot,
         eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
       )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
       .where(
         and(
           eq(financialOperationAllocation.operationId, operationId),
           eq(financialOperationAllocation.sourceType, 'order_unit')
         )
       )
-      .orderBy(commerceOrderUnit.ordinal)
-      .for('update')
+      .orderBy(productOrder.lineOrdinal, commerceOrderUnit.ordinal)
+      .for('update', { of: commerceOrderUnit })
   }
 }

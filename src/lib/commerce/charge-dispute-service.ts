@@ -212,6 +212,7 @@ export class ChargeDisputeService {
           status: paymentCharge.status,
           grossMinor: paymentCharge.grossMinor,
           currency: paymentCharge.currency,
+          customerOrderId: paymentAttempt.customerOrderId,
           fundingClassification: commerceOrderSnapshot.fundingClassification,
         })
         .from(paymentCharge)
@@ -245,6 +246,7 @@ export class ChargeDisputeService {
           operationKey: `charge-dispute-loss:${dispute.id}`,
           kind: 'charge_dispute_loss',
           currency: 'COP',
+          customerOrderId: charge.customerOrderId ?? undefined,
           createdByUserId: input.resolvedByUserId,
           entries: [
             {
@@ -292,6 +294,7 @@ export class ChargeDisputeService {
           resolutionReference,
           evidenceId: input.evidenceId,
           detail,
+          customerOrderId: charge.customerOrderId,
         },
         createdAt: now,
       })

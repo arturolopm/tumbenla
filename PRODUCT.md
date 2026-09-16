@@ -389,6 +389,15 @@ Estan aca para no volver a discutirlas cada dos semanas.
     tecnica ya cubre ese riesgo, el paso se quita o se mueve al momento en que
     si entrega valor. La revision vive en `docs/ux-friction-review.md`: es una
     puerta de implementacion y validacion, no una sugerencia de copy.
+41. **Un pedido explícito puede mezclar productos, pero nunca bares ni cobros.** El carrito
+    pertenece a un solo sitio, admite máximo 20 unidades y termina en un medio de pago, un cobro o
+    reserva, una URL, un QR visible y un escaneo atómico. El camino de un solo producto no gana una
+    pantalla: **Pedirlo** abre el checkout con ese producto ya agregado y allí mismo aparece
+    **Agregar algo más**. Cada bar conserva su carrito en el navegador, pero precio, publicación,
+    moneda, porcentaje, beneficiario y total se vuelven a decidir en el servidor antes de crear el
+    pedido. **Por qué:** obligar a pagar dos veces por dos bebidas del mismo bar aumenta pasos,
+    comisiones y errores sin reducir ningún riesgo; mezclar bares sí rompería entrega, crédito y
+    liquidación.
 
 ---
 
@@ -449,7 +458,7 @@ logo.
 | El operador escribe pin y compromiso a mano | Con muchos sitios por semana | Que el sitio proponga y el operador solo apruebe |
 | Sin caducidad de solicitudes | Cuando la cola no quepa en una pantalla | Caducar `verifying` a los 30 dias con aviso |
 | Sin auditoria mas alla de `reviewedBy` | Con mas operadores | Bitacora aparte |
-| Una orden contiene un producto, aunque puede llevar varias unidades | Cuando alguien quiera combinar, por ejemplo, un mojito y una cerveza en un solo pago | Carrito con lineas de pedido, un cobro y un QR para todo el carrito |
+| El carrito no mezcla bares y tiene máximo 20 unidades | Cuando una mesa necesite una compra conjunta mayor o productos de sitios distintos | Pedidos separados; el límite protege operación y el sitio conserva liquidación y entrega claras |
 
 ---
 

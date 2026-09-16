@@ -54,6 +54,7 @@ export type Entrega =
       /** Lo que el mesero tiene que hacer, y lo unico que decide la pantalla. */
       cobrar: number | null
       producto: string
+      lines: readonly { productName: string; quantity: number }[]
       cantidadDeLaOrden: number
       cantidadAEntregar: number
       entregadas: number
@@ -168,6 +169,10 @@ export const redimirAction = async (
       ok: true,
       cobrar: result.collectMinor === null ? null : Number(result.collectMinor) / 100,
       producto: result.productName,
+      lines: result.lines.map((line) => ({
+        productName: line.productName,
+        quantity: line.quantity,
+      })),
       cantidadDeLaOrden: result.quantity,
       cantidadAEntregar: result.fulfilledCount,
       entregadas: result.redeemedCount,
@@ -315,6 +320,7 @@ export const redimirAction = async (
     // sin escanear, y ahi se cae el mecanismo entero (decision 26).
     cobrar: pagaEnBarra ? unitPrice : null,
     producto: fila.producto,
+    lines: [{ productName: fila.producto, quantity: 1 }],
     cantidadDeLaOrden: Number(fila.quantity),
     cantidadAEntregar: 1,
     entregadas: await contarEntregadas(fila.orderId),

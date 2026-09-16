@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { createHash, randomBytes } from 'node:crypto'
-import { and, desc, eq, gt, isNull, lte, ne, or, sql } from 'drizzle-orm'
+import { and, desc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm'
 
 import type { db } from '@/database'
 import {
@@ -14,7 +14,14 @@ import {
   paymentCharge,
   paymentEvent,
 } from '@/database/commerce-schema'
-import { orderRedemption, productOrder, venue, venueProduct } from '@/database/schema'
+import {
+  customerOrder,
+  orderRedemption,
+  productOrder,
+  venue,
+  venueProduct,
+} from '@/database/schema'
+import { canonicalCartQuote } from '@/lib/cart/cart-quote'
 import { generarCodigo } from '@/lib/comercio/codigos'
 import { fechaDeCaducidad } from '@/lib/comercio/types'
 import { createId } from '@/lib/utils/id'
@@ -43,7 +50,7 @@ const MAX_PROVIDER_CANDIDATES = 8
 
 type FundingClassification = 'real' | 'sandbox'
 
-export type StartPaymentInput = Readonly<{
+type LegacyStartPaymentInput = Readonly<{
   submissionKey: string
   productId: string
   buyerName: string
@@ -51,6 +58,24 @@ export type StartPaymentInput = Readonly<{
   quantity: number
   userId: string | null
 }>
+
+export type CartLineInput = Readonly<{
+  productId: string
+  quantity: number
+}>
+
+export type StartCustomerOrderInput = Readonly<{
+  venueId: string
+  lines: readonly CartLineInput[]
+  buyerName: string
+  buyerEmail: string
+  payMethod: 'app' | 'bar'
+  submissionKey: string
+  quotedCartHash: string
+  userId: string | null
+}>
+
+export type StartPaymentInput = LegacyStartPaymentInput | StartCustomerOrderInput
 
 export type StartPaymentResult =
   | Readonly<{
@@ -89,7 +114,7 @@ export type StartPaymentResult =
     }>
   | Readonly<{
       kind: 'unavailable'
-      reason: 'invalid-request' | 'product-unavailable' | 'commerce-not-configured'
+      reason: 'invalid-request' | 'product-unavailable' | 'commerce-not-configured' | 'cart-changed'
     }>
 
 export type PaymentReconciliationResult = Readonly<{
@@ -122,6 +147,7 @@ export type CommercePaymentServiceDependencies = Readonly<{
 
 type AttemptContext = Readonly<{
   attemptId: string
+  customerOrderId: string | null
   orderSnapshotId: string
   orderId: string
   orderToken: string
@@ -132,6 +158,7 @@ type AttemptContext = Readonly<{
   venueName: string
   venueSlug: string
   quantity: number
+  lineCount: number
   grossMinor: bigint
   status: string
   checkoutSessionId: string | null
@@ -147,8 +174,23 @@ type PreparedAttempt =
   | Readonly<{ kind: 'attempt'; attemptId: string }>
   | Readonly<{
       kind: 'unavailable'
-      reason: 'product-unavailable' | 'commerce-not-configured'
+      reason: 'product-unavailable' | 'commerce-not-configured' | 'cart-changed'
     }>
+
+type LockedPaymentLine = Readonly<{
+  orderId: string
+  orderSnapshotId: string
+  quantity: number
+}>
+
+type LockedPaymentOrder = Readonly<{
+  customerOrderId: string | null
+  orderStatus: string
+  lines: readonly LockedPaymentLine[]
+  quantity: number
+  grossMinor: bigint
+  fundingClassification: string
+}>
 
 type AppliedPayment = PaymentReconciliationResult & Readonly<{ issuedCodes: readonly string[] }>
 
@@ -176,28 +218,78 @@ const persistedBinding = (context: AttemptContext): GatewayBinding => {
   }
 }
 
-const requestHashFor = (input: StartPaymentInput): string =>
-  hashJson({
-    buyerEmail: input.buyerEmail.trim().toLowerCase(),
-    buyerName: input.buyerName.trim(),
-    productId: input.productId,
-    quantity: input.quantity,
-    userId: input.userId,
-  })
+const isCustomerOrderInput = (input: StartPaymentInput): input is StartCustomerOrderInput =>
+  'lines' in input
 
-const validStartInput = (input: StartPaymentInput): boolean =>
-  /^[A-Za-z0-9_-]{16,128}$/.test(input.submissionKey) &&
-  input.productId.length > 0 &&
+const normalizedLines = (lines: readonly CartLineInput[]): readonly CartLineInput[] =>
+  [...lines].sort((left, right) => left.productId.localeCompare(right.productId))
+
+const requestHashFor = (input: StartPaymentInput): string =>
+  hashJson(
+    isCustomerOrderInput(input)
+      ? {
+          buyerEmail: input.buyerEmail.trim().toLowerCase(),
+          buyerName: input.buyerName.trim(),
+          lines: normalizedLines(input.lines),
+          payMethod: input.payMethod,
+          quotedCartHash: input.quotedCartHash,
+          userId: input.userId,
+          venueId: input.venueId,
+        }
+      : {
+          buyerEmail: input.buyerEmail.trim().toLowerCase(),
+          buyerName: input.buyerName.trim(),
+          productId: input.productId,
+          quantity: input.quantity,
+          userId: input.userId,
+        }
+  )
+
+const validBuyer = (input: Pick<StartPaymentInput, 'buyerName' | 'buyerEmail'>): boolean =>
   input.buyerName.trim().length >= 2 &&
   input.buyerName.trim().length <= 80 &&
   input.buyerEmail.trim().length > 3 &&
-  input.buyerEmail.includes('@') &&
-  Number.isInteger(input.quantity) &&
-  input.quantity >= 1 &&
-  input.quantity <= MAX_CHECKOUT_UNITS
+  input.buyerEmail.includes('@')
 
-const retryUrlFor = (context: Pick<AttemptContext, 'venueSlug' | 'productSlug'>): string =>
-  `/sitios/${encodeURIComponent(context.venueSlug)}/pedir/${encodeURIComponent(context.productSlug)}`
+const validStartInput = (input: StartPaymentInput): boolean => {
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(input.submissionKey) || !validBuyer(input)) return false
+  if (!isCustomerOrderInput(input)) {
+    return (
+      input.productId.length > 0 &&
+      Number.isInteger(input.quantity) &&
+      input.quantity >= 1 &&
+      input.quantity <= MAX_CHECKOUT_UNITS
+    )
+  }
+
+  if (
+    input.payMethod !== 'app' ||
+    input.venueId.length === 0 ||
+    !/^[a-f0-9]{64}$/.test(input.quotedCartHash) ||
+    input.lines.length === 0 ||
+    new Set(input.lines.map((line) => line.productId)).size !== input.lines.length
+  ) {
+    return false
+  }
+  const totalUnits = input.lines.reduce((sum, line) => sum + line.quantity, 0)
+  return (
+    totalUnits <= MAX_CHECKOUT_UNITS &&
+    input.lines.every(
+      (line) =>
+        line.productId.length > 0 &&
+        Number.isInteger(line.quantity) &&
+        line.quantity >= 1 &&
+        line.quantity <= MAX_CHECKOUT_UNITS
+    )
+  )
+}
+
+const retryUrlFor = (
+  context: Pick<AttemptContext, 'customerOrderId' | 'venueSlug' | 'productSlug'>
+): string =>
+  context.customerOrderId
+    ? `/sitios/${encodeURIComponent(context.venueSlug)}/pedir`
+    : `/sitios/${encodeURIComponent(context.venueSlug)}/pedir/${encodeURIComponent(context.productSlug)}`
 
 const uniqueConstraint = (error: unknown): string | undefined => {
   if (typeof error !== 'object' || error === null) return undefined
@@ -531,6 +623,10 @@ export class CommercePaymentService {
     requestHash: string,
     binding: GatewayBinding
   ): Promise<PreparedAttempt> {
+    if (isCustomerOrderInput(input)) {
+      return this.#prepareCustomerOrderAttempt(input, requestHash, binding)
+    }
+
     const now = this.#now()
     const fundingClassification = fundingFor(binding)
 
@@ -688,6 +784,227 @@ export class CommercePaymentService {
     })
   }
 
+  async #prepareCustomerOrderAttempt(
+    input: StartCustomerOrderInput,
+    requestHash: string,
+    binding: GatewayBinding
+  ): Promise<PreparedAttempt> {
+    const now = this.#now()
+    const fundingClassification = fundingFor(binding)
+    const lines = normalizedLines(input.lines)
+    const productIds = lines.map((line) => line.productId)
+
+    return this.#database.transaction(async (transaction) => {
+      const products = await transaction
+        .select({
+          id: venueProduct.id,
+          venueId: venueProduct.venueId,
+          name: venueProduct.name,
+          kind: venueProduct.kind,
+          description: venueProduct.description,
+          price: venueProduct.price,
+          currency: venueProduct.currency,
+          donationPercentage: venueProduct.donationPercentage,
+          productStatus: venueProduct.status,
+          venueName: venue.name,
+          venueStatus: venue.status,
+        })
+        .from(venueProduct)
+        .innerJoin(venue, eq(venueProduct.venueId, venue.id))
+        .where(and(eq(venueProduct.venueId, input.venueId), inArray(venueProduct.id, productIds)))
+        .for('share')
+
+      if (
+        products.length !== lines.length ||
+        products.some(
+          (product) =>
+            product.productStatus !== 'published' ||
+            product.venueStatus !== 'published' ||
+            product.currency !== 'COP'
+        )
+      ) {
+        return { kind: 'unavailable', reason: 'product-unavailable' }
+      }
+
+      const productById = new Map(products.map((product) => [product.id, product]))
+      const canonicalLines = lines.map((line) => {
+        const product = productById.get(line.productId)
+        if (!product) throw new Error('A locked cart product could not be resolved')
+        const unitGrossMinor = parseMinorUnits(product.price)
+        const donationBasisPoints = Number(parseScaledDecimal(product.donationPercentage, 2))
+        return { ...line, product, unitGrossMinor, donationBasisPoints }
+      })
+      if (
+        canonicalLines.some(
+          (line) =>
+            !Number.isSafeInteger(line.donationBasisPoints) ||
+            line.donationBasisPoints < MIN_DONATION_BASIS_POINTS ||
+            line.donationBasisPoints > 10_000 ||
+            line.unitGrossMinor > BigInt(Number.MAX_SAFE_INTEGER)
+        )
+      ) {
+        return { kind: 'unavailable', reason: 'product-unavailable' }
+      }
+
+      const serverQuoteHash = sha256(
+        canonicalCartQuote(
+          canonicalLines.map((line) => ({
+            venueId: line.product.venueId,
+            productId: line.product.id,
+            quantity: line.quantity,
+            unitGrossMinor: Number(line.unitGrossMinor),
+            donationBasisPoints: line.donationBasisPoints,
+            currency: 'COP',
+          }))
+        )
+      )
+      if (serverQuoteHash !== input.quotedCartHash) {
+        return { kind: 'unavailable', reason: 'cart-changed' }
+      }
+
+      const foundations = await transaction
+        .select({ id: commerceBeneficiary.id, legalName: commerceBeneficiary.legalName })
+        .from(commerceBeneficiary)
+        .where(
+          and(
+            eq(commerceBeneficiary.kind, 'foundation'),
+            eq(commerceBeneficiary.status, 'verified')
+          )
+        )
+        .orderBy(commerceBeneficiary.createdAt)
+        .limit(2)
+      const [policy] = await transaction
+        .select({ id: allocationPolicy.id })
+        .from(allocationPolicy)
+        .where(
+          and(
+            lte(allocationPolicy.effectiveAt, now),
+            or(isNull(allocationPolicy.retiredAt), gt(allocationPolicy.retiredAt, now))
+          )
+        )
+        .orderBy(desc(allocationPolicy.version))
+        .limit(1)
+      if (foundations.length !== 1 || !policy) {
+        return { kind: 'unavailable', reason: 'commerce-not-configured' }
+      }
+
+      const customerOrderId = createId('cor')
+      const attemptId = createId('pat')
+      const orderToken = this.#generateToken()
+      const totalUnits = canonicalLines.reduce((sum, line) => sum + line.quantity, 0)
+      const totalGrossMinor = canonicalLines.reduce(
+        (sum, line) => sum + line.unitGrossMinor * BigInt(line.quantity),
+        BigInt(0)
+      )
+      const expiresAt = fechaDeCaducidad(now)
+      const buyerName = input.buyerName.trim()
+      const buyerEmail = input.buyerEmail.trim().toLowerCase()
+
+      await transaction.insert(customerOrder).values({
+        id: customerOrderId,
+        venueId: input.venueId,
+        userId: input.userId,
+        buyerName,
+        buyerEmail,
+        totalUnits,
+        totalAmount: formatMinorUnits(totalGrossMinor),
+        currency: 'COP',
+        publicToken: orderToken,
+        payMethod: 'app',
+        status: 'pending',
+        expiresAt,
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      let firstSnapshotId: string | undefined
+      for (const [index, line] of canonicalLines.entries()) {
+        const orderId = createId('ord')
+        const snapshotId = createId('cos')
+        firstSnapshotId ??= snapshotId
+        const grossDonationMinor = divideHalfUp(
+          line.unitGrossMinor * BigInt(line.donationBasisPoints),
+          BigInt(10_000)
+        )
+        const grossVenueMinor = line.unitGrossMinor - grossDonationMinor
+        const percentage = formatMinorUnits(BigInt(line.donationBasisPoints), 2)
+
+        await transaction.insert(productOrder).values({
+          id: orderId,
+          customerOrderId,
+          lineOrdinal: index + 1,
+          productId: line.product.id,
+          venueId: line.product.venueId,
+          userId: input.userId,
+          buyerName,
+          buyerEmail,
+          quantity: String(line.quantity),
+          unitPrice: formatMinorUnits(line.unitGrossMinor),
+          donationPercentage: percentage,
+          unitDonationAmount: formatMinorUnits(grossDonationMinor),
+          unitVenueAmount: formatMinorUnits(grossVenueMinor),
+          totalAmount: formatMinorUnits(line.unitGrossMinor * BigInt(line.quantity)),
+          currency: 'COP',
+          publicToken: this.#generateToken(),
+          payMethod: 'app',
+          status: 'pending',
+          expiresAt,
+          createdAt: now,
+          updatedAt: now,
+        })
+        await transaction.insert(commerceOrderSnapshot).values({
+          id: snapshotId,
+          orderId,
+          schemaVersion: 1,
+          productName: line.product.name,
+          productKind: line.product.kind,
+          productDescription: line.product.description,
+          venueName: line.product.venueName,
+          currency: 'COP',
+          quantity: line.quantity,
+          unitGrossMinor: line.unitGrossMinor,
+          donationBasisPoints: line.donationBasisPoints,
+          allocationPolicyId: policy.id,
+          foundationBeneficiaryId: foundations[0]!.id,
+          foundationLegalName: foundations[0]!.legalName,
+          policyDisclosure: `El ${percentage}% se distribuye después de las deducciones verificadas; el monto exacto queda pendiente hasta la reconciliación.`,
+          fundingClassification,
+          createdAt: now,
+        })
+        await transaction.insert(commerceOrderUnit).values(
+          Array.from({ length: line.quantity }, (_, unitIndex) => ({
+            id: createId('cou'),
+            orderSnapshotId: snapshotId,
+            ordinal: unitIndex + 1,
+            grossMinor: line.unitGrossMinor,
+            lifecycleStatus: 'pending_payment',
+            expiresAt,
+            createdAt: now,
+            updatedAt: now,
+          }))
+        )
+      }
+      if (!firstSnapshotId) throw new Error('A customer order requires at least one snapshot')
+
+      await transaction.insert(paymentAttempt).values({
+        id: attemptId,
+        orderSnapshotId: firstSnapshotId,
+        customerOrderId,
+        submissionKey: input.submissionKey,
+        requestHash,
+        provider: binding.provider,
+        providerConfigVersion: binding.configVersion,
+        merchantAccountKey: binding.accountId,
+        environment: binding.environment,
+        status: 'created',
+        createdAt: now,
+        updatedAt: now,
+      })
+
+      return { kind: 'attempt', attemptId }
+    })
+  }
+
   async #continueAttempt(attemptId: string): Promise<StartPaymentResult> {
     let context = await this.#loadAttemptContext(attemptId)
     if (!context) return { kind: 'unavailable', reason: 'invalid-request' }
@@ -740,8 +1057,10 @@ export class CommercePaymentService {
     const checkoutRequest: CheckoutRequest = {
       attemptId,
       invoice: attemptId,
-      productName: context.productName,
-      description: `${context.productName} · ${context.venueName}`,
+      productName: context.customerOrderId ? `Pedido en ${context.venueName}` : context.productName,
+      description: context.customerOrderId
+        ? `Pedido en ${context.venueName} · ${context.lineCount} productos`
+        : `${context.productName} · ${context.venueName}`,
       gross: { minorUnits: amountAsSafeNumber(context.grossMinor), currency: 'COP' },
       customer: { name: context.buyerName, email: context.buyerEmail },
     }
@@ -974,26 +1293,7 @@ export class CommercePaymentService {
     const desiredAttemptStatus = attemptStatusFor(payment.status)
 
     return this.#database.transaction(async (transaction) => {
-      const [locked] = await transaction
-        .select({
-          attemptId: paymentAttempt.id,
-          attemptStatus: paymentAttempt.status,
-          orderId: commerceOrderSnapshot.orderId,
-          orderSnapshotId: paymentAttempt.orderSnapshotId,
-          orderStatus: productOrder.status,
-          quantity: commerceOrderSnapshot.quantity,
-          grossMinor: sql<bigint>`${commerceOrderSnapshot.unitGrossMinor} * ${commerceOrderSnapshot.quantity}`,
-          fundingClassification: commerceOrderSnapshot.fundingClassification,
-        })
-        .from(paymentAttempt)
-        .innerJoin(
-          commerceOrderSnapshot,
-          eq(paymentAttempt.orderSnapshotId, commerceOrderSnapshot.id)
-        )
-        .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
-        .where(eq(paymentAttempt.id, context.attemptId))
-        .limit(1)
-        .for('update')
+      const locked = await this.#lockPaymentOrder(transaction, context)
 
       if (!locked) {
         return { kind: 'not-found', issuedCodes: [] } as AppliedPayment
@@ -1199,27 +1499,74 @@ export class CommercePaymentService {
         }
       }
 
-      const [markedPaid] = await transaction
-        .update(productOrder)
-        .set({
-          status: 'paid',
-          provider: context.provider,
-          providerReference: payment.reference,
-          paidAt: now,
-          updatedAt: now,
-        })
-        .where(and(eq(productOrder.id, locked.orderId), eq(productOrder.status, 'pending')))
-        .returning({ id: productOrder.id })
-
-      if (!markedPaid) {
-        throw new Error('The payment order changed while applying authoritative approval')
+      if (locked.customerOrderId) {
+        const [markedParentPaid] = await transaction
+          .update(customerOrder)
+          .set({
+            status: 'paid',
+            provider: context.provider,
+            providerReference: payment.reference,
+            paidAt: now,
+            updatedAt: now,
+          })
+          .where(
+            and(eq(customerOrder.id, locked.customerOrderId), eq(customerOrder.status, 'pending'))
+          )
+          .returning({ id: customerOrder.id })
+        if (!markedParentPaid) {
+          throw new Error('The customer order changed while applying authoritative approval')
+        }
+        const markedLines = await transaction
+          .update(productOrder)
+          .set({ status: 'paid', paidAt: now, updatedAt: now })
+          .where(
+            and(
+              eq(productOrder.customerOrderId, locked.customerOrderId),
+              eq(productOrder.status, 'pending')
+            )
+          )
+          .returning({ id: productOrder.id })
+        if (markedLines.length !== locked.lines.length) {
+          throw new Error('A customer order line changed while applying authoritative approval')
+        }
+      } else {
+        const [line] = locked.lines
+        if (!line) throw new Error('A payment order requires one immutable line')
+        const [markedPaid] = await transaction
+          .update(productOrder)
+          .set({
+            status: 'paid',
+            provider: context.provider,
+            providerReference: payment.reference,
+            paidAt: now,
+            updatedAt: now,
+          })
+          .where(and(eq(productOrder.id, line.orderId), eq(productOrder.status, 'pending')))
+          .returning({ id: productOrder.id })
+        if (!markedPaid) {
+          throw new Error('The payment order changed while applying authoritative approval')
+        }
       }
 
       const units = await transaction
-        .select({ id: commerceOrderUnit.id, ordinal: commerceOrderUnit.ordinal })
+        .select({
+          id: commerceOrderUnit.id,
+          ordinal: commerceOrderUnit.ordinal,
+          orderId: commerceOrderSnapshot.orderId,
+        })
         .from(commerceOrderUnit)
-        .where(eq(commerceOrderUnit.orderSnapshotId, locked.orderSnapshotId))
-        .orderBy(commerceOrderUnit.ordinal)
+        .innerJoin(
+          commerceOrderSnapshot,
+          eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+        )
+        .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+        .where(
+          inArray(
+            commerceOrderUnit.orderSnapshotId,
+            locked.lines.map((line) => line.orderSnapshotId)
+          )
+        )
+        .orderBy(productOrder.lineOrdinal, commerceOrderUnit.ordinal)
         .for('update')
 
       if (units.length !== locked.quantity) {
@@ -1232,7 +1579,7 @@ export class CommercePaymentService {
         const redemptionId = createId('red')
         await transaction.insert(orderRedemption).values({
           id: redemptionId,
-          orderId: locked.orderId,
+          orderId: unit.orderId,
           code,
           status: 'issued',
           createdAt: now,
@@ -1260,7 +1607,8 @@ export class CommercePaymentService {
       await this.#postApprovedPayment(transaction, {
         chargeId,
         operationKey: paymentOperationKey,
-        snapshotId: locked.orderSnapshotId,
+        customerOrderId: locked.customerOrderId,
+        snapshotId: locked.lines[0]!.orderSnapshotId,
         grossMinor: BigInt(payment.gross.minorUnits),
         provider: context.provider,
         merchantAccountKey: context.merchantAccountKey,
@@ -1295,11 +1643,121 @@ export class CommercePaymentService {
     })
   }
 
+  async #lockPaymentOrder(
+    transaction: CommerceTransaction,
+    context: AttemptContext
+  ): Promise<LockedPaymentOrder | undefined> {
+    if (!context.customerOrderId) {
+      const [legacy] = await transaction
+        .select({
+          orderId: commerceOrderSnapshot.orderId,
+          orderSnapshotId: commerceOrderSnapshot.id,
+          orderStatus: productOrder.status,
+          quantity: commerceOrderSnapshot.quantity,
+          grossMinor: sql<bigint>`${commerceOrderSnapshot.unitGrossMinor} * ${commerceOrderSnapshot.quantity}`,
+          fundingClassification: commerceOrderSnapshot.fundingClassification,
+        })
+        .from(paymentAttempt)
+        .innerJoin(
+          commerceOrderSnapshot,
+          sql`${paymentAttempt.orderSnapshotId} = ${commerceOrderSnapshot.id}`
+        )
+        .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+        .where(eq(paymentAttempt.id, context.attemptId))
+        .limit(1)
+        .for('update')
+      if (!legacy) return undefined
+      return {
+        customerOrderId: null,
+        orderStatus: legacy.orderStatus,
+        lines: [
+          {
+            orderId: legacy.orderId,
+            orderSnapshotId: legacy.orderSnapshotId,
+            quantity: legacy.quantity,
+          },
+        ],
+        quantity: legacy.quantity,
+        grossMinor: legacy.grossMinor,
+        fundingClassification: legacy.fundingClassification,
+      }
+    }
+
+    const [parent] = await transaction
+      .select({
+        id: customerOrder.id,
+        status: customerOrder.status,
+        totalUnits: customerOrder.totalUnits,
+        totalAmount: customerOrder.totalAmount,
+      })
+      .from(customerOrder)
+      .where(eq(customerOrder.id, context.customerOrderId))
+      .limit(1)
+      .for('update')
+    if (!parent) return undefined
+
+    const [attempt] = await transaction
+      .select({ id: paymentAttempt.id })
+      .from(paymentAttempt)
+      .where(
+        and(
+          eq(paymentAttempt.id, context.attemptId),
+          eq(paymentAttempt.customerOrderId, context.customerOrderId)
+        )
+      )
+      .limit(1)
+      .for('update')
+    if (!attempt) return undefined
+
+    const rows = await transaction
+      .select({
+        orderId: productOrder.id,
+        orderSnapshotId: commerceOrderSnapshot.id,
+        orderStatus: productOrder.status,
+        quantity: commerceOrderSnapshot.quantity,
+        unitGrossMinor: commerceOrderSnapshot.unitGrossMinor,
+        fundingClassification: commerceOrderSnapshot.fundingClassification,
+      })
+      .from(productOrder)
+      .innerJoin(commerceOrderSnapshot, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .where(eq(productOrder.customerOrderId, context.customerOrderId))
+      .orderBy(productOrder.lineOrdinal)
+      .for('update')
+    if (rows.length === 0) throw new Error('The customer order has no immutable lines')
+    const quantity = rows.reduce((sum, row) => sum + row.quantity, 0)
+    const grossMinor = rows.reduce(
+      (sum, row) => sum + row.unitGrossMinor * BigInt(row.quantity),
+      BigInt(0)
+    )
+    if (quantity !== parent.totalUnits || grossMinor !== parseMinorUnits(parent.totalAmount)) {
+      throw new Error('The customer order aggregate does not match its immutable lines')
+    }
+    if (rows.some((row) => row.fundingClassification !== rows[0]!.fundingClassification)) {
+      throw new Error('A customer order cannot mix funding classifications')
+    }
+    if (rows.some((row) => row.orderStatus !== parent.status)) {
+      throw new Error('A customer order line does not match its parent status')
+    }
+    return {
+      customerOrderId: parent.id,
+      orderStatus: parent.status,
+      lines: rows.map((row) => ({
+        orderId: row.orderId,
+        orderSnapshotId: row.orderSnapshotId,
+        quantity: row.quantity,
+      })),
+      quantity,
+      grossMinor,
+      fundingClassification: rows[0]!.fundingClassification,
+    }
+  }
+
   async #postApprovedPayment(
     transaction: CommerceTransaction,
     input: {
       chargeId: string
       operationKey: string
+      customerOrderId: string | null
       snapshotId: string
       grossMinor: bigint
       provider: string
@@ -1317,7 +1775,7 @@ export class CommercePaymentService {
     })
     const heldFunds = await ensureFinanceAccount(transaction, {
       kind: 'customer_funds_held',
-      ownerKey: input.snapshotId,
+      ownerKey: input.customerOrderId ?? input.snapshotId,
       currency: 'COP',
       fundingClassification: input.fundingClassification,
     })
@@ -1326,6 +1784,7 @@ export class CommercePaymentService {
       kind: 'payment_approved',
       currency: 'COP',
       orderSnapshotId: input.snapshotId,
+      customerOrderId: input.customerOrderId ?? undefined,
       entries: [
         {
           accountId: receivable,
@@ -1357,17 +1816,27 @@ export class CommercePaymentService {
     const [row] = await this.#database
       .select({
         attemptId: paymentAttempt.id,
-        orderSnapshotId: paymentAttempt.orderSnapshotId,
+        customerOrderId: paymentAttempt.customerOrderId,
+        orderSnapshotId: commerceOrderSnapshot.id,
         orderId: commerceOrderSnapshot.orderId,
-        orderToken: productOrder.publicToken,
-        buyerName: productOrder.buyerName,
-        buyerEmail: productOrder.buyerEmail,
+        lineOrderToken: productOrder.publicToken,
+        parentOrderToken: customerOrder.publicToken,
+        lineBuyerName: productOrder.buyerName,
+        parentBuyerName: customerOrder.buyerName,
+        lineBuyerEmail: productOrder.buyerEmail,
+        parentBuyerEmail: customerOrder.buyerEmail,
         productName: commerceOrderSnapshot.productName,
         productSlug: venueProduct.slug,
         venueName: commerceOrderSnapshot.venueName,
         venueSlug: venue.slug,
-        quantity: commerceOrderSnapshot.quantity,
+        lineQuantity: commerceOrderSnapshot.quantity,
+        parentQuantity: customerOrder.totalUnits,
         unitGrossMinor: commerceOrderSnapshot.unitGrossMinor,
+        parentTotalAmount: customerOrder.totalAmount,
+        lineCount: sql<number>`(
+          select count(*)::integer from product_order lines
+          where lines.customer_order_id = ${paymentAttempt.customerOrderId}
+        )`,
         status: paymentAttempt.status,
         checkoutSessionId: paymentAttempt.checkoutSessionId,
         outcomeDetail: paymentAttempt.outcomeDetail,
@@ -1380,9 +1849,10 @@ export class CommercePaymentService {
       .from(paymentAttempt)
       .innerJoin(
         commerceOrderSnapshot,
-        eq(paymentAttempt.orderSnapshotId, commerceOrderSnapshot.id)
+        sql`${paymentAttempt.orderSnapshotId} = ${commerceOrderSnapshot.id}`
       )
       .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .leftJoin(customerOrder, eq(paymentAttempt.customerOrderId, customerOrder.id))
       .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
       .innerJoin(venue, eq(productOrder.venueId, venue.id))
       .where(eq(paymentAttempt.id, attemptId))
@@ -1390,8 +1860,30 @@ export class CommercePaymentService {
 
     if (!row) return undefined
     return {
-      ...row,
-      grossMinor: row.unitGrossMinor * BigInt(row.quantity),
+      attemptId: row.attemptId,
+      customerOrderId: row.customerOrderId,
+      orderSnapshotId: row.orderSnapshotId,
+      orderId: row.orderId,
+      orderToken: row.parentOrderToken ?? row.lineOrderToken,
+      buyerName: row.parentBuyerName ?? row.lineBuyerName,
+      buyerEmail: row.parentBuyerEmail ?? row.lineBuyerEmail,
+      productName: row.productName,
+      productSlug: row.productSlug,
+      venueName: row.venueName,
+      venueSlug: row.venueSlug,
+      quantity: row.parentQuantity ?? row.lineQuantity,
+      lineCount: row.customerOrderId ? row.lineCount : 1,
+      grossMinor: row.parentTotalAmount
+        ? parseMinorUnits(row.parentTotalAmount)
+        : row.unitGrossMinor * BigInt(row.lineQuantity),
+      status: row.status,
+      checkoutSessionId: row.checkoutSessionId,
+      outcomeDetail: row.outcomeDetail,
+      provider: row.provider,
+      providerConfigVersion: row.providerConfigVersion,
+      merchantAccountKey: row.merchantAccountKey,
+      environment: row.environment,
+      fundingClassification: row.fundingClassification,
     }
   }
 

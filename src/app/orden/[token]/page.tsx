@@ -3,10 +3,10 @@ import { notFound } from 'next/navigation'
 
 import { headers } from 'next/headers'
 
-import { PantallaDeOrden } from '@/components/comercio/pantalla-de-orden'
+import { CustomerOrderScreen } from '@/components/commerce/customer-order-screen'
 import { auth } from '@/lib/auth/auth'
-import { ordenPorToken } from '@/lib/comercio/queries'
-import { svgDelCodigo } from '@/lib/comercio/qr'
+import { svgDelCodigo as generateQrSvg } from '@/lib/comercio/qr'
+import { getCustomerOrderByToken } from '@/lib/commerce/customer-order-view'
 import { getBaseUrl } from '@/lib/utils/urls'
 
 /**
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default async function OrdenPage({
+export default async function CustomerOrderPage({
   params,
   searchParams,
 }: {
@@ -32,8 +32,8 @@ export default async function OrdenPage({
 }) {
   const { token } = await params
   const { cuenta } = await searchParams
-  const orden = await ordenPorToken(token)
-  if (!orden) notFound()
+  const order = await getCustomerOrderByToken(token)
+  if (!order) notFound()
 
   // Si ya entro, no hay nada que ofrecerle.
   const sesion = await auth.api.getSession({ headers: await headers() })
@@ -49,48 +49,58 @@ export default async function OrdenPage({
   // Internally there is still one immutable lifecycle unit per drink, but the
   // bar interaction is one order and therefore exposes one code. For an old
   // partially redeemed order, show the first code that is still usable.
-  const redencionVisible =
-    orden.redenciones.find((redencion) => redencion.estado === 'issued') ?? orden.redenciones[0]
-  const codigos = await Promise.all(
-    (redencionVisible ? [redencionVisible] : []).map(async (r) => ({
-      id: r.id,
-      unidadId: r.unidadId,
-      estado: r.estado,
-      redimidaEn: r.redimidaEn?.toISOString() ?? null,
-      codigo: r.codigo,
-      svg: await svgDelCodigo(`${base}/panel/${orden.venueSlug}/escanear?c=${r.codigo}`),
-    }))
-  )
+  const visibleUnit =
+    order.units.find((unit) => unit.status === 'issued' && unit.redemptionCode) ??
+    order.units.find((unit) => unit.redemptionCode)
+  const displayCode = visibleUnit?.redemptionCode
+    ? {
+        redemptionId: visibleUnit.redemptionId ?? visibleUnit.id,
+        unitId: visibleUnit.id,
+        status: visibleUnit.status,
+        redeemedAt: visibleUnit.redeemedAt?.toISOString() ?? null,
+        code: visibleUnit.redemptionCode,
+        svg: await generateQrSvg(
+          `${base}/panel/${order.venueSlug}/escanear?c=${visibleUnit.redemptionCode}`
+        ),
+      }
+    : null
 
   // Se le pasa al cliente SOLO lo que pinta. El correo del comprador, los ids
   // internos y las fechas que no se muestran se quedan en el servidor: todo lo
   // que cruce va al HTML, y esta pagina es un enlace al portador.
   return (
-    <PantallaDeOrden
-      orden={{
-        publicToken: orden.publicToken,
-        compradorNombre: orden.compradorNombre,
-        cantidad: orden.cantidad,
-        entregadasIniciales: orden.redenciones.filter(
-          (redencion) => redencion.estado === 'redeemed'
-        ).length,
-        precioUnitario: orden.precioUnitario,
-        materialPorUnidad: orden.materialPorUnidad,
-        sitioPorUnidad: orden.sitioPorUnidad,
-        total: orden.total,
-        payMethod: orden.payMethod,
-        estado: orden.estado,
-        productoNombre: orden.productoNombre,
-        productoDescripcion: orden.productoDescripcion,
-        porcentajeMaterial: orden.porcentajeMaterial,
-        repartoFinal: orden.repartoFinal,
-        explicacionDelReparto: orden.explicacionDelReparto,
-        venueSlug: orden.venueSlug,
-        venueNombre: orden.venueNombre,
+    <CustomerOrderScreen
+      order={{
+        publicToken: order.publicToken,
+        buyerName: order.buyerName,
+        totalUnits: order.totalUnits,
+        totalAmount: order.totalAmount,
+        donationAmount: order.donationAmount,
+        venueAmount: order.venueAmount,
+        payMethod: order.payMethod,
+        status: order.status,
+        lines: order.lines.map((line) => ({
+          productOrderId: line.productOrderId,
+          productName: line.productName,
+          productKind: line.productKind,
+          quantity: line.quantity,
+          donationPercentage: line.donationPercentage,
+        })),
+        units: order.units.map((unit) => ({
+          id: unit.id,
+          redemptionId: unit.redemptionId,
+          status: unit.status,
+          expiresAt: unit.expiresAt?.toISOString() ?? null,
+          redeemedAt: unit.redeemedAt?.toISOString() ?? null,
+        })),
+        allocationFinal: order.allocationFinal,
+        allocationExplanation: order.allocationExplanation,
+        venueSlug: order.venueSlug,
+        venueName: order.venueName,
       }}
-      codigos={codigos}
-      ofrecerCuenta={cuenta === '1' && !sesion}
-      correo={orden.compradorEmail}
+      displayCode={displayCode}
+      offerAccount={cuenta === '1' && !sesion}
+      email={order.buyerEmail}
     />
   )
 }

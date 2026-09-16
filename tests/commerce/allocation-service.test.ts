@@ -147,6 +147,131 @@ const seedApprovedCharge = async (input: {
   return { chargeId, snapshotId, unitIds }
 }
 
+const seedApprovedCustomerOrderCharge = async (
+  suffix: string
+): Promise<{ chargeId: string; customerOrderId: string; unitIds: string[] }> => {
+  if (!database) throw new Error('Commerce test database was not initialized')
+  const venueId = `mixed-allocation-venue-${suffix}`
+  const customerOrderId = `mixed-allocation-order-${suffix}`
+  const attemptId = `mixed-allocation-attempt-${suffix}`
+  const chargeId = `mixed-allocation-charge-${suffix}`
+  const splits = [4_000, 5_000, 10_000] as const
+  const unitIds: string[] = []
+
+  await database.sql`
+    insert into venue
+      (id, slug, name, type, address_line, city, department, latitude, longitude, status)
+    values
+      (${venueId}, ${venueId}, 'Venue reparto mixto', 'bar', 'Calle 1', 'Bogotá',
+       'Bogotá D.C.', 4.710989, -74.072090, 'published')
+  `
+  await database.sql`
+    insert into customer_order
+      (id, venue_id, buyer_name, buyer_email, total_units, total_amount, currency,
+       public_token, pay_method, status, provider, provider_reference, paid_at)
+    values
+      (${customerOrderId}, ${venueId}, 'Persona', 'persona@example.test', 3, 3.00, 'COP',
+       ${`mixed-token-${suffix}`}, 'app', 'paid', 'epayco', ${`mixed-reference-${suffix}`}, now())
+  `
+
+  for (const [index, donationBasisPoints] of splits.entries()) {
+    const ordinal = index + 1
+    const productId = `mixed-allocation-product-${suffix}-${ordinal}`
+    const orderId = `mixed-allocation-line-${suffix}-${ordinal}`
+    const snapshotId = `mixed-allocation-snapshot-${suffix}-${ordinal}`
+    const unitId = `mixed-allocation-unit-${suffix}-${ordinal}`
+    unitIds.push(unitId)
+    await database.sql`
+      insert into venue_product
+        (id, venue_id, slug, name, kind, price, currency, donation_percentage, status)
+      values
+        (${productId}, ${venueId}, ${productId}, ${`Producto ${ordinal}`}, 'coctel', 1.00,
+         'COP', ${String(donationBasisPoints / 100)}, 'published')
+    `
+    await database.sql`
+      insert into product_order
+        (id, customer_order_id, line_ordinal, product_id, venue_id, buyer_name, buyer_email,
+         quantity, unit_price, donation_percentage, unit_donation_amount, unit_venue_amount,
+         total_amount, public_token, pay_method, status, paid_at)
+      values
+        (${orderId}, ${customerOrderId}, ${ordinal}, ${productId}, ${venueId}, 'Persona',
+         'persona@example.test', 1, 1.00, ${String(donationBasisPoints / 100)},
+         ${String(donationBasisPoints / 10_000)},
+         ${String(1 - donationBasisPoints / 10_000)}, 1.00, ${`mixed-line-token-${suffix}-${ordinal}`},
+         'app', 'paid', now())
+    `
+    await database.sql`
+      insert into commerce_order_snapshot
+        (id, order_id, product_name, product_kind, venue_name, currency, quantity,
+         unit_gross_minor, donation_basis_points, allocation_policy_id,
+         foundation_beneficiary_id, foundation_legal_name, policy_disclosure,
+         funding_classification)
+      values
+        (${snapshotId}, ${orderId}, ${`Producto ${ordinal}`}, 'coctel', 'Venue reparto mixto',
+         'COP', 1, 100, ${donationBasisPoints}, 'allocation-policy', 'allocation-foundation',
+         'Fundación reparto', 'Reparto mixto', 'sandbox')
+    `
+    await database.sql`
+      insert into commerce_order_unit
+        (id, order_snapshot_id, ordinal, gross_minor, lifecycle_status, redeemed_at)
+      values (${unitId}, ${snapshotId}, 1, 100, 'redeemed', now())
+    `
+  }
+
+  await database.sql`
+    insert into payment_attempt
+      (id, order_snapshot_id, customer_order_id, submission_key, request_hash, provider,
+       provider_config_version, merchant_account_key, environment,
+       provider_attempt_reference, status)
+    values
+      (${attemptId}, ${`mixed-allocation-snapshot-${suffix}-1`}, ${customerOrderId},
+       ${`mixed-submission-${suffix}`}, 'hash', 'epayco', 'test-v1', 'merchant-test', 'test',
+       ${`mixed-reference-${suffix}`}, 'approved')
+  `
+  await database.sql`
+    insert into payment_charge
+      (id, attempt_id, provider, merchant_account_key, environment, provider_reference,
+       provider_transaction_id, gross_minor, currency, status, approved_at)
+    values
+      (${chargeId}, ${attemptId}, 'epayco', 'merchant-test', 'test',
+       ${`mixed-reference-${suffix}`}, ${`mixed-transaction-${suffix}`}, 300, 'COP', 'approved', now())
+  `
+  await database.sql`
+    insert into finance_account
+      (id, kind, owner_key, currency, funding_classification)
+    values
+      ('allocation-receivable', 'gateway_receivable', 'epayco:merchant-test:test',
+       'COP', 'sandbox'),
+      (${`mixed-held-${suffix}`}, 'customer_funds_held', ${customerOrderId}, 'COP', 'sandbox')
+    on conflict do nothing
+  `
+  await database.sql.begin(async (transaction) => {
+    await transaction`
+      insert into finance_transaction
+        (id, operation_key, content_hash, kind, currency, status, order_snapshot_id,
+         customer_order_id, posted_at)
+      values
+        (${`mixed-approval-${suffix}`}, ${`mixed-approval-op-${suffix}`}, 'approval-hash',
+         'payment_approved', 'COP', 'draft', ${`mixed-allocation-snapshot-${suffix}-1`},
+         ${customerOrderId}, null)
+    `
+    await transaction`
+      insert into finance_entry
+        (id, transaction_id, account_id, amount_minor, ordinal)
+      values
+        (${`mixed-approval-debit-${suffix}`}, ${`mixed-approval-${suffix}`},
+         'allocation-receivable', 300, 1),
+        (${`mixed-approval-credit-${suffix}`}, ${`mixed-approval-${suffix}`},
+         ${`mixed-held-${suffix}`}, -300, 2)
+    `
+    await transaction`
+      update finance_transaction set status = 'posted', posted_at = now()
+      where id = ${`mixed-approval-${suffix}`}
+    `
+  })
+  return { chargeId, customerOrderId, unitIds }
+}
+
 const captureError = async (operation: () => Promise<unknown>): Promise<unknown> => {
   try {
     await operation()
@@ -167,6 +292,47 @@ const seedDeductionEvidence = async (evidenceId: string, chargeId: string): Prom
 }
 
 describe('AllocationService', () => {
+  test('allocates one charge across mixed line percentages in stable line and unit order', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedApprovedCustomerOrderCharge('mixed-lines')
+    await seedDeductionEvidence('evidence-mixed-lines', fixture.chargeId)
+
+    const result = await new AllocationService({ database: database.db }).reconcileCharge({
+      chargeId: fixture.chargeId,
+      operationKey: 'allocation:mixed-lines:report-1',
+      deductions: [
+        {
+          externalKey: 'gateway-fee',
+          kind: 'gateway_fee',
+          amount: '0.020000',
+          finality: 'final',
+          evidenceId: 'evidence-mixed-lines',
+        },
+      ],
+    })
+
+    expect(result.units.map((unit) => unit.unitId)).toEqual(fixture.unitIds)
+    expect(result.units.map((unit) => String(unit.deductionMinor))).toEqual(['1', '1', '0'])
+    expect(result.units.map((unit) => String(unit.donationMinor))).toEqual(['40', '50', '100'])
+    const [persisted] = await database.sql<
+      { parentRuns: string; parentTransactions: string; lineHeldAccounts: string }[]
+    >`
+      select
+        (select count(*) from allocation_run
+          where customer_order_id = ${fixture.customerOrderId})::text as "parentRuns",
+        (select count(*) from finance_transaction
+          where customer_order_id = ${fixture.customerOrderId})::text as "parentTransactions",
+        (select count(*) from finance_account account
+          where account.kind = 'customer_funds_held'
+            and account.owner_key like 'mixed-allocation-snapshot-%')::text as "lineHeldAccounts"
+    `
+    expect(persisted).toEqual({
+      parentRuns: '1',
+      parentTransactions: '5',
+      lineHeldAccounts: '0',
+    })
+  }, 30_000)
+
   test('persists deterministic deductions, final allocations, clearing, and redeemed release', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const fixture = await seedApprovedCharge({

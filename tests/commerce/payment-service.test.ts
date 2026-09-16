@@ -2,8 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
 import {
   CommercePaymentService,
+  type StartCustomerOrderInput,
   type StartPaymentInput,
 } from '../../src/lib/commerce/payment-service'
+import { cartQuoteHash } from '../../src/lib/cart/cart-quote'
 import {
   type AuthoritativePaymentQuery,
   type AuthoritativePaymentResult,
@@ -41,6 +43,7 @@ class TestCollectionGateway implements CollectionGateway {
   readonly binding: GatewayBinding
   readonly capabilities = CAPABILITIES
   createCalls = 0
+  createRequests: CheckoutRequest[] = []
   retrieveCalls = 0
   createBehavior: (request: CheckoutRequest) => Promise<CheckoutCreationResult> = async (
     request
@@ -95,6 +98,7 @@ class TestCollectionGateway implements CollectionGateway {
 
   async createCheckout(request: CheckoutRequest): Promise<CheckoutCreationResult> {
     this.createCalls += 1
+    this.createRequests.push(request)
     return this.createBehavior(request)
   }
 
@@ -171,6 +175,67 @@ const paymentInput = (suffix: string, productId: string, quantity = 2): StartPay
   userId: null,
 })
 
+const seedCart = async (
+  suffix: string
+): Promise<{ venueId: string; firstProductId: string; secondProductId: string }> => {
+  if (!database) throw new Error('Commerce test database was not initialized')
+  const venueId = `cart-venue-${suffix}`
+  const firstProductId = `cart-product-${suffix}-first`
+  const secondProductId = `cart-product-${suffix}-second`
+  await database.sql`
+    insert into venue
+      (id, slug, name, type, address_line, city, department, latitude, longitude, status)
+    values
+      (${venueId}, ${venueId}, ${`Cart Venue ${suffix}`}, 'bar', 'Calle 1', 'Bogotá',
+       'Bogotá D.C.', 4.710989, -74.072090, 'published')
+  `
+  await database.sql`
+    insert into venue_product
+      (id, venue_id, slug, name, kind, description, price, currency,
+       donation_percentage, status)
+    values
+      (${firstProductId}, ${venueId}, ${firstProductId}, 'Primer producto', 'coctel',
+       'Primera descripción', 123.45, 'COP', 40.00, 'published'),
+      (${secondProductId}, ${venueId}, ${secondProductId}, 'Segundo producto', 'cerveza',
+       'Segunda descripción', 201.00, 'COP', 100.00, 'published')
+  `
+  return { venueId, firstProductId, secondProductId }
+}
+
+const customerOrderInput = async (
+  suffix: string,
+  cart: Awaited<ReturnType<typeof seedCart>>
+): Promise<StartCustomerOrderInput> => ({
+  venueId: cart.venueId,
+  lines: [
+    { productId: cart.secondProductId, quantity: 1 },
+    { productId: cart.firstProductId, quantity: 2 },
+  ],
+  buyerName: 'Persona con carrito',
+  buyerEmail: `${suffix}@example.test`,
+  payMethod: 'app',
+  submissionKey: `cart_submission_${suffix.padEnd(16, 'x')}`,
+  quotedCartHash: await cartQuoteHash([
+    {
+      venueId: cart.venueId,
+      productId: cart.secondProductId,
+      quantity: 1,
+      unitGrossMinor: 20_100,
+      donationBasisPoints: 10_000,
+      currency: 'COP',
+    },
+    {
+      venueId: cart.venueId,
+      productId: cart.firstProductId,
+      quantity: 2,
+      unitGrossMinor: 12_345,
+      donationBasisPoints: 4_000,
+      currency: 'COP',
+    },
+  ]),
+  userId: null,
+})
+
 const createService = (
   gateway: TestCollectionGateway,
   overrides: Partial<ConstructorParameters<typeof CommercePaymentService>[0]> = {}
@@ -198,6 +263,125 @@ const approve = async (
   reference = `reference-${attemptId}`,
   transactionId = `transaction-${attemptId}`
 ) => service.reconcileAttempt({ attemptId, reference, transactionId })
+
+describe('CommercePaymentService customer orders', () => {
+  test('creates and approves one aggregate payment for multiple product lines', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const cart = await seedCart('mixed-payment')
+    const gateway = new TestCollectionGateway()
+    const service = createService(gateway)
+    const input = await customerOrderInput('mixed-payment', cart)
+
+    const first = expectCheckout(await service.startPayment(input))
+    const retry = expectCheckout(await service.startPayment(input))
+
+    expect(retry.attemptId).toBe(first.attemptId)
+    expect(retry.orderToken).toBe(first.orderToken)
+    expect(gateway.createCalls).toBe(1)
+    expect(gateway.createRequests[0]?.gross).toEqual({ minorUnits: 44_790, currency: 'COP' })
+    expect(gateway.createRequests[0]?.description).toBe(
+      'Pedido en Cart Venue mixed-payment · 2 productos'
+    )
+
+    const [created] = await database.sql<
+      {
+        customerOrders: string
+        lines: string
+        snapshots: string
+        units: string
+        totalUnits: number
+        totalAmount: string
+        attempts: string
+      }[]
+    >`
+      select
+        count(distinct co.id)::text as "customerOrders",
+        count(distinct po.id)::text as lines,
+        count(distinct snapshot.id)::text as snapshots,
+        count(distinct unit.id)::text as units,
+        max(co.total_units)::integer as "totalUnits",
+        max(co.total_amount)::text as "totalAmount",
+        count(distinct attempt.id)::text as attempts
+      from customer_order co
+      join product_order po on po.customer_order_id = co.id
+      join commerce_order_snapshot snapshot on snapshot.order_id = po.id
+      join commerce_order_unit unit on unit.order_snapshot_id = snapshot.id
+      join payment_attempt attempt on attempt.customer_order_id = co.id
+      where co.public_token = ${first.orderToken}
+    `
+    expect(created).toEqual({
+      customerOrders: '1',
+      lines: '2',
+      snapshots: '2',
+      units: '3',
+      totalUnits: 3,
+      totalAmount: '447.90',
+      attempts: '1',
+    })
+
+    const approval = await approve(service, first.attemptId)
+    expect(approval.kind).toBe('applied')
+    expect(approval.status).toBe('approved')
+    expect(approval.issuedUnitCount).toBe(3)
+
+    const [approved] = await database.sql<
+      {
+        parentStatus: string
+        paidLines: string
+        issuedUnits: string
+        redemptionCodes: string
+        parentPostings: string
+      }[]
+    >`
+      select
+        co.status as "parentStatus",
+        count(distinct po.id) filter (where po.status = 'paid')::text as "paidLines",
+        count(distinct unit.id) filter (where unit.lifecycle_status = 'issued')::text as "issuedUnits",
+        count(distinct redemption.id)::text as "redemptionCodes",
+        count(distinct transaction.id)::text as "parentPostings"
+      from customer_order co
+      join product_order po on po.customer_order_id = co.id
+      join commerce_order_snapshot snapshot on snapshot.order_id = po.id
+      join commerce_order_unit unit on unit.order_snapshot_id = snapshot.id
+      join order_redemption redemption on redemption.id = unit.redemption_id
+      left join finance_transaction transaction on transaction.customer_order_id = co.id
+      where co.public_token = ${first.orderToken}
+      group by co.status
+    `
+    expect(approved).toEqual({
+      parentStatus: 'paid',
+      paidLines: '2',
+      issuedUnits: '3',
+      redemptionCodes: '3',
+      parentPostings: '1',
+    })
+  }, 30_000)
+
+  test('rejects a stale quote before creating an order or contacting the provider', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const cart = await seedCart('stale-quote')
+    const gateway = new TestCollectionGateway()
+    const service = createService(gateway)
+    const input = await customerOrderInput('stale-quote', cart)
+
+    await database.sql`
+      update venue_product set price = 124.45 where id = ${cart.firstProductId}
+    `
+    const result = await service.startPayment(input)
+
+    expect(result).toEqual({ kind: 'unavailable', reason: 'cart-changed' })
+    expect(gateway.createCalls).toBe(0)
+    const [counts] = await database.sql<{ customerOrders: string; attempts: string }[]>`
+      select
+        (select count(*) from customer_order where venue_id = ${cart.venueId})::text
+          as "customerOrders",
+        (select count(*) from payment_attempt attempt
+          join customer_order co on co.id = attempt.customer_order_id
+          where co.venue_id = ${cart.venueId})::text as attempts
+    `
+    expect(counts).toEqual({ customerOrders: '0', attempts: '0' })
+  }, 30_000)
+})
 
 describe('CommercePaymentService checkout idempotency', () => {
   test('persists one immutable order and reuses its hosted session across identical retries', async () => {

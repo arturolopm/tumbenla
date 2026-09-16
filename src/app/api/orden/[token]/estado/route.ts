@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { estadoDeOrdenPorToken } from '@/lib/comercio/queries'
+import { getCustomerOrderStatusByToken } from '@/lib/commerce/customer-order-view'
 
 /**
  * Lo que sondea la pantalla del QR, hasta una vez por segundo.
@@ -27,15 +27,15 @@ export const dynamic = 'force-dynamic'
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
 
-  const estado = await estadoDeOrdenPorToken(token)
+  const status = await getCustomerOrderStatusByToken(token)
 
   // Mismo 404 para un token que no existe y para uno mal formado: distinguirlos
   // le diria a quien prueba tokens cuando va por buen camino.
-  if (!estado) {
+  if (!status) {
     return NextResponse.json({ error: 'No existe' }, { status: 404 })
   }
 
-  return NextResponse.json(estado, {
+  return NextResponse.json(status, {
     headers: { 'cache-control': 'no-store' },
   })
 }

@@ -41,7 +41,7 @@ import {
   getEmailSubject,
   renderApplicationDecisionEmail,
   renderSolicitudDmEmail,
-  renderPedidoEmail,
+  renderCustomerOrderEmail,
   renderVenueInvitationEmail,
 } from '@/components/emails'
 import { getFromEmailAddress, getReplyToAddress } from './utils'
@@ -376,20 +376,19 @@ export async function sendApplicationDecisionEmail(params: {
  * la barra. Tumbarle el pedido porque el proveedor de correo esta caido seria
  * cambiar un inconveniente por una venta perdida.
  */
-export async function sendPedidoEmail(params: {
+export async function sendCustomerOrderEmail(params: {
   to: string
-  compradorNombre: string
-  productoNombre: string
-  venueNombre: string
-  cantidad: number
+  buyerName: string
+  venueName: string
+  lines: readonly Readonly<{ productName: string; quantity: number }>[]
   total: number
-  material: number
-  pagaEnBarra: boolean
+  donationAmount: number
+  payAtBar: boolean
   token: string
-  codigos: string[]
+  code: string
 }): Promise<void> {
-  const { to, ...resto } = params
-  const html = await renderPedidoEmail(resto)
+  const { to, ...emailOrder } = params
+  const html = await renderCustomerOrderEmail(emailOrder)
 
   await sendEmail({
     to,

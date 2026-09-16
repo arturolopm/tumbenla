@@ -262,7 +262,7 @@ export const loadAdminFinanceOverview = async (
     database
       .select({
         id: paymentCharge.id,
-        orderId: commerceOrderSnapshot.orderId,
+        orderId: sql<string>`coalesce(${paymentAttempt.customerOrderId}, ${commerceOrderSnapshot.orderId})`,
         venueName: commerceOrderSnapshot.venueName,
         grossMinor: paymentCharge.grossMinor,
         fundingClassification: commerceOrderSnapshot.fundingClassification,

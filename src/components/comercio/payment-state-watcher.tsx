@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 import { Spinner } from '@/components/ui/spinner'
+import { barCartStore } from '@/lib/cart/cart-store'
 
 type PaymentState = {
   state: 'checkout' | 'pending' | 'approved' | 'rejected' | 'checkout-unavailable'
@@ -13,24 +14,36 @@ type PaymentState = {
   reason?: string
 }
 
-const clearAttemptMapping = (attemptId: string): boolean => {
+type AttemptMapping = {
+  venueId: string
+  cartFingerprint: string
+  wantsAccount: boolean
+}
+
+const takeAttemptMapping = (attemptId: string): AttemptMapping | null => {
   const mappingKey = `tumbenla:payment-attempt:${attemptId}`
   const serialized = sessionStorage.getItem(mappingKey)
-  let rememberedAccount = false
+  let mapping: AttemptMapping | null = null
   if (serialized) {
     try {
-      const mapping = JSON.parse(serialized) as {
-        storageKey?: unknown
+      const parsed = JSON.parse(serialized) as {
+        venueId?: unknown
+        cartFingerprint?: unknown
         wantsAccount?: unknown
       }
-      if (typeof mapping.storageKey === 'string') sessionStorage.removeItem(mapping.storageKey)
-      rememberedAccount = mapping.wantsAccount === true
+      if (typeof parsed.venueId === 'string' && typeof parsed.cartFingerprint === 'string') {
+        mapping = {
+          venueId: parsed.venueId,
+          cartFingerprint: parsed.cartFingerprint,
+          wantsAccount: parsed.wantsAccount === true,
+        }
+      }
     } catch {
       // A malformed browser-local value is ignored and removed below.
     }
   }
   sessionStorage.removeItem(mappingKey)
-  return rememberedAccount
+  return mapping
 }
 
 const readState = async (url: string): Promise<PaymentState> => {
@@ -65,10 +78,20 @@ export function PaymentStateWatcher({
       data?.state === 'rejected' ||
       data?.state === 'checkout-unavailable'
     ) {
-      const rememberedAccount = clearAttemptMapping(attemptId)
+      const mapping = takeAttemptMapping(attemptId)
+      if (mapping) {
+        if (data.state === 'approved') {
+          barCartStore.getState().clearVenueCart(mapping.venueId, mapping.cartFingerprint)
+        } else {
+          const current = barCartStore.getState().getCart(mapping.venueId)
+          if (current?.fingerprint === mapping.cartFingerprint) {
+            barCartStore.getState().rotateSubmissionKey(mapping.venueId)
+          }
+        }
+      }
 
       if (data.state === 'approved' && data.nextUrl) {
-        const account = wantsAccount || rememberedAccount
+        const account = wantsAccount || mapping?.wantsAccount === true
         router.replace(
           `${data.nextUrl}${account && !data.nextUrl.includes('?') ? '?cuenta=1' : ''}`
         )
@@ -86,7 +109,7 @@ export function PaymentStateWatcher({
   const pending = !rejected && !checkoutUnavailable
 
   const retryCheckout = () => {
-    clearAttemptMapping(attemptId)
+    takeAttemptMapping(attemptId)
     window.location.assign(data?.nextUrl ?? '/sitios')
   }
 

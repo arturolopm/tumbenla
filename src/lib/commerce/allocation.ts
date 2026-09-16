@@ -17,6 +17,7 @@ export type AllocationUnitInput = {
   id: string
   ordinal: number
   grossMinor: MinorUnits
+  donationBasisPoints?: number
 }
 
 export type UnitAllocation = {
@@ -73,7 +74,7 @@ export const allocateWeighted = (
 export const allocateNetProceeds = (input: {
   units: readonly AllocationUnitInput[]
   deductions: readonly DeductionInput[]
-  donationBasisPoints: number
+  donationBasisPoints?: number
   evidenceScale?: number
 }): UnitAllocation[] => {
   const units = [...input.units].sort(byOrdinal)
@@ -96,7 +97,11 @@ export const allocateNetProceeds = (input: {
   return units.map((unit, index) => {
     const unitDeduction = perUnitDeductions[index]
     const netMinor = (unit.grossMinor - unitDeduction) as MinorUnits
-    const donationMinor = multiplyBasisPoints(netMinor, input.donationBasisPoints)
+    const donationBasisPoints = unit.donationBasisPoints ?? input.donationBasisPoints
+    if (donationBasisPoints === undefined) {
+      throw new Error('Every unit requires a donation percentage')
+    }
+    const donationMinor = multiplyBasisPoints(netMinor, donationBasisPoints)
     return {
       unitId: unit.id,
       ordinal: unit.ordinal,

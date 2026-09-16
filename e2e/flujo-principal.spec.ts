@@ -14,9 +14,9 @@ const PASSWORD = 'Prueba-2026-tumbenla'
 test.describe.configure({ mode: 'serial' })
 
 type OrderStatus = {
-  entregadas: number
-  total: number
-  unidades: { id: string; estado: string }[]
+  deliveredUnits: number
+  totalUnits: number
+  units: { id: string; status: string }[]
 }
 
 type AuthRole = 'operator' | 'ownerA' | 'ownerB' | 'staff'
@@ -257,7 +257,7 @@ test('personal history separates sandbox orders from real spend and donations', 
     await expect(nonRealTotals).toContainText('Reparto mostrado al pedir')
     await expect(nonRealTotals).toContainText('$ 24.000')
 
-    const order = page.getByRole('link', { name: /Mojito Reconstrucción/ })
+    const order = page.getByRole('link', { name: /Pedido en Bar La Nona/ })
     await expect(order).toContainText('Prueba')
     await expect(order).toContainText('Reparto mostrado al pedir: $ 24.000 para reconstruir')
   } finally {
@@ -289,7 +289,7 @@ test('operator can reach recovery controls in an isolated context', async ({ bro
   }
 })
 
-test('one guest order is issued and redeemed by staff in separate contexts', async ({
+test('one mixed app order uses one URL, QR, charge, and staff scan', async ({
   browser,
   page: guest,
 }, testInfo) => {
@@ -307,6 +307,9 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
       'href',
       '/sitios/bar-la-nona'
     )
+    await guest.getByRole('button', { name: 'Agregar Cerveza de la casa' }).click()
+    await expect(guest.getByLabel('1 unidades de Mojito Reconstrucción')).toBeVisible()
+    await expect(guest.getByLabel('1 unidades de Cerveza de la casa')).toBeVisible()
     await guest.getByLabel('Tu nombre').fill('Rumbero navegador')
     await guest
       .getByLabel('Tu correo')
@@ -314,8 +317,13 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await guest.getByRole('button', { name: /^Pagar / }).click()
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
     await expect(
-      guest.getByText('Ya está pagado. Que lo escaneen para entregártelo.')
+      guest.getByText('Ya está pagado. Un solo escaneo entrega todo el pedido.')
     ).toBeVisible()
+    await expect(guest.getByText('Mojito Reconstrucción')).toBeVisible()
+    await expect(guest.getByText('Cerveza de la casa')).toBeVisible()
+    await expect(
+      guest.locator('section[aria-label="Código único del pedido"] svg'),
+    ).toHaveCount(1)
     await expect(guest.getByRole('link', { name: 'Volver a Bar La Nona' })).toHaveAttribute(
       'href',
       '/sitios/bar-la-nona'
@@ -326,10 +334,10 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     if (!token) throw new Error('The guest order URL did not contain a bearer token')
 
     const initialStatus = await readOrderStatus(guest, token)
-    expect(initialStatus).toMatchObject({ entregadas: 0, total: 1 })
-    expect(initialStatus.unidades).toHaveLength(1)
-    expect(initialStatus.unidades[0]?.estado).toBe('issued')
-    const unitId = initialStatus.unidades[0]?.id
+    expect(initialStatus).toMatchObject({ deliveredUnits: 0, totalUnits: 2 })
+    expect(initialStatus.units).toHaveLength(2)
+    expect(initialStatus.units.every((unit) => unit.status === 'issued')).toBe(true)
+    const unitId = initialStatus.units[0]?.id
     if (!unitId) throw new Error('The order status did not expose its unit identity')
 
     const formattedCode = await guest.locator('p.font-mono').first().innerText()
@@ -340,7 +348,7 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
       async (response) => {
         if (!response.url().endsWith(`/api/orden/${token}/estado`) || !response.ok()) return false
         const status = (await response.json()) as OrderStatus
-        return status.unidades.some((unit) => unit.id === unitId && unit.estado === 'redeemed')
+        return status.units.some((unit) => unit.id === unitId && unit.status === 'redeemed')
       },
       { timeout: 15_000 }
     )
@@ -349,6 +357,8 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await staff.getByRole('button', { name: 'Buscar' }).click()
     await expect(staff.getByText('Ya pagado')).toBeVisible()
     await expect(staff.getByText(/No cobres nada\. Entrega/)).toBeVisible()
+    await expect(staff.getByText(/Mojito Reconstrucción/)).toBeVisible()
+    await expect(staff.getByText(/Cerveza de la casa/)).toBeVisible()
     await expect(
       staff.getByText('Orden registrada. En Tumbenla ya quedó todo listo.')
     ).toBeVisible()
@@ -362,7 +372,7 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
       .poll(
         async () => {
           const status = await readOrderStatus(guest, token)
-          return status.unidades.find((unit) => unit.id === unitId)?.estado
+          return status.units.find((unit) => unit.id === unitId)?.status
         },
         { message: 'the order status API should expose the redeemed unit', timeout: 10_000 }
       )
@@ -371,13 +381,13 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await guest.bringToFront()
     await guestObservedRedemption
     await expect(guest.getByText('Confirmado', { exact: true })).toBeVisible()
-    await expect(guest.getByText('El mesero preparará y te entregará tu pedido.')).toBeVisible()
+    await expect(guest.getByText('El bar ya recibió el pedido completo.')).toBeVisible()
   } finally {
     await staffContext.close()
   }
 })
 
-test('one QR fulfills a multi-unit bar order and tells staff the full amount', async ({
+test('one QR fulfills a mixed bar order and tells staff the full amount and lines', async ({
   browser,
   page: guest,
 }, testInfo) => {
@@ -388,34 +398,38 @@ test('one QR fulfills a multi-unit bar order and tells staff the full amount', a
     await expect(staff).toHaveURL(/\/panel\/bar-la-nona\/escanear$/)
 
     await guest.goto('/sitios/bar-la-nona/pedir/mojito-reconstruccion')
-    await guest.getByRole('button', { name: 'Uno más' }).click()
+    await guest.getByRole('button', { name: 'Agregar una unidad de Mojito Reconstrucción' }).click()
+    await guest.getByRole('button', { name: 'Agregar Cerveza de la casa' }).click()
     await guest.getByRole('button', { name: /^En la barra/ }).click()
     await guest.getByLabel('Tu nombre').fill('Rumbero barra')
     await guest
       .getByLabel('Tu correo')
       .fill(`rumbero-barra-e2e-${testInfo.repeatEachIndex}-${testInfo.retry}@prueba.local`)
-    await guest.getByRole('button', { name: /^Pedirlo/ }).click()
+    await guest.getByRole('button', { name: /^Pedir todo/ }).click()
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
-    await expect(guest.getByText('Muestra esto ANTES de pagar')).toBeVisible()
-    await expect(guest.locator('main ul svg')).toHaveCount(1)
+    await expect(guest.getByText('Muestra esto antes de pagar')).toBeVisible()
+    await expect(
+      guest.locator('section[aria-label="Código único del pedido"] svg'),
+    ).toHaveCount(1)
     await expect(guest.locator('footer')).toContainText(
-      'Del total de $ 60.000 del pedido: $ 48.000 se van en material. $ 12.000 se quedan en el sitio.'
+      'Del total de $ 68.000: $ 52.000 se van en material. $ 16.000 se quedan en el sitio.'
     )
 
     const token = /^\/orden\/([A-Za-z0-9_-]+)$/.exec(new URL(guest.url()).pathname)?.[1]
     if (!token) throw new Error('The cash order URL did not contain a bearer token')
     const initialStatus = await readOrderStatus(guest, token)
-    expect(initialStatus).toMatchObject({ entregadas: 0, total: 2 })
-    expect(initialStatus.unidades).toHaveLength(2)
-    expect(initialStatus.unidades.every((unit) => unit.estado === 'issued')).toBe(true)
+    expect(initialStatus).toMatchObject({ deliveredUnits: 0, totalUnits: 3 })
+    expect(initialStatus.units).toHaveLength(3)
+    expect(initialStatus.units.every((unit) => unit.status === 'issued')).toBe(true)
 
     const formattedCode = await guest.locator('p.font-mono').first().innerText()
     const redemptionCode = formattedCode.replace(/[^A-Z0-9]/g, '')
     await staff.getByLabel('O escríbelo').fill(redemptionCode)
     await staff.getByRole('button', { name: 'Buscar' }).click()
-    await expect(staff.getByText(/Cobra en la barra.*60\.000/)).toBeVisible()
+    await expect(staff.getByText(/Cobra en la barra.*68\.000/)).toBeVisible()
     await expect(staff.getByText(/Este pedido no está pagado\. Cobra el total aquí/)).toBeVisible()
-    await expect(staff.getByText(/2 unidades de Mojito Reconstrucción/)).toBeVisible()
+    await expect(staff.getByText(/2 × Mojito Reconstrucción/)).toBeVisible()
+    await expect(staff.getByText(/Cerveza de la casa/)).toBeVisible()
     await expect(
       staff.getByText('Orden registrada. En Tumbenla ya quedó todo listo.')
     ).toBeVisible()
@@ -425,11 +439,11 @@ test('one QR fulfills a multi-unit bar order and tells staff the full amount', a
       .poll(
         async () => {
           const status = await readOrderStatus(guest, token)
-          return status.unidades.map((unit) => unit.estado)
+          return status.units.map((unit) => unit.status)
         },
         { message: 'the cash order should be redeemed after staff scans it', timeout: 10_000 }
       )
-      .toEqual(['redeemed', 'redeemed'])
+      .toEqual(['redeemed', 'redeemed', 'redeemed'])
     await expect(guest.getByText('Confirmado', { exact: true })).toBeVisible()
   } finally {
     await staffContext.close()

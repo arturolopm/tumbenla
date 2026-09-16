@@ -3,14 +3,69 @@ import 'server-only'
 import { eq } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { productOrder, venue, venueProduct } from '@/database/schema'
-import { sendPedidoEmail } from '@/lib/messaging/email/mailer'
+import { customerOrder, productOrder, venue, venueProduct } from '@/database/schema'
+import { sendCustomerOrderEmail } from '@/lib/messaging/email/mailer'
 
 /** Email delivery is deliberately outside every payment transaction. */
 export const notifyApprovedOrder = async (input: {
   orderId: string
   codes: readonly string[]
 }): Promise<void> => {
+  const code = input.codes[0]
+  if (!code) return
+  const [anchor] = await db
+    .select({ customerOrderId: productOrder.customerOrderId })
+    .from(productOrder)
+    .where(eq(productOrder.id, input.orderId))
+    .limit(1)
+  if (!anchor) return
+
+  if (anchor.customerOrderId) {
+    const [order] = await db
+      .select({
+        buyerName: customerOrder.buyerName,
+        buyerEmail: customerOrder.buyerEmail,
+        totalAmount: customerOrder.totalAmount,
+        payMethod: customerOrder.payMethod,
+        publicToken: customerOrder.publicToken,
+        venueName: venue.name,
+      })
+      .from(customerOrder)
+      .innerJoin(venue, eq(customerOrder.venueId, venue.id))
+      .where(eq(customerOrder.id, anchor.customerOrderId))
+      .limit(1)
+    if (!order) return
+    const lines = await db
+      .select({
+        productName: venueProduct.name,
+        quantity: productOrder.quantity,
+        unitDonationAmount: productOrder.unitDonationAmount,
+      })
+      .from(productOrder)
+      .innerJoin(venueProduct, eq(productOrder.productId, venueProduct.id))
+      .where(eq(productOrder.customerOrderId, anchor.customerOrderId))
+      .orderBy(productOrder.lineOrdinal)
+
+    await sendCustomerOrderEmail({
+      to: order.buyerEmail,
+      buyerName: order.buyerName,
+      venueName: order.venueName,
+      lines: lines.map((line) => ({
+        productName: line.productName,
+        quantity: Number(line.quantity),
+      })),
+      total: Number(order.totalAmount),
+      donationAmount: lines.reduce(
+        (total, line) => total + Number(line.unitDonationAmount) * Number(line.quantity),
+        0
+      ),
+      payAtBar: order.payMethod === 'bar',
+      token: order.publicToken,
+      code,
+    })
+    return
+  }
+
   const [order] = await db
     .select({
       buyerName: productOrder.buyerName,
@@ -30,19 +85,15 @@ export const notifyApprovedOrder = async (input: {
     .limit(1)
 
   if (!order) return
-  await sendPedidoEmail({
+  await sendCustomerOrderEmail({
     to: order.buyerEmail,
-    compradorNombre: order.buyerName,
-    productoNombre: order.productName,
-    venueNombre: order.venueName,
-    cantidad: Number(order.quantity),
+    buyerName: order.buyerName,
+    venueName: order.venueName,
+    lines: [{ productName: order.productName, quantity: Number(order.quantity) }],
     total: Number(order.totalAmount),
-    material: Number(order.unitDonationAmount) * Number(order.quantity),
-    pagaEnBarra: order.payMethod === 'bar',
+    donationAmount: Number(order.unitDonationAmount) * Number(order.quantity),
+    payAtBar: order.payMethod === 'bar',
     token: order.publicToken,
-    // Unit codes remain separate internally for accounting and refunds. The
-    // buyer receives one canonical order code because one scan fulfills the
-    // whole order.
-    codigos: input.codes.slice(0, 1),
+    code,
   })
 }

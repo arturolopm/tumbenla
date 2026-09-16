@@ -12,7 +12,7 @@
  */
 import { and, eq } from 'drizzle-orm'
 
-import { confirmarPago } from '@/app/actions/pedidos'
+import { confirmPayment } from '@/app/actions/orders'
 import { db } from '@/database'
 import { ledgerTransaction, orderRedemption, productOrder, venueProduct } from '@/database/schema'
 import { generarToken } from '@/lib/venues/invitations'
@@ -59,8 +59,8 @@ const [order] = await db
 if (!order) throw new Error('Could not create the test order.')
 
 const [first, second] = await Promise.all([
-  confirmarPago(order.id, 'test', reference),
-  confirmarPago(order.id, 'test', reference),
+  confirmPayment(order.id, 'test', reference),
+  confirmPayment(order.id, 'test', reference),
 ])
 
 const [saved] = await db

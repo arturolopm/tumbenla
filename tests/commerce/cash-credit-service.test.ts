@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 
 import { AllocationService } from '../../src/lib/commerce/allocation-service'
-import { CashCreditService } from '../../src/lib/commerce/cash-credit-service'
+import {
+  CashCreditService,
+  type StartCustomerCashOrderInput,
+} from '../../src/lib/commerce/cash-credit-service'
+import { cartQuoteHash } from '../../src/lib/cart/cart-quote'
 import {
   DEFAULT_CASH_CREDIT_LIMIT_MINOR,
   CreditPolicyService,
@@ -206,6 +210,151 @@ const seedClearedAppAllocation = async (input: {
 }
 
 describe('CashCreditService', () => {
+  test('reserves one parent order using the summed mixed-line donation exposure', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedVenue('mixed-cart', { limitMinor: BigInt(190) })
+    const secondProductId = 'cash-product-mixed-cart-second'
+    const thirdProductId = 'cash-product-mixed-cart-third'
+    await database.sql`
+      update venue_product set price = 1.00 where id = ${fixture.productId}
+    `
+    await database.sql`
+      insert into venue_product
+        (id, venue_id, slug, name, kind, price, currency, donation_percentage, status)
+      values
+        (${secondProductId}, ${fixture.venueId}, ${secondProductId}, 'Segundo', 'cerveza',
+         1.00, 'COP', 40.00, 'published'),
+        (${thirdProductId}, ${fixture.venueId}, ${thirdProductId}, 'Tercero', 'coctel',
+         1.00, 'COP', 100.00, 'published')
+    `
+    const lines = [
+      { productId: fixture.productId, quantity: 1 },
+      { productId: secondProductId, quantity: 1 },
+      { productId: thirdProductId, quantity: 1 },
+    ]
+    const request: StartCustomerCashOrderInput = {
+      venueId: fixture.venueId,
+      lines,
+      buyerName: 'Persona caja',
+      buyerEmail: 'mixed-cart@example.test',
+      payMethod: 'bar',
+      submissionKey: 'cash_mixed_cart_xxxxxxxxxx',
+      quotedCartHash: await cartQuoteHash(
+        lines.map((line, index) => ({
+          venueId: fixture.venueId,
+          productId: line.productId,
+          quantity: line.quantity,
+          unitGrossMinor: 100,
+          donationBasisPoints: [5_000, 4_000, 10_000][index]!,
+          currency: 'COP',
+        }))
+      ),
+      userId: null,
+    }
+
+    const first = await createService(START).startOrder(request)
+    const retry = await createService(new Date(START.getTime() + 60_000)).startOrder(request)
+
+    expect(first).toMatchObject({ kind: 'reserved', duplicate: false })
+    expect(retry).toMatchObject({ kind: 'reserved', duplicate: true })
+    if (first.kind !== 'reserved' || retry.kind !== 'reserved') {
+      throw new Error('Expected a mixed cash reservation')
+    }
+    expect(retry.orderToken).toBe(first.orderToken)
+    expect(retry.codes).toEqual(first.codes)
+    const [created] = await database.sql<
+      {
+        parents: string
+        lines: string
+        units: string
+        reservations: string
+        exposureMinor: string
+      }[]
+    >`
+      select
+        count(distinct parent.id)::text as parents,
+        count(distinct line.id)::text as lines,
+        count(distinct unit.id)::text as units,
+        count(distinct reservation.id)::text as reservations,
+        sum(reservation.amount_minor)::text as "exposureMinor"
+      from customer_order parent
+      join product_order line on line.customer_order_id = parent.id
+      join commerce_order_snapshot snapshot on snapshot.order_id = line.id
+      join commerce_order_unit unit on unit.order_snapshot_id = snapshot.id
+      join credit_reservation reservation on reservation.unit_id = unit.id
+      where parent.public_token = ${first.orderToken}
+    `
+    expect(created).toEqual({
+      parents: '1',
+      lines: '3',
+      units: '3',
+      reservations: '3',
+      exposureMinor: '190',
+    })
+
+    const redemption = await new CommerceUnitService({
+      database: database.db,
+      now: () => START,
+    }).redeem({
+      code: first.codes[0]!,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:mixed-cart:all-lines',
+    })
+    expect(redemption).toMatchObject({
+      kind: 'redeemed',
+      duplicate: false,
+      quantity: 3,
+      fulfilledCount: 3,
+      redeemedCount: 3,
+      collectMinor: BigInt(300),
+      lines: [
+        { productName: 'Product mixed-cart', quantity: 1 },
+        { productName: 'Segundo', quantity: 1 },
+        { productName: 'Tercero', quantity: 1 },
+      ],
+    })
+    const duplicate = await new CommerceUnitService({
+      database: database.db,
+      now: () => START,
+    }).redeem({
+      code: first.codes[0]!,
+      expectedVenueId: fixture.venueId,
+      actorUserId: ACTOR_ID,
+      actorIsPlatform: false,
+      operationKey: 'redeem:mixed-cart:all-lines',
+    })
+    expect(duplicate).toMatchObject({
+      kind: 'redeemed',
+      duplicate: true,
+      collectMinor: BigInt(300),
+    })
+    const [redeemed] = await database.sql<
+      { parentStatus: string; paidLines: string; redeemedUnits: string; debts: string }[]
+    >`
+      select
+        parent.status as "parentStatus",
+        count(distinct line.id) filter (where line.status = 'paid')::text as "paidLines",
+        count(distinct unit.id) filter (where unit.lifecycle_status = 'redeemed')::text
+          as "redeemedUnits",
+        count(distinct debt.id)::text as debts
+      from customer_order parent
+      join product_order line on line.customer_order_id = parent.id
+      join commerce_order_snapshot snapshot on snapshot.order_id = line.id
+      join commerce_order_unit unit on unit.order_snapshot_id = snapshot.id
+      left join credit_debt debt on debt.unit_id = unit.id
+      where parent.public_token = ${first.orderToken}
+      group by parent.status
+    `
+    expect(redeemed).toEqual({
+      parentStatus: 'paid',
+      paidLines: '3',
+      redeemedUnits: '3',
+      debts: '3',
+    })
+  }, 30_000)
+
   test('starts every venue with an audited COP 500,000 cash credit policy', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const fixture = await seedVenue('automatic-default')

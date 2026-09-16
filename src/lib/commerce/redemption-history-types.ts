@@ -1,8 +1,8 @@
 export type RecentVenueOrder = {
   id: string
-  productName: string
+  lines: readonly { productName: string; quantity: number }[]
   buyerName: string
-  quantity: number
+  totalUnits: number
   chargeAtBar: number | null
   redeemedAt: string
 }

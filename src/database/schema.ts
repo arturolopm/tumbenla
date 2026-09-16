@@ -1,5 +1,15 @@
 import { relations, sql } from 'drizzle-orm'
-import { boolean, check, decimal, index, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  check,
+  decimal,
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+} from 'drizzle-orm/pg-core'
 
 import { ID_PREFIX, createId } from '@/lib/utils/id'
 
@@ -1112,7 +1122,54 @@ export const venueProduct = pgTable(
 )
 
 /**
- * One purchase.
+ * The customer-facing order and its single payment/delivery boundary.
+ *
+ * A customer order belongs to one venue and can contain multiple product lines.
+ * It owns the public bearer URL, aggregate money state, and payment method. The
+ * line table below keeps frozen product promises and unit lifecycle boundaries.
+ */
+export const customerOrder = pgTable(
+  'customer_order',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.customerOrder)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'restrict' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    buyerName: text('buyer_name').notNull(),
+    buyerEmail: text('buyer_email').notNull(),
+    totalUnits: integer('total_units').notNull(),
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    publicToken: text('public_token').notNull(),
+    payMethod: text('pay_method').notNull(),
+    status: text('status').default('pending').notNull(),
+    provider: text('provider'),
+    providerReference: text('provider_reference'),
+    paidAt: timestamp('paid_at'),
+    expiresAt: timestamp('expires_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('customer_order_venueId_idx').on(table.venueId),
+    index('customer_order_userId_idx').on(table.userId),
+    index('customer_order_status_idx').on(table.status),
+    index('customer_order_createdAt_idx').on(table.createdAt),
+    uniqueIndex('customer_order_providerReference_key').on(table.providerReference),
+    uniqueIndex('customer_order_publicToken_key').on(table.publicToken),
+    check('customer_order_total_units_check', sql`${table.totalUnits} between 1 and 20`),
+    check('customer_order_total_amount_check', sql`${table.totalAmount} > 0`),
+  ]
+)
+
+/**
+ * One frozen product line in a customer order.
  *
  * THE FIVE MONEY COLUMNS ARE A SNAPSHOT, not a join. If the venue changes the
  * price or the split tomorrow, this row keeps what the buyer was actually shown
@@ -1135,6 +1192,11 @@ export const productOrder = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId(ID_PREFIX.productOrder)),
+    /** Nullable only for rolling deploy compatibility. New writes always set both fields. */
+    customerOrderId: text('customer_order_id').references(() => customerOrder.id, {
+      onDelete: 'restrict',
+    }),
+    lineOrdinal: integer('line_ordinal'),
     productId: text('product_id')
       .notNull()
       .references(() => venueProduct.id, { onDelete: 'restrict' }),
@@ -1200,6 +1262,11 @@ export const productOrder = pgTable(
       .notNull(),
   },
   (table) => [
+    uniqueIndex('product_order_customerOrderId_lineOrdinal_key').on(
+      table.customerOrderId,
+      table.lineOrdinal
+    ),
+    index('product_order_customerOrderId_idx').on(table.customerOrderId),
     index('product_order_venueId_idx').on(table.venueId),
     index('product_order_productId_idx').on(table.productId),
     index('product_order_userId_idx').on(table.userId),
@@ -1209,6 +1276,10 @@ export const productOrder = pgTable(
      *  webhook this schema deliberately does not reuse. */
     uniqueIndex('product_order_providerReference_key').on(table.providerReference),
     uniqueIndex('product_order_publicToken_key').on(table.publicToken),
+    check(
+      'product_order_customer_order_binding_check',
+      sql`(${table.customerOrderId} is null and ${table.lineOrdinal} is null) or (${table.customerOrderId} is not null and ${table.lineOrdinal} > 0)`
+    ),
   ]
 )
 
@@ -1464,7 +1535,23 @@ export const venueProductRelations = relations(venueProduct, ({ one, many }) => 
   orders: many(productOrder),
 }))
 
+export const customerOrderRelations = relations(customerOrder, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [customerOrder.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [customerOrder.userId],
+    references: [user.id],
+  }),
+  lines: many(productOrder),
+}))
+
 export const productOrderRelations = relations(productOrder, ({ one, many }) => ({
+  customerOrder: one(customerOrder, {
+    fields: [productOrder.customerOrderId],
+    references: [customerOrder.id],
+  }),
   product: one(venueProduct, {
     fields: [productOrder.productId],
     references: [venueProduct.id],

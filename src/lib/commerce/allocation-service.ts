@@ -60,6 +60,7 @@ type AllocationContext = Readonly<{
   chargeStatus: string
   chargeGrossMinor: bigint
   chargeCurrency: string
+  customerOrderId: string | null
   snapshotId: string
   policyId: string | null
   foundationBeneficiaryId: string | null
@@ -70,7 +71,8 @@ type AllocationContext = Readonly<{
 
 type PersistedUnitAllocation = Readonly<{
   unitId: string
-  ordinal: number
+  lineOrdinal: number | null
+  unitOrdinal: number
   grossMinor: bigint
   deductionMinor: bigint
   netMinor: bigint
@@ -125,15 +127,30 @@ const inputDigest = (input: ReconcileChargeInput, deductions: readonly Reconcile
     })),
   })
 
-const toUnitAllocation = (row: PersistedUnitAllocation): UnitAllocation => ({
+const toUnitAllocation = (row: PersistedUnitAllocation, ordinal: number): UnitAllocation => ({
   unitId: row.unitId,
-  ordinal: row.ordinal,
+  ordinal,
   grossMinor: row.grossMinor as MinorUnits,
   deductionMinor: row.deductionMinor as MinorUnits,
   netMinor: row.netMinor as MinorUnits,
   donationMinor: row.donationMinor as MinorUnits,
   venueMinor: row.venueMinor as MinorUnits,
 })
+
+type AllocationUnitContext = Readonly<{
+  id: string
+  ordinal: number
+  lineOrdinal: number | null
+  unitOrdinal: number
+  grossMinor: bigint
+  lifecycleStatus: string
+  snapshotId: string
+  policyId: string | null
+  foundationBeneficiaryId: string | null
+  donationBasisPoints: number
+  venueId: string
+  fundingClassification: string
+}>
 
 export class AllocationService {
   readonly #database: CommerceDatabase
@@ -199,19 +216,23 @@ export class AllocationService {
         }
       }
 
-      const units = await transaction
-        .select({
-          id: commerceOrderUnit.id,
-          ordinal: commerceOrderUnit.ordinal,
-          grossMinor: commerceOrderUnit.grossMinor,
-          lifecycleStatus: commerceOrderUnit.lifecycleStatus,
-        })
-        .from(commerceOrderUnit)
-        .where(eq(commerceOrderUnit.orderSnapshotId, context.snapshotId))
-        .orderBy(commerceOrderUnit.ordinal)
-        .for('update')
+      const units = await this.#loadUnits(transaction, context)
       if (units.length === 0) throw new Error('The immutable order has no units')
+      if (
+        units.some(
+          (unit) =>
+            unit.policyId !== context.policyId ||
+            unit.foundationBeneficiaryId !== context.foundationBeneficiaryId ||
+            unit.venueId !== context.venueId ||
+            unit.fundingClassification !== context.fundingClassification
+        )
+      ) {
+        throw new Error('Customer order lines do not share immutable allocation bindings')
+      }
 
+      const orderBinding = context.customerOrderId
+        ? eq(allocationRun.customerOrderId, context.customerOrderId)
+        : eq(allocationRun.orderSnapshotId, context.snapshotId)
       const [previousRun] = await transaction
         .select({
           id: allocationRun.id,
@@ -221,12 +242,7 @@ export class AllocationService {
           netMinor: allocationRun.netMinor,
         })
         .from(allocationRun)
-        .where(
-          and(
-            eq(allocationRun.orderSnapshotId, context.snapshotId),
-            eq(allocationRun.status, 'final')
-          )
-        )
+        .where(and(orderBinding, eq(allocationRun.status, 'final')))
         .orderBy(desc(allocationRun.revision))
         .limit(1)
         .for('update')
@@ -239,13 +255,13 @@ export class AllocationService {
           id: unit.id,
           ordinal: unit.ordinal,
           grossMinor: unit.grossMinor as MinorUnits,
+          donationBasisPoints: unit.donationBasisPoints,
         })),
         deductions: deductions.map((line) => ({
           amount: decimalString(line.amount),
           kind: line.kind,
           finality: line.finality,
         })),
-        donationBasisPoints: context.donationBasisPoints,
       })
       const grossMinor = allocations.reduce((sum, unit) => sum + unit.grossMinor, BigInt(0))
       const deductionMinor = allocations.reduce((sum, unit) => sum + unit.deductionMinor, BigInt(0))
@@ -259,6 +275,7 @@ export class AllocationService {
       await transaction.insert(allocationRun).values({
         id: runId,
         orderSnapshotId: context.snapshotId,
+        customerOrderId: context.customerOrderId,
         chargeId: context.chargeId,
         policyId: context.policyId,
         revision,
@@ -330,7 +347,8 @@ export class AllocationService {
           runId,
           allocation,
           previous: previousByUnit.get(unit.id),
-          snapshotId: context.snapshotId,
+          customerOrderId: context.customerOrderId,
+          snapshotId: unit.snapshotId,
           foundationBeneficiaryId: context.foundationBeneficiaryId,
           venueId: context.venueId,
           chargeId: context.chargeId,
@@ -357,6 +375,39 @@ export class AllocationService {
     })
   }
 
+  async #loadUnits(
+    transaction: FinanceTransactionConnection,
+    context: AllocationContext
+  ): Promise<AllocationUnitContext[]> {
+    const binding = context.customerOrderId
+      ? eq(productOrder.customerOrderId, context.customerOrderId)
+      : eq(commerceOrderUnit.orderSnapshotId, context.snapshotId)
+    const rows = await transaction
+      .select({
+        id: commerceOrderUnit.id,
+        lineOrdinal: productOrder.lineOrdinal,
+        unitOrdinal: commerceOrderUnit.ordinal,
+        grossMinor: commerceOrderUnit.grossMinor,
+        lifecycleStatus: commerceOrderUnit.lifecycleStatus,
+        snapshotId: commerceOrderSnapshot.id,
+        policyId: commerceOrderSnapshot.allocationPolicyId,
+        foundationBeneficiaryId: commerceOrderSnapshot.foundationBeneficiaryId,
+        donationBasisPoints: commerceOrderSnapshot.donationBasisPoints,
+        venueId: productOrder.venueId,
+        fundingClassification: commerceOrderSnapshot.fundingClassification,
+      })
+      .from(commerceOrderUnit)
+      .innerJoin(
+        commerceOrderSnapshot,
+        eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+      )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
+      .where(binding)
+      .orderBy(productOrder.lineOrdinal, commerceOrderUnit.ordinal)
+      .for('update')
+    return rows.map((row, index) => ({ ...row, ordinal: index + 1 }))
+  }
+
   async #loadContext(
     transaction: FinanceTransactionConnection,
     chargeId: string
@@ -370,6 +421,7 @@ export class AllocationService {
         chargeStatus: paymentCharge.status,
         chargeGrossMinor: paymentCharge.grossMinor,
         chargeCurrency: paymentCharge.currency,
+        customerOrderId: paymentAttempt.customerOrderId,
         snapshotId: commerceOrderSnapshot.id,
         policyId: commerceOrderSnapshot.allocationPolicyId,
         foundationBeneficiaryId: commerceOrderSnapshot.foundationBeneficiaryId,
@@ -397,7 +449,8 @@ export class AllocationService {
     const rows = await transaction
       .select({
         unitId: unitAllocation.unitId,
-        ordinal: commerceOrderUnit.ordinal,
+        lineOrdinal: productOrder.lineOrdinal,
+        unitOrdinal: commerceOrderUnit.ordinal,
         grossMinor: unitAllocation.grossMinor,
         deductionMinor: unitAllocation.deductionMinor,
         netMinor: unitAllocation.netMinor,
@@ -407,9 +460,14 @@ export class AllocationService {
       })
       .from(unitAllocation)
       .innerJoin(commerceOrderUnit, eq(unitAllocation.unitId, commerceOrderUnit.id))
+      .innerJoin(
+        commerceOrderSnapshot,
+        eq(commerceOrderUnit.orderSnapshotId, commerceOrderSnapshot.id)
+      )
+      .innerJoin(productOrder, eq(commerceOrderSnapshot.orderId, productOrder.id))
       .where(eq(unitAllocation.allocationRunId, runId))
-      .orderBy(commerceOrderUnit.ordinal)
-    return rows.map(toUnitAllocation)
+      .orderBy(productOrder.lineOrdinal, commerceOrderUnit.ordinal)
+    return rows.map((row, index) => toUnitAllocation(row, index + 1))
   }
 
   async #postClearing(
@@ -456,6 +514,7 @@ export class AllocationService {
         kind: 'charge_cleared',
         currency: 'COP',
         orderSnapshotId: input.context.snapshotId,
+        customerOrderId: input.context.customerOrderId ?? undefined,
         createdByUserId: input.createdByUserId,
         entries: [
           { accountId: receivable, amountMinor: -input.grossMinor },
@@ -475,6 +534,7 @@ export class AllocationService {
       kind: 'charge_clearing_adjustment',
       currency: 'COP',
       orderSnapshotId: input.context.snapshotId,
+      customerOrderId: input.context.customerOrderId ?? undefined,
       createdByUserId: input.createdByUserId,
       entries: [
         { accountId: cash, amountMinor: cashDelta },
@@ -491,6 +551,7 @@ export const postUnitDistribution = async (
     runId: string
     allocation: UnitAllocation
     previous?: UnitAllocation
+    customerOrderId?: string | null
     snapshotId: string
     foundationBeneficiaryId: string
     venueId: string
@@ -523,7 +584,7 @@ export const postUnitDistribution = async (
   if (!input.previous) {
     const held = await ensureFinanceAccount(transaction, {
       kind: 'customer_funds_held',
-      ownerKey: input.snapshotId,
+      ownerKey: input.customerOrderId ?? input.snapshotId,
       currency: 'COP',
       fundingClassification: input.classification,
     })
@@ -532,6 +593,7 @@ export const postUnitDistribution = async (
       kind: 'unit_distribution',
       currency: 'COP',
       orderSnapshotId: input.snapshotId,
+      customerOrderId: input.customerOrderId ?? undefined,
       createdByUserId: input.createdByUserId,
       entries: [
         { accountId: held, amountMinor: input.allocation.grossMinor },
@@ -555,6 +617,7 @@ export const postUnitDistribution = async (
     kind: 'unit_distribution_adjustment',
     currency: 'COP',
     orderSnapshotId: input.snapshotId,
+    customerOrderId: input.customerOrderId ?? undefined,
     createdByUserId: input.createdByUserId,
     entries: [
       { accountId: foundation, amountMinor: -foundationDelta },

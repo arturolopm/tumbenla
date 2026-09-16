@@ -59,6 +59,7 @@ export const postFinanceTransaction = async (
     kind: string
     currency: 'COP'
     orderSnapshotId?: string
+    customerOrderId?: string
     operationId?: string
     reversalOfId?: string
     createdByUserId?: string
@@ -76,6 +77,7 @@ export const postFinanceTransaction = async (
     kind: input.kind,
     currency: input.currency,
     orderSnapshotId: input.orderSnapshotId ?? null,
+    customerOrderId: input.customerOrderId ?? null,
     operationId: input.operationId ?? null,
     reversalOfId: input.reversalOfId ?? null,
     createdByUserId: input.createdByUserId ?? null,
@@ -97,6 +99,7 @@ export const postFinanceTransaction = async (
       currency: input.currency,
       status: 'draft',
       orderSnapshotId: input.orderSnapshotId,
+      customerOrderId: input.customerOrderId,
       operationId: input.operationId,
       reversalOfId: input.reversalOfId,
       createdByUserId: input.createdByUserId,

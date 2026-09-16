@@ -14,7 +14,14 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/pg-core'
 
-import { materialPurchase, orderRedemption, productOrder, user, venue } from './schema'
+import {
+  customerOrder,
+  materialPurchase,
+  orderRedemption,
+  productOrder,
+  user,
+  venue,
+} from './schema'
 import { createId } from '@/lib/utils/id'
 
 const money = (name: string) => bigint(name, { mode: 'bigint' })
@@ -241,9 +248,12 @@ export const paymentAttempt = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId('pat')),
-    orderSnapshotId: text('order_snapshot_id')
-      .notNull()
-      .references(() => commerceOrderSnapshot.id, { onDelete: 'restrict' }),
+    orderSnapshotId: text('order_snapshot_id').references(() => commerceOrderSnapshot.id, {
+      onDelete: 'restrict',
+    }),
+    customerOrderId: text('customer_order_id').references(() => customerOrder.id, {
+      onDelete: 'restrict',
+    }),
     submissionKey: text('submission_key').notNull(),
     requestHash: text('request_hash').notNull(),
     provider: text('provider').notNull(),
@@ -267,6 +277,11 @@ export const paymentAttempt = pgTable(
       table.providerAttemptReference
     ),
     index('payment_attempt_status_idx').on(table.status),
+    index('payment_attempt_customer_order_idx').on(table.customerOrderId),
+    check(
+      'payment_attempt_order_binding_check',
+      sql`${table.customerOrderId} is not null or ${table.orderSnapshotId} is not null`
+    ),
     check('payment_attempt_environment_check', sql`${table.environment} in ('test', 'live')`),
     check(
       'payment_attempt_status_check',
@@ -405,9 +420,12 @@ export const allocationRun = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId('alr')),
-    orderSnapshotId: text('order_snapshot_id')
-      .notNull()
-      .references(() => commerceOrderSnapshot.id, { onDelete: 'restrict' }),
+    orderSnapshotId: text('order_snapshot_id').references(() => commerceOrderSnapshot.id, {
+      onDelete: 'restrict',
+    }),
+    customerOrderId: text('customer_order_id').references(() => customerOrder.id, {
+      onDelete: 'restrict',
+    }),
     chargeId: text('charge_id')
       .notNull()
       .references(() => paymentCharge.id, { onDelete: 'restrict' }),
@@ -427,6 +445,15 @@ export const allocationRun = pgTable(
   (table) => [
     uniqueIndex('allocation_run_operation_key').on(table.operationKey),
     uniqueIndex('allocation_run_order_revision_key').on(table.orderSnapshotId, table.revision),
+    uniqueIndex('allocation_run_customer_order_revision_key').on(
+      table.customerOrderId,
+      table.revision
+    ),
+    index('allocation_run_customer_order_idx').on(table.customerOrderId),
+    check(
+      'allocation_run_order_binding_check',
+      sql`${table.customerOrderId} is not null or ${table.orderSnapshotId} is not null`
+    ),
     check('allocation_run_revision_check', sql`${table.revision} > 0`),
     check(
       'allocation_run_amounts_check',
@@ -509,6 +536,9 @@ export const financeTransaction = pgTable(
     orderSnapshotId: text('order_snapshot_id').references(() => commerceOrderSnapshot.id, {
       onDelete: 'restrict',
     }),
+    customerOrderId: text('customer_order_id').references(() => customerOrder.id, {
+      onDelete: 'restrict',
+    }),
     operationId: text('operation_id'),
     reversalOfId: text('reversal_of_id'),
     createdByUserId: text('created_by_user_id').references(() => user.id, {
@@ -520,6 +550,7 @@ export const financeTransaction = pgTable(
   (table) => [
     uniqueIndex('finance_transaction_operation_key').on(table.operationKey),
     index('finance_transaction_order_idx').on(table.orderSnapshotId),
+    index('finance_transaction_customer_order_idx').on(table.customerOrderId),
     check(
       'finance_transaction_status_check',
       sql`${table.status} in ('draft', 'posted', 'reversed')`

@@ -24,6 +24,7 @@ export const ID_PREFIX = {
   venueContribution: 'vco',
   venueContributionMedia: 'vcm',
   venueProduct: 'vpr',
+  customerOrder: 'cor',
   productOrder: 'ord',
   orderRedemption: 'red',
   ledgerAccount: 'lac',

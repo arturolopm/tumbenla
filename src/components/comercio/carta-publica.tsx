@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { ContinueOrderLink } from '@/components/commerce/continue-order-link'
 import {
   KIND_LABEL,
   PORCENTAJE_DESTACADO_DE_RECONSTRUCCION,
@@ -32,19 +33,28 @@ type Producto = {
   imagenUrl: string | null
 }
 
-export function CartaPublica({ slug, productos }: { slug: string; productos: Producto[] }) {
+export function CartaPublica({
+  venueId,
+  slug,
+  productos,
+}: {
+  venueId: string
+  slug: string
+  productos: Producto[]
+}) {
   return (
     <section className='mt-10'>
       <h2 className='font-display font-extrabold text-headline-md uppercase'>Pide y suma</h2>
       <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
         Sale como cualquier trago de la carta. La diferencia está escrita abajo de cada uno.
       </p>
+      <ContinueOrderLink venueId={venueId} venueSlug={slug} />
 
       <ul className='mt-6 grid gap-4 sm:grid-cols-2'>
         {productos.map((p) => (
           <li key={p.id}>
             <Link
-              href={`/sitios/${slug}/pedir/${p.slug}`}
+              href={`/sitios/${slug}/pedir?producto=${encodeURIComponent(p.slug)}`}
               className='group flex h-full flex-col rounded-xl border-2 border-border bg-card p-5 transition-colors hover:border-party'
             >
               {p.imagenUrl ? (
