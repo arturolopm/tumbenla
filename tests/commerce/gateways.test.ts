@@ -211,6 +211,28 @@ describe('ePayco checkout session creation', () => {
     expect(
       await createGateway(rejectedSessionWithOkStatus.fetch).createCheckout(CHECKOUT_REQUEST)
     ).toEqual({ kind: 'rejected', reason: 'provider-rejected' })
+
+    const amountLimitedSession = createQueuedFetch([
+      jsonResponse({ token: 'apify-token-placeholder' }),
+      jsonResponse({
+        success: false,
+        data: {
+          errors: [
+            {
+              codError: 400,
+              errorMessage: '[VALIDATION_ERROR] - property Amount must be between 5000 and 200000',
+            },
+          ],
+          totalErrors: 1,
+        },
+      }),
+    ])
+    expect(
+      await createGateway(amountLimitedSession.fetch).createCheckout(CHECKOUT_REQUEST)
+    ).toEqual({
+      kind: 'rejected',
+      reason: 'provider-amount-limit',
+    })
   })
 
   test('treats malformed success payloads and provider errors as uncertain', async () => {

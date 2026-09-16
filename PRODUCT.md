@@ -357,6 +357,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     compra de material verificada son hechos distintos. Abrir la cuenta comercial,
     contratar, ejecutar transferencias reales y desplegar siguen bloqueados por
     compuertas externas. El detalle vive en `docs/payment-provider-decision-brief.md`.
+    **Tumbenla no impone un tope monetario al pedido.** Un limite que ePayco aplique
+    por estado o configuracion de la cuenta es una compuerta del proveedor, no una
+    regla de la carta: se muestra como tal y se resuelve con ePayco, no rechazando
+    botellas de COP 700.000 en nuestro dominio. Si ePayco rechaza antes de crear la
+    sesion, el siguiente intento usa una idempotencia nueva. Si la sesion ya existe,
+    se vuelve a abrir esa misma sesion en vez de crear dos cobros que sigan pagables.
 38. **Cada sitio publicado arranca con COP 500.000 de cupo para cobrar en la
     barra; Operación lo puede bajar hasta cero.** El cupo cubre la obligación
     congelada del aporte, no el bruto completo de la venta. La primera orden de

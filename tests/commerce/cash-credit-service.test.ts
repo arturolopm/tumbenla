@@ -313,6 +313,33 @@ describe('CashCreditService', () => {
     expect(counts).toEqual({ orders: '1', units: '2', reservations: '2' })
   }, 30_000)
 
+  test('accepts a COP 900,000 bar order when its donation obligation fits the cupo', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const fixture = await seedVenue('large-gross')
+    await database.sql`
+      update venue_product set price = 300000.00 where id = ${fixture.productId}
+    `
+
+    const result = await createService(START).startOrder(input('large-gross', fixture.productId, 3))
+
+    expect(result).toMatchObject({ kind: 'reserved', duplicate: false })
+    const [order] = await database.sql<{ total_amount: string; reserved_donation_minor: string }[]>`
+      select
+        o.total_amount::text,
+        coalesce(sum(r.amount_minor), 0)::text as reserved_donation_minor
+      from product_order o
+      join commerce_order_snapshot s on s.order_id = o.id
+      join commerce_order_unit u on u.order_snapshot_id = s.id
+      join credit_reservation r on r.unit_id = u.id
+      where o.product_id = ${fixture.productId}
+      group by o.id
+    `
+    expect(order).toEqual({
+      total_amount: '900000.00',
+      reserved_donation_minor: '45000000',
+    })
+  }, 30_000)
+
   test('rejects conflicting submission-key reuse', async () => {
     const fixture = await seedVenue('idempotency-conflict', { limitMinor: BigInt(20_000) })
     const service = createService(START)

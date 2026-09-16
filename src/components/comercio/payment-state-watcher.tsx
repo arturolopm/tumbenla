@@ -10,6 +10,27 @@ import { Spinner } from '@/components/ui/spinner'
 type PaymentState = {
   state: 'checkout' | 'pending' | 'approved' | 'rejected' | 'checkout-unavailable'
   nextUrl?: string
+  reason?: string
+}
+
+const clearAttemptMapping = (attemptId: string): boolean => {
+  const mappingKey = `tumbenla:payment-attempt:${attemptId}`
+  const serialized = sessionStorage.getItem(mappingKey)
+  let rememberedAccount = false
+  if (serialized) {
+    try {
+      const mapping = JSON.parse(serialized) as {
+        storageKey?: unknown
+        wantsAccount?: unknown
+      }
+      if (typeof mapping.storageKey === 'string') sessionStorage.removeItem(mapping.storageKey)
+      rememberedAccount = mapping.wantsAccount === true
+    } catch {
+      // A malformed browser-local value is ignored and removed below.
+    }
+  }
+  sessionStorage.removeItem(mappingKey)
+  return rememberedAccount
 }
 
 const readState = async (url: string): Promise<PaymentState> => {
@@ -39,23 +60,12 @@ export function PaymentStateWatcher({
   })
 
   useEffect(() => {
-    if (data?.state === 'approved' || data?.state === 'rejected') {
-      const mappingKey = `tumbenla:payment-attempt:${attemptId}`
-      const serialized = sessionStorage.getItem(mappingKey)
-      let rememberedAccount = false
-      if (serialized) {
-        try {
-          const mapping = JSON.parse(serialized) as {
-            storageKey?: unknown
-            wantsAccount?: unknown
-          }
-          if (typeof mapping.storageKey === 'string') sessionStorage.removeItem(mapping.storageKey)
-          rememberedAccount = mapping.wantsAccount === true
-        } catch {
-          // A malformed browser-local value is ignored and removed below.
-        }
-      }
-      sessionStorage.removeItem(mappingKey)
+    if (
+      data?.state === 'approved' ||
+      data?.state === 'rejected' ||
+      data?.state === 'checkout-unavailable'
+    ) {
+      const rememberedAccount = clearAttemptMapping(attemptId)
 
       if (data.state === 'approved' && data.nextUrl) {
         const account = wantsAccount || rememberedAccount
@@ -72,20 +82,11 @@ export function PaymentStateWatcher({
 
   const rejected = data?.state === 'rejected'
   const checkoutUnavailable = data?.state === 'checkout-unavailable'
+  const providerAmountLimit = checkoutUnavailable && data.reason === 'provider-amount-limit'
   const pending = !rejected && !checkoutUnavailable
 
   const retryCheckout = () => {
-    const mappingKey = `tumbenla:payment-attempt:${attemptId}`
-    const serialized = sessionStorage.getItem(mappingKey)
-    if (serialized) {
-      try {
-        const mapping = JSON.parse(serialized) as { storageKey?: unknown }
-        if (typeof mapping.storageKey === 'string') sessionStorage.removeItem(mapping.storageKey)
-      } catch {
-        // A malformed browser-local value is ignored and removed below.
-      }
-    }
-    sessionStorage.removeItem(mappingKey)
+    clearAttemptMapping(attemptId)
     window.location.assign(data?.nextUrl ?? '/sitios')
   }
 
@@ -103,11 +104,13 @@ export function PaymentStateWatcher({
             : 'Estamos verificando'}
       </h1>
       <p role='status' aria-live='polite' className='text-body-lg text-muted-foreground'>
-        {checkoutUnavailable
-          ? 'No recibimos una sesión de pago y no se inició ningún cobro. Vuelve al producto para intentarlo de nuevo.'
-          : rejected
-            ? 'No habilitamos ningún código. Puedes volver a la carta e iniciar un pedido nuevo.'
-            : 'Tu código aparecerá solo cuando ePayco confirme el cobro directamente. Un PSE pendiente puede tardar un poco.'}
+        {providerAmountLimit
+          ? 'ePayco rechazó este total por un límite actual de la cuenta de pagos. Tumbenla no limita el valor de tu pedido y no se inició ningún cobro. Vuelve al producto para elegir otro medio de pago.'
+          : checkoutUnavailable
+            ? 'No recibimos una sesión de pago y no se inició ningún cobro. Vuelve al producto para intentarlo de nuevo.'
+            : rejected
+              ? 'No habilitamos ningún código. Puedes volver a la carta e iniciar un pedido nuevo.'
+              : 'Tu código aparecerá solo cuando ePayco confirme el cobro directamente. Un PSE pendiente puede tardar un poco.'}
       </p>
       {error && pending ? (
         <p className='text-body-md text-muted-foreground'>
@@ -120,7 +123,7 @@ export function PaymentStateWatcher({
           onClick={retryCheckout}
           className='rounded-xl bg-primary px-6 py-4 font-display text-label-lg text-primary-foreground uppercase'
         >
-          Volver e intentar de nuevo
+          {providerAmountLimit ? 'Volver y elegir cómo pagar' : 'Volver e intentar de nuevo'}
         </button>
       ) : pending ? (
         <button

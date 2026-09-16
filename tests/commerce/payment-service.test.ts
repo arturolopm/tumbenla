@@ -232,6 +232,27 @@ describe('CommercePaymentService checkout idempotency', () => {
     expect(counts).toEqual({ orders: '1', snapshots: '1', attempts: '1', units: '2' })
   }, 30_000)
 
+  test('reopens a hosted session that legacy recovery escalated without a transaction reference', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const productId = await seedProduct('resume-escalated')
+    const gateway = new TestCollectionGateway()
+    const service = createService(gateway)
+    const input = paymentInput('resume-escalated', productId, 1)
+
+    const first = expectCheckout(await service.startPayment(input))
+    await database.sql`
+      update payment_attempt
+      set status = 'operator_review', outcome_detail = 'missing-provider-reference'
+      where id = ${first.attemptId}
+    `
+
+    const resumed = expectCheckout(await service.startPayment(input))
+
+    expect(resumed.attemptId).toBe(first.attemptId)
+    expect(resumed.launch.sessionId).toBe(first.launch.sessionId)
+    expect(gateway.createCalls).toBe(1)
+  }, 30_000)
+
   test('lets only one concurrent caller contact the provider', async () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const productId = await seedProduct('concurrent')
@@ -310,7 +331,10 @@ describe('CommercePaymentService checkout idempotency', () => {
     if (!database) throw new Error('Commerce test database was not initialized')
     const productId = await seedProduct('session-rejected')
     const gateway = new TestCollectionGateway()
-    gateway.createBehavior = async () => ({ kind: 'rejected', reason: 'provider-rejected' })
+    gateway.createBehavior = async () => ({
+      kind: 'rejected',
+      reason: 'provider-amount-limit',
+    })
     const service = createService(gateway)
     const input = paymentInput('session-rejected', productId)
 
@@ -320,16 +344,20 @@ describe('CommercePaymentService checkout idempotency', () => {
     expect(first).toMatchObject({
       kind: 'checkout-unavailable',
       retryUrl: '/sitios/venue-session-rejected/pedir/product-session-rejected',
+      reason: 'provider-amount-limit',
     })
     expect(retry).toMatchObject({
       kind: 'checkout-unavailable',
       retryUrl: '/sitios/venue-session-rejected/pedir/product-session-rejected',
+      reason: 'provider-amount-limit',
     })
     expect(gateway.createCalls).toBe(1)
-    const [attempt] = await database.sql<{ status: string }[]>`
-      select status from payment_attempt where submission_key = ${input.submissionKey}
+    const [attempt] = await database.sql<{ status: string; outcome_detail: string }[]>`
+      select status, outcome_detail from payment_attempt
+      where submission_key = ${input.submissionKey}
     `
     expect(attempt?.status).toBe('declined')
+    expect(attempt?.outcome_detail).toBe('provider-amount-limit')
   }, 30_000)
 
   test('creates a distinct order and checkout for a genuine second purchase', async () => {
@@ -359,6 +387,30 @@ describe('CommercePaymentService checkout idempotency', () => {
       where o.product_id = ${productId}
     `
     expect(counts).toEqual({ orders: '2', attempts: '2' })
+  }, 30_000)
+
+  test('does not impose a monetary cap on a COP 900,000 checkout', async () => {
+    if (!database) throw new Error('Commerce test database was not initialized')
+    const productId = await seedProduct('large-total')
+    await database.sql`
+      update venue_product set price = 300000.00 where id = ${productId}
+    `
+    const gateway = new TestCollectionGateway()
+    let requestedGrossMinor = 0
+    gateway.createBehavior = async (request) => {
+      requestedGrossMinor = request.gross.minorUnits
+      return {
+        kind: 'created',
+        launch: gateway.resumeHostedCheckout(`session-${request.attemptId}`)!,
+      }
+    }
+
+    const result = expectCheckout(
+      await createService(gateway).startPayment(paymentInput('large-total', productId, 3))
+    )
+
+    expect(result.kind).toBe('checkout')
+    expect(requestedGrossMinor).toBe(90_000_000)
   }, 30_000)
 
   test('ignores client-supplied price, percentage, and recipient fields and freezes server data', async () => {

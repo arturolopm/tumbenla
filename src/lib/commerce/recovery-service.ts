@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { randomUUID } from 'node:crypto'
-import { and, asc, eq, inArray, isNull, lte, or, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm'
 
 import type { db } from '@/database'
 import {
@@ -127,6 +127,8 @@ export class CommerceRecoveryService {
     let cursor: string | null = null
     try {
       const staleBefore = new Date(now.getTime() - staleAfterSeconds * 1_000)
+      // A hosted session has no transaction reference until the buyer submits payment.
+      // Escalating that normal state would make a still-usable checkout impossible to resume.
       const attempts = await this.#database
         .select({
           id: paymentAttempt.id,
@@ -137,7 +139,11 @@ export class CommerceRecoveryService {
         .where(
           and(
             inArray(paymentAttempt.status, ['created', 'submitted', 'pending', 'uncertain']),
-            lte(paymentAttempt.updatedAt, staleBefore)
+            lte(paymentAttempt.updatedAt, staleBefore),
+            or(
+              isNotNull(paymentAttempt.providerAttemptReference),
+              isNull(paymentAttempt.checkoutSessionId)
+            )
           )
         )
         .orderBy(asc(paymentAttempt.updatedAt), asc(paymentAttempt.id))
@@ -180,7 +186,11 @@ export class CommerceRecoveryService {
         .where(
           and(
             inArray(paymentAttempt.status, ['created', 'submitted', 'pending', 'uncertain']),
-            lte(paymentAttempt.updatedAt, staleBefore)
+            lte(paymentAttempt.updatedAt, staleBefore),
+            or(
+              isNotNull(paymentAttempt.providerAttemptReference),
+              isNull(paymentAttempt.checkoutSessionId)
+            )
           )
         )
       const attemptBacklog = Number(backlog?.value ?? 0)

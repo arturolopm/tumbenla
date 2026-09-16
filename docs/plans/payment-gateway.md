@@ -70,7 +70,7 @@ Primary implementation evidence: [order/payment actions](/Users/arturolopez/Docu
 - **Deductions:** Reviewed APIs do not establish a complete final fee/withholding breakdown at checkout confirmation. Do not treat `gross − amountNet` as commission. Reports can support manual reconciliation. [APIFY reference](https://api.epayco.co/), [dashboard reports](https://ayuda.epayco.com/en/articles/10739-dashboard), [deduction categories](https://epayco.com/calculadora-comisiones/)
 - **Refunds:** Do not assume a universal refund API. Legacy reversal documentation has method/time restrictions and uncertain compatibility with v2 references. The first release must support verified manual refunds. [Reversal guidance](https://ayuda.epayco.com/en/articles/2018-a-qu-mtodos-de-pago-se-les-puede-hacer-reversiones-con-epayco)
 - **Distribution:** Checkout splitting, merchant withdrawals, and third-party payouts are different capabilities. This release uses reviewed bank transfers and does not depend on ePayco split-payment activation. [Split-payment documentation](https://docs.epayco.com/docs/split-descripcion)
-- **Limits:** Published terms state a COP 5,000 minimum, with account limits subject to change. Verify the actual merchant limits and accounting configuration before enabling live checkout. [Current terms](https://epayco.com/terminos-y-condiciones-generales-2026/)
+- **Limits:** Published terms state a COP 5,000 minimum, with account limits subject to change. On 2026-09-16 the configured sandbox account rejected session creation above COP 200,000 with an explicit `Amount must be between 5000 and 200000` validation error. That is account/provider evidence, not a Tumbenla order-total rule: the application keeps COP 700,000+ orders valid and must show the provider restriction until ePayco raises it. Verify the live merchant limit and accounting configuration before enabling live checkout. [Current terms](https://epayco.com/terminos-y-condiciones-generales-2026/)
 - **Scheduling:** Vercel Hobby supports daily cron; it does not guarantee precise invocation time or retry failed runs automatically. Recovery must also work through webhooks and explicit reconciliation. [Cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing), [execution behavior](https://vercel.com/docs/cron-jobs/manage-cron-jobs)
 
 Unverified contracts become explicit checkpoint requirements, not guessed implementations: merchant eligibility for collecting bar proceeds, foundation agreement, tax responsibility, checkout retry behavior, transaction lookup, settlement reports, and refund procedures.
@@ -227,7 +227,7 @@ Use a daily authenticated Vercel cron for missed events, stale attempts, refunda
 
 Expiry and credit enforcement also run transactionally when relevant operations occur, so correctness does not depend on cron punctuality.
 
-If a provider reference is missing and automatic lookup cannot establish the transaction, place the attempt in operator review. Do not guess that it failed.
+If a provider reference is missing, no hosted session exists, and automatic lookup cannot establish the transaction, place the attempt in operator review. A hosted session normally has no transaction reference until the buyer submits payment; keep that state pending and resumable instead of escalating it. Do not guess that it failed.
 
 Accepted tradeoff: an unattended payment can remain pending until a provider retry, daily recovery, or human reconciliation. Show recovery age/backlog in the admin panel.
 
@@ -856,3 +856,33 @@ passed before source integration. These facts do not close any external gate.
   **99 tests, 0 failures, and 381 assertions**; the isolated production-build browser harness passed
   **7 tests, 0 failures**, including the public three-number summary and a signed-in customer's
   sandbox/real separation. Repository lint retains only the pre-existing unrelated advisories.
+
+### 2026-09-16 — ePayco pre-session failures and safe checkout retry
+
+- The failing Preview attempt was traced through Vercel logs and a direct sandbox request. ePayco
+  authenticated successfully but rejected session creation with HTTP 200, `success: false`, and
+  `Amount must be between 5000 and 200000`. No checkout session or provider transaction reference
+  existed, so the customer was never shown the gateway and no charge started.
+- The ePayco adapter now recognizes that provider response as `provider-amount-limit` without
+  logging customer data or raw payload values. The payment-state API and page preserve the reason,
+  and the UI says that the account/provider rejected the amount while Tumbenla itself does not cap
+  the order. A COP 700,000+ order remains valid in the application; the electronic route requires
+  ePayco to raise the merchant-account limit, while payment at the bar remains governed only by the
+  venue's donation-obligation cupo from decision 38.
+- Pre-session terminal failures now clear the browser's product submission mapping as soon as the
+  state page loads, not only when the orange retry button is clicked. Returning through the retry
+  button, the sites link, or later navigation can therefore create a fresh order instead of reusing
+  the failed attempt.
+- A hosted session is handled differently because it may still be payable. Closing ePayco reopens
+  the same session rather than creating a duplicate checkout. Daily recovery no longer mistakes a
+  normal hosted session without a transaction reference for an operator-review incident, and old
+  attempts previously escalated solely as `missing-provider-reference` can resume that session.
+- Validation: focused adapter/payment/recovery tests passed **40/40**, and the explicit large-order
+  payment/cash cases passed in their focused suites; the complete commerce suite passed **103/103
+  with 399 assertions**; `bun run typecheck` and the production build passed;
+  `bun run test:e2e` passed **12/12** against its disposable PostgreSQL database and production
+  server. Repository lint passed with only three unrelated unused-import warnings and one existing
+  Lemon Squeezy radix advisory.
+- Remaining external gate: ePayco must raise or remove the merchant account's current amount limit
+  before electronic COP 700,000+ orders can open Hosted Checkout in Preview or Production. No code
+  or environment variable can override that provider-side rule.

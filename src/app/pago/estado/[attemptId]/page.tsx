@@ -40,7 +40,11 @@ export default async function PaymentStatePage({
       <PaymentStateWatcher
         attemptId={attemptId}
         wantsAccount={wantsAccount}
-        initialState={{ state: 'checkout-unavailable', nextUrl: state.retryUrl }}
+        initialState={{
+          state: 'checkout-unavailable',
+          nextUrl: state.retryUrl,
+          reason: state.reason,
+        }}
       />
     )
   }

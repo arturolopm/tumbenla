@@ -13,6 +13,7 @@ const NOW = new Date('2026-09-12T20:00:00.000Z')
 const seedAttempt = async (input: {
   id: string
   reference?: string
+  checkoutSessionId?: string
   updatedAt: Date
 }): Promise<void> => {
   if (!database) throw new Error('Commerce test database was not initialized')
@@ -41,11 +42,11 @@ const seedAttempt = async (input: {
     insert into payment_attempt
       (id, order_snapshot_id, submission_key, request_hash, provider,
        provider_config_version, merchant_account_key, environment,
-       provider_attempt_reference, status, created_at, updated_at)
+       provider_attempt_reference, checkout_session_id, status, created_at, updated_at)
     values
       (${input.id}, ${snapshotId}, ${`submission-${input.id}`}, 'hash', 'epayco', 'live-v1',
-       'merchant', 'live', ${input.reference ?? null}, 'pending', ${input.updatedAt.toISOString()},
-       ${input.updatedAt.toISOString()})
+       'merchant', 'live', ${input.reference ?? null}, ${input.checkoutSessionId ?? null}, 'pending',
+       ${input.updatedAt.toISOString()}, ${input.updatedAt.toISOString()})
   `
 }
 
@@ -87,6 +88,11 @@ beforeAll(async () => {
     id: 'recovery-attempt-error',
     reference: 'RECOVERY-ERROR',
     updatedAt: new Date(NOW.getTime() - 10 * 60_000),
+  })
+  await seedAttempt({
+    id: 'recovery-attempt-hosted-session',
+    checkoutSessionId: 'hosted-session-without-transaction-yet',
+    updatedAt: new Date(NOW.getTime() - 25 * 60_000),
   })
 }, 120_000)
 
@@ -149,6 +155,14 @@ describe('CommerceRecoveryService', () => {
     expect(missing).toMatchObject({
       status: 'operator_review',
       outcome_detail: 'missing-provider-reference',
+    })
+    const [hostedSession] = await database.sql`
+      select status, outcome_detail from payment_attempt
+      where id = 'recovery-attempt-hosted-session'
+    `
+    expect(hostedSession).toMatchObject({
+      status: 'pending',
+      outcome_detail: null,
     })
 
     const second = await service().run({ batchSize: 1, staleAfterSeconds: 60 })

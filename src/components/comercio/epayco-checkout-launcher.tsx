@@ -99,12 +99,14 @@ export function EpaycoCheckoutLauncher({
           if (responseReceived.current) return
           setPhase('closed')
           setMessage(
-            'Cerraste ePayco. No asumimos que el cobro falló ni iniciaremos otro automáticamente.'
+            'Cerraste ePayco. Puedes volver a abrir esta misma sesión sin crear otro pedido ni otro cobro.'
           )
         },
         onErrors: () => {
           setPhase('error')
-          setMessage('ePayco reportó un problema. No iniciaremos otro cobro automáticamente.')
+          setMessage(
+            'ePayco reportó un problema. Puedes volver a abrir esta misma sesión; no crearemos un cobro duplicado.'
+          )
         },
       })
     }
@@ -166,8 +168,8 @@ export function EpaycoCheckoutLauncher({
         Revisar estado
       </button>
       <p className='text-muted-foreground text-sm'>
-        Cerrar esta ventana no confirma ni cancela el cobro. Tumbenla habilita tu código solo
-        después de verificarlo directamente con ePayco.
+        Cerrar esta ventana no confirma ni cancela el cobro. El botón vuelve a abrir la misma sesión
+        y Tumbenla habilita tu código solo después de verificarlo directamente con ePayco.
       </p>
     </main>
   )

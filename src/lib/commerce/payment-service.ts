@@ -135,6 +135,7 @@ type AttemptContext = Readonly<{
   grossMinor: bigint
   status: string
   checkoutSessionId: string | null
+  outcomeDetail: string | null
   provider: string
   providerConfigVersion: string
   merchantAccountKey: string
@@ -826,7 +827,7 @@ export class CommercePaymentService {
         attemptId: context.attemptId,
         orderToken: context.orderToken,
         retryUrl: retryUrlFor(context),
-        reason: 'checkout-session-unavailable',
+        reason: context.outcomeDetail ?? 'checkout-session-unavailable',
       }
     }
     if (context.status === 'declined' || context.status === 'cancelled') {
@@ -837,7 +838,11 @@ export class CommercePaymentService {
         reason: context.status,
       }
     }
-    if (context.status === 'pending' && context.checkoutSessionId) {
+    const resumableHostedCheckout =
+      context.status === 'pending' ||
+      (context.status === 'operator_review' &&
+        context.outcomeDetail === 'missing-provider-reference')
+    if (resumableHostedCheckout && context.checkoutSessionId) {
       try {
         const gateway = this.#gateways.resolvePersisted(persistedBinding(context))
         const launch = gateway.resumeHostedCheckout(context.checkoutSessionId)
@@ -1365,6 +1370,7 @@ export class CommercePaymentService {
         unitGrossMinor: commerceOrderSnapshot.unitGrossMinor,
         status: paymentAttempt.status,
         checkoutSessionId: paymentAttempt.checkoutSessionId,
+        outcomeDetail: paymentAttempt.outcomeDetail,
         provider: paymentAttempt.provider,
         providerConfigVersion: paymentAttempt.providerConfigVersion,
         merchantAccountKey: paymentAttempt.merchantAccountKey,

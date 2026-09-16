@@ -66,7 +66,11 @@ export type CheckoutCreationResult =
     }>
   | Readonly<{
       kind: 'rejected'
-      reason: 'invalid-request' | 'authentication-rejected' | 'provider-rejected'
+      reason:
+        | 'invalid-request'
+        | 'authentication-rejected'
+        | 'provider-rejected'
+        | 'provider-amount-limit'
     }>
   | Readonly<{
       kind: 'uncertain'

@@ -175,10 +175,33 @@ const parseJson = async (response: Response): Promise<unknown | undefined> => {
   }
 }
 
+const checkoutRejectionReason = (
+  payload: unknown
+): Extract<CheckoutCreationResult, { kind: 'rejected' }>['reason'] => {
+  if (!isRecord(payload) || !isRecord(payload.data)) return 'provider-rejected'
+  const errors = payload.data.errors
+  const entries = Array.isArray(errors) ? errors : [errors]
+  const messages = entries.flatMap((entry) => {
+    if (typeof entry === 'string') return [entry]
+    if (!isRecord(entry)) return []
+    return ['errorMessage', 'message', 'error', 'description'].flatMap((key) => {
+      const value = entry[key]
+      return typeof value === 'string' ? [value] : []
+    })
+  })
+
+  return messages.some(
+    (message) => /\bamount\b.*\bbetween\b/i.test(message) || /\bmonto\b.*\bentre\b/i.test(message)
+  )
+    ? 'provider-amount-limit'
+    : 'provider-rejected'
+}
+
 const logUnexpectedCheckoutResponse = (
   stage: 'login' | 'session',
   response: Response,
-  payload: unknown
+  payload: unknown,
+  rejectionReason?: Extract<CheckoutCreationResult, { kind: 'rejected' }>['reason']
 ): void => {
   const record = isRecord(payload) ? payload : undefined
   const data = record && isRecord(record.data) ? record.data : undefined
@@ -191,6 +214,7 @@ const logUnexpectedCheckoutResponse = (
     hasData: data !== undefined,
     dataKeys: data ? Object.keys(data).sort() : [],
     hasSessionId: data ? typeof data.sessionId === 'string' && data.sessionId.length > 0 : false,
+    rejectionReason,
   })
 }
 
@@ -309,16 +333,19 @@ export class EpaycoCollectionGateway implements CollectionGateway {
       return { kind: 'uncertain', reason: 'network' }
     }
 
-    if (!sessionResponse.ok) {
-      return sessionResponse.status >= 400 && sessionResponse.status < 500
-        ? { kind: 'rejected', reason: 'provider-rejected' }
-        : { kind: 'uncertain', reason: 'provider-unavailable' }
-    }
-
     const sessionPayload = await parseJson(sessionResponse)
+    if (!sessionResponse.ok) {
+      if (sessionResponse.status >= 400 && sessionResponse.status < 500) {
+        const reason = checkoutRejectionReason(sessionPayload)
+        logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload, reason)
+        return { kind: 'rejected', reason }
+      }
+      return { kind: 'uncertain', reason: 'provider-unavailable' }
+    }
     if (isRecord(sessionPayload) && sessionPayload.success === false) {
-      logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload)
-      return { kind: 'rejected', reason: 'provider-rejected' }
+      const reason = checkoutRejectionReason(sessionPayload)
+      logUnexpectedCheckoutResponse('session', sessionResponse, sessionPayload, reason)
+      return { kind: 'rejected', reason }
     }
     if (
       !isRecord(sessionPayload) ||

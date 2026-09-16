@@ -33,7 +33,7 @@ export async function GET(
     }
     if (result.kind === 'checkout-unavailable') {
       return NextResponse.json(
-        { state: 'checkout-unavailable', nextUrl: result.retryUrl },
+        { state: 'checkout-unavailable', nextUrl: result.retryUrl, reason: result.reason },
         { headers: { 'cache-control': 'no-store' } }
       )
     }
