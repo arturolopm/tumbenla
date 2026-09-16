@@ -1,6 +1,14 @@
 'use client'
 
-import { ArchiveIcon, ImagePlusIcon, PauseIcon, PencilIcon, PlayIcon, SendIcon, XIcon } from 'lucide-react'
+import {
+  ArchiveIcon,
+  ImagePlusIcon,
+  PauseIcon,
+  PencilIcon,
+  PlayIcon,
+  SendIcon,
+  XIcon,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 
@@ -221,7 +229,6 @@ export function CartaPanel({
                   Archivar
                 </Accion>
               </div>
-
             </li>
           ))}
         </ul>
@@ -294,6 +301,8 @@ function FormularioDeProducto({
   const [storageKey, setStorageKey] = useState('')
   const [subiendoImagen, setSubiendoImagen] = useState(false)
   const imageInput = useRef<HTMLInputElement>(null)
+  const canChoosePublication =
+    producto === null || producto.estado === 'draft' || producto.estado === 'pending_review'
 
   const vistaPrevia = useMemo(() => {
     const p = Number(precio)
@@ -536,26 +545,59 @@ function FormularioDeProducto({
         />
       </Campo>
 
-      <div className='flex flex-wrap gap-3'>
-        <button
-          type='submit'
-          disabled={guardando}
-          className='rounded-xl bg-primary px-6 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 disabled:opacity-50'
-        >
-          {guardando ? 'Guardando…' : 'Guardar'}
-        </button>
-        <button
-          type='button'
-          onClick={onCancelar}
-          className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase'
-        >
-          Cancelar
-        </button>
-      </div>
+      <div className='flex flex-col gap-3 border-border border-t pt-5'>
+        {canChoosePublication ? (
+          <div>
+            <p className='font-display text-label-lg uppercase'>¿Qué quieres hacer?</p>
+            <p className='mt-1 text-muted-foreground text-sm'>
+              El borrador no se ve afuera. Si publicas, queda disponible para pedir de una vez.
+            </p>
+          </div>
+        ) : null}
 
-      <p className='text-body-md text-muted-foreground'>
-        Se guarda como borrador. Publícalo cuando esté listo.
-      </p>
+        <div className='flex flex-wrap gap-3'>
+          {canChoosePublication ? (
+            <>
+              <button
+                type='submit'
+                name='intent'
+                value='draft'
+                disabled={guardando}
+                className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase transition-colors hover:border-primary disabled:opacity-50'
+              >
+                {guardando ? 'Guardando…' : 'Guardar borrador'}
+              </button>
+              <button
+                type='submit'
+                name='intent'
+                value='publish'
+                disabled={guardando}
+                className='rounded-xl bg-primary px-6 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 disabled:opacity-50'
+              >
+                {guardando ? 'Publicando…' : 'Guardar y publicar'}
+              </button>
+            </>
+          ) : (
+            <button
+              type='submit'
+              name='intent'
+              value='save'
+              disabled={guardando}
+              className='rounded-xl bg-primary px-6 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 disabled:opacity-50'
+            >
+              {guardando ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+          )}
+
+          <button
+            type='button'
+            onClick={onCancelar}
+            className='rounded-xl border border-border px-6 py-3 font-display text-label-lg uppercase'
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </form>
   )
 }

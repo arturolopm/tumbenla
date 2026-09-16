@@ -110,9 +110,13 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
     venue.phone ? { label: venue.phone, href: `tel:${venue.phone}` } : null,
   ].filter(Boolean) as { label: string; href: string }[]
 
-  // Deep link straight into the phone's map app rather than embedding a second
-  // map on a page that already has the address.
-  const directionsHref = `https://www.openstreetmap.org/?mlat=${venue.lat}&mlon=${venue.lng}#map=18/${venue.lat}/${venue.lng}`
+  // Google's universal Maps URL opens the app when installed and falls back
+  // to the web. Coordinates are more precise than re-geocoding the address.
+  const directionsUrl = new URL('https://www.google.com/maps/dir/')
+  directionsUrl.searchParams.set('api', '1')
+  directionsUrl.searchParams.set('destination', `${venue.lat},${venue.lng}`)
+  directionsUrl.searchParams.set('dir_action', 'navigate')
+  const directionsHref = directionsUrl.toString()
 
   return (
     <article className='mx-auto w-full max-w-4xl px-margin-mobile py-section-gap lg:px-margin-desktop'>
@@ -148,10 +152,10 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
       </header>
 
       {venue.coverImageUrl ? (
-        <div className='halftone-overlay relative mt-8 overflow-hidden rounded-xl border-2 border-secondary bg-muted'>
+        <div className='halftone-overlay relative mt-8 h-[clamp(14rem,52vw,28rem)] overflow-hidden rounded-xl border-2 border-secondary bg-muted'>
           {/* Plain <img>: remote image hosts are
               not configured in next.config yet. */}
-          <img src={venue.coverImageUrl} alt='' className='w-full object-cover' />
+          <img src={venue.coverImageUrl} alt='' className='size-full object-cover' />
         </div>
       ) : null}
 

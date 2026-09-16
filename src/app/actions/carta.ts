@@ -41,16 +41,13 @@ const httpsImageUrl = z
   .string()
   .trim()
   .url('Pega una URL válida.')
-  .refine(
-    (value) => {
-      try {
-        return new URL(value).protocol === 'https:'
-      } catch {
-        return false
-      }
-    },
-    'La imagen debe usar https.'
-  )
+  .refine((value) => {
+    try {
+      return new URL(value).protocol === 'https:'
+    } catch {
+      return false
+    }
+  }, 'La imagen debe usar https.')
   .max(600)
 
 const productoSchema = z.object({
@@ -206,6 +203,9 @@ export const guardarProductoAction = async (
   _previous: CartaState,
   formData: FormData
 ): Promise<CartaState> => {
+  const intent = formData.get('intent')
+  const publishNow = intent === 'publish'
+  const saveDraft = intent === 'draft'
   const parsed = productoSchema.safeParse({
     venueId: formData.get('venueId'),
     name: formData.get('name'),
@@ -231,9 +231,20 @@ export const guardarProductoAction = async (
   // El sitio contra el que se comprueba el permiso sale de la BASE. Al editar,
   // de la fila del producto; al crear, de la fila del sitio.
   const productoExistente = editando ? await contextoDeProducto(idExistente) : null
-  const venueId = editando ? productoExistente?.venueId ?? null : parsed.data.venueId
+  const venueId = editando ? (productoExistente?.venueId ?? null) : parsed.data.venueId
 
   if (!venueId) return { status: 'error', error: 'Ese producto ya no existe.' }
+  if (
+    editando &&
+    publishNow &&
+    productoExistente?.status !== 'draft' &&
+    productoExistente?.status !== 'pending_review'
+  ) {
+    return {
+      status: 'error',
+      error: 'Solo un borrador se puede publicar desde este formulario.',
+    }
+  }
 
   const [sitio] = await db
     .select({ id: venue.id, slug: venue.slug })
@@ -286,6 +297,25 @@ export const guardarProductoAction = async (
         .set({
           ...datos,
           slug,
+          ...(publishNow
+            ? {
+                status: 'published' as const,
+                reviewedByUserId: null,
+                reviewedAt: null,
+                reviewNote: null,
+                publishedAt: new Date(),
+              }
+            : saveDraft &&
+                (productoExistente?.status === 'draft' ||
+                  productoExistente?.status === 'pending_review')
+              ? {
+                  status: 'draft' as const,
+                  reviewedByUserId: null,
+                  reviewedAt: null,
+                  reviewNote: null,
+                  publishedAt: null,
+                }
+              : {}),
           updatedAt: new Date(),
         })
         .where(eq(venueProduct.id, idExistente))
@@ -293,8 +323,9 @@ export const guardarProductoAction = async (
       revalidarCarta(sitio.slug)
       return {
         status: 'success',
-        mensaje:
-          productoExistente?.status === 'published'
+        mensaje: publishNow
+          ? 'Publicado. Ya se puede pedir.'
+          : productoExistente?.status === 'published'
             ? 'Guardado. Los cambios ya se ven en la carta.'
             : productoExistente?.status === 'paused'
               ? 'Guardado. Sigue pausado hasta que decidas volver a venderlo.'
@@ -310,11 +341,21 @@ export const guardarProductoAction = async (
         ...datos,
         venueId: sitio.id,
         slug,
+        ...(publishNow
+          ? {
+              status: 'published' as const,
+              publishedAt: new Date(),
+            }
+          : {}),
       })
       .returning({ id: venueProduct.id })
 
     revalidarCarta(sitio.slug)
-    return { status: 'success', mensaje: 'Producto creado como borrador.', id: fila.id }
+    return {
+      status: 'success',
+      mensaje: publishNow ? 'Publicado. Ya se puede pedir.' : 'Producto creado como borrador.',
+      id: fila.id,
+    }
   } catch {
     return { status: 'error', error: 'No se pudo guardar el producto.' }
   }

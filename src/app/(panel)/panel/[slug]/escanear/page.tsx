@@ -1,7 +1,8 @@
 import { notFound } from 'next/navigation'
 
-import { Escaner } from '@/components/panel/escaner'
+import { OrderScanner } from '@/components/panel/order-scanner'
 import { getVenueForPanel, requireVenueAccess } from '@/lib/auth/venue-access'
+import { listRecentVenueOrders } from '@/lib/commerce/redemption-history'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +27,14 @@ export default async function EscanearPage({
   if (!sitio) notFound()
 
   await requireVenueAccess(sitio.id, `/panel/${slug}/escanear`)
+  const recentOrders = await listRecentVenueOrders(sitio.id)
 
-  return <Escaner venueId={sitio.id} nombreDelSitio={sitio.nombre} codigoDeLaUrl={c ?? null} />
+  return (
+    <OrderScanner
+      venueId={sitio.id}
+      venueName={sitio.nombre}
+      codeFromUrl={c ?? null}
+      recentOrders={recentOrders}
+    />
+  )
 }

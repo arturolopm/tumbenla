@@ -10,7 +10,7 @@ import { listPublishedVenues, listVenueCities } from '@/lib/venues/queries'
 export const metadata: Metadata = buildMetadata({
   title: 'Mapa del parche',
   description:
-    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Busca por ciudad o por barrio.',
+    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Busca por nombre o ciudad.',
   canonical: '/sitios',
 })
 

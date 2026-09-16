@@ -56,8 +56,13 @@ export function AccountMenu({ variant = 'bar' }: { variant?: 'bar' | 'mobile' })
   }
 
   const personName = session.user.name?.trim() || session.user.email
-  // With several venues the trigger shows the first; the menu lists them all.
-  const mainVenue = access?.venues[0] ?? null
+  // Inside a venue panel the trigger must name THAT venue. Falling back to the
+  // first membership is only correct on public/admin pages, where no venue is
+  // active in the URL.
+  const activeVenue = access?.venues.find(
+    (venue) => pathname === `/panel/${venue.slug}` || pathname.startsWith(`/panel/${venue.slug}/`)
+  )
+  const mainVenue = activeVenue ?? access?.venues[0] ?? null
 
   const handleSignOut = () => {
     startSignOut(async () => {
@@ -105,7 +110,9 @@ export function AccountMenu({ variant = 'bar' }: { variant?: 'bar' | 'mobile' })
         {mainVenue ? <MenuSeparator /> : null}
 
         <MenuItem
-          render={<Link href='/mi-historia'>{mainVenue ? 'Verlo como rumbero' : 'Mi historia'}</Link>}
+          render={
+            <Link href='/mi-historia'>{mainVenue ? 'Verlo como rumbero' : 'Mi historia'}</Link>
+          }
         />
 
         <MenuSeparator />

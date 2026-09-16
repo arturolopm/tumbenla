@@ -31,6 +31,7 @@ const browserEnvironment = {
   COMMERCE_FUNDING_CLASSIFICATION: 'sandbox',
   COMMERCE_NEW_OPERATIONS_ENABLED: 'true',
   COMMERCE_PAYMENT_PROVIDER: 'fake',
+  DEFAULT_REPLY_TO: 'hastaabajo@tumbenla.com',
   EMAIL_PROVIDER: 'nodemailer',
   E2E_RUN_ID: runId,
   NEXT_PUBLIC_APP_URL: 'http://127.0.0.1:3107',

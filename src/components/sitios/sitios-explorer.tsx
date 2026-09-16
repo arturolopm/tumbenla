@@ -78,26 +78,22 @@ export function SitiosExplorer({
       if (city !== 'all' && venue.city !== city) return false
       if (type !== 'all' && venue.type !== type) return false
       if (!needle) return true
-      return (
-        venue.name.toLowerCase().includes(needle) ||
-        (venue.neighborhood ?? '').toLowerCase().includes(needle) ||
-        venue.city.toLowerCase().includes(needle)
-      )
+      return venue.name.toLowerCase().includes(needle) || venue.city.toLowerCase().includes(needle)
     })
   }, [venues, city, type, query])
 
   const hasFilters = city !== 'all' || type !== 'all' || query.trim() !== ''
 
   return (
-    <div className="w-full px-margin-mobile pb-section-gap lg:px-margin-desktop">
+    <div className='w-full px-margin-mobile pb-section-gap lg:px-margin-desktop'>
       {/* Movil: control segmentado. En escritorio las dos vistas estan en
           pantalla al tiempo, asi que un toggle seria un control que no hace
           nada. */}
-      <div className="mb-4 flex rounded-lg border-2 border-secondary bg-card p-0.5 lg:hidden">
+      <div className='mb-4 flex rounded-lg border-2 border-secondary bg-card p-0.5 lg:hidden'>
         {(['lista', 'mapa'] as const).map((option) => (
           <button
             key={option}
-            type="button"
+            type='button'
             onClick={() => handleVista(option)}
             aria-pressed={vista === option}
             className={cn(
@@ -112,7 +108,7 @@ export function SitiosExplorer({
         ))}
       </div>
 
-      <div className="relative flex w-full flex-col gap-8 lg:flex-row">
+      <div className='relative flex w-full flex-col gap-8 lg:flex-row'>
         <div
           className={cn(
             'relative h-[600px] w-full overflow-hidden rounded-xl border-4 border-secondary shadow-2xl shadow-primary/5 lg:h-[800px] lg:w-2/3',
@@ -120,7 +116,7 @@ export function SitiosExplorer({
           )}
         >
           {map?.({ venues: filtered, activeId, onActiveChange: setActiveId }) ?? (
-            <div className="flex h-full items-center justify-center p-8 text-center text-body-md text-muted-foreground">
+            <div className='flex h-full items-center justify-center p-8 text-center text-body-md text-muted-foreground'>
               El mapa llega en un momento.
             </div>
           )}
@@ -132,24 +128,24 @@ export function SitiosExplorer({
             vista === 'mapa' ? 'hidden lg:flex' : 'flex'
           )}
         >
-          <div className="sticky top-0 z-10 flex items-end justify-between gap-3 border-secondary border-b-2 bg-background/90 pb-4 backdrop-blur-md">
-            <div className="min-w-0">
-              <h2 className="font-display font-bold text-headline-md text-primary-text uppercase">
+          <div className='sticky top-0 z-10 flex items-end justify-between gap-3 border-secondary border-b-2 bg-background/90 pb-4 backdrop-blur-md'>
+            <div className='min-w-0'>
+              <h2 className='font-display font-bold text-headline-md text-primary-text uppercase'>
                 Aliados del Combo
               </h2>
-              <p className="text-body-md text-muted-foreground" aria-live="polite">
+              <p className='text-body-md text-muted-foreground' aria-live='polite'>
                 {filtered.length === 1
-                  ? '1 punto apoyando la causa'
-                  : `${filtered.length} puntos apoyando la causa`}
+                  ? '1 sitio en el mapa'
+                  : `${filtered.length} sitios en el mapa`}
                 {hasFilters ? ' con estos filtros' : ''}
               </p>
             </div>
 
             <button
-              type="button"
+              type='button'
               onClick={() => setFiltersOpen((value) => !value)}
               aria-expanded={filtersOpen}
-              aria-controls="filtros-sitios"
+              aria-controls='filtros-sitios'
               className={cn(
                 'shrink-0 rounded-lg border border-secondary p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 filtersOpen || hasFilters
@@ -157,30 +153,30 @@ export function SitiosExplorer({
                   : 'bg-popover text-lime hover:bg-secondary'
               )}
             >
-              <SlidersHorizontalIcon className="size-5" />
-              <span className="sr-only">Filtros</span>
+              <SlidersHorizontalIcon className='size-5' />
+              <span className='sr-only'>Filtros</span>
             </button>
           </div>
 
-          {filtersOpen ? (
-            <div id="filtros-sitios" className="flex flex-col gap-3">
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Busca por nombre o barrio"
-                aria-label="Busca por nombre o barrio"
-                className="h-10 w-full rounded-lg border border-input bg-card px-3 text-body-md text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
+          <input
+            type='search'
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder='Busca por nombre o ciudad'
+            aria-label='Busca por nombre o ciudad'
+            className='h-10 w-full rounded-lg border border-input bg-card px-3 text-body-md text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+          />
 
+          {filtersOpen ? (
+            <div id='filtros-sitios' className='flex flex-col gap-3'>
               {cities.length > 1 ? (
                 <select
                   value={city}
                   onChange={(event) => setCity(event.target.value)}
-                  aria-label="Filtrar por ciudad"
-                  className="h-10 w-full rounded-lg border border-input bg-card px-3 text-body-md text-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label='Filtrar por ciudad'
+                  className='h-10 w-full rounded-lg border border-input bg-card px-3 text-body-md text-foreground focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
                 >
-                  <option value="all">Toda Colombia</option>
+                  <option value='all'>Toda Colombia</option>
                   {cities.map((option) => (
                     <option key={option} value={option}>
                       {option}
@@ -189,11 +185,11 @@ export function SitiosExplorer({
                 </select>
               ) : null}
 
-              <div className="flex flex-wrap gap-2">
+              <div className='flex flex-wrap gap-2'>
                 {TYPE_FILTERS.map((option) => (
                   <button
                     key={option.value}
-                    type="button"
+                    type='button'
                     onClick={() => setType(option.value)}
                     aria-pressed={type === option.value}
                     className={cn(
@@ -210,7 +206,7 @@ export function SitiosExplorer({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-4">
+          <div className='flex flex-col gap-4'>
             {filtered.length === 0 ? (
               <EmptyState
                 onReset={() => {
@@ -238,17 +234,17 @@ export function SitiosExplorer({
 
 function EmptyState({ onReset }: { onReset: () => void }) {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-xl border border-border border-dashed p-6">
-      <p className="font-display font-bold text-headline-md uppercase">
+    <div className='flex flex-col items-start gap-3 rounded-xl border border-border border-dashed p-6'>
+      <p className='font-display font-bold text-headline-md uppercase'>
         Por acá no hay nada todavía.
       </p>
-      <p className="text-body-md text-muted-foreground">
+      <p className='text-body-md text-muted-foreground'>
         Prueba quitando los filtros, o escribe menos.
       </p>
       <button
-        type="button"
+        type='button'
         onClick={onReset}
-        className="rounded-lg bg-primary px-3 py-1.5 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90"
+        className='rounded-lg bg-primary px-3 py-1.5 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
       >
         Ver todos
       </button>

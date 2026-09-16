@@ -202,8 +202,10 @@ Estan aca para no volver a discutirlas cada dos semanas.
     entrega el panel despues de que su correo exacto este verificado.
 20c. **El formulario largo de un sitio no se le muestra a nadie de la calle.**
     Estuvo colgado en `/registrar-sitio/nuevo` y era la peor pantalla del
-    producto. Ademas su buscador de direcciones llama a `/api/geocode`, que
-    exige ser operador y le respondia 404. Vive solo en los dos paneles.
+    producto. Vive solo en los dos paneles. Su buscador de direcciones llama a
+    `/api/geocode`: entra el operador al crear un sitio y el dueno verificado
+    solo al editar uno que ya le pertenece. El alta publica sigue teniendo
+    cuatro campos y ninguna direccion.
 21. **Una foto que sube un rumbero solo es reclamable cuando el sitio la
     aprueba.** Es lo que impide subir fotos de un bar donde uno nunca estuvo y
     reclamarlas para inflarse las noches. El portero es el sitio.
@@ -711,16 +713,20 @@ salir.** Resend solo firma dominios verificados. Y si se borra
 Los registros DNS viven en Vercel, que es el nameserver de `tumbenla.com`:
 `vercel dns ls tumbenla.com`.
 
-### `/api/geocode` esta cerrado A PROPOSITO
+### `/api/geocode` esta cerrado al publico A PROPOSITO
 
-Exige `assertAdmin()` y responde 404 a cualquier otro. No es un descuido y no
-hay que "arreglarlo": Nominatim tiene terminos de uso de bajo volumen (riesgo 5)
-y abrirlo lo expondria a trafico anonimo.
+Responde 404 al trafico anonimo. Entra el operador, o un dueno verificado cuando
+manda el `venueId` de un sitio que ya le pertenece. No es un autocompletado:
+solo consulta cuando la persona pulsa el boton, toma la primera coincidencia y
+deja las demas para corregir. Nominatim tiene terminos de uso de bajo volumen
+(riesgo 5), asi que abrirlo a la calle lo expondria a trafico incompatible con
+el proveedor.
 
-**Por eso el alta de un sitio pide la direccion en TEXTO** y el pin lo pone un
-operador. Si algun dia una pantalla publica necesita autocompletar direcciones,
-la respuesta no es quitarle el gate a esa ruta: es un proxy propio con su
-limite, o los tiles/geocoder que ya se contemplan mover a R2.
+**Por eso el alta publica de un sitio no geocodifica nada:** pide solo los
+cuatro datos de la solicitud. La direccion y el pin los pone un operador al
+aprobar; despues, el dueno puede corregirlos desde su panel. Si una pantalla
+publica necesita buscar direcciones, la respuesta no es quitarle el gate a esta
+ruta: es otro proveedor o un proxy propio con limite.
 
 ### Trampas que ya mordieron (para no repetirlas)
 
@@ -809,6 +815,9 @@ limite, o los tiles/geocoder que ya se contemplan mover a R2.
   es un hijo que si puede escalar.
 - **Los tiles `@2x` de CARTO son de 256 unidades, no de 512.** Declarar
   `tileSize: 512` corre el mapa un nivel de zoom entero.
+- **El basemap raster publico de CARTO que usa el mapa no lleva API key.** No
+  agregar `NEXT_PUBLIC_CARTO_BASEMAP_KEY` a los ejemplos de entorno: el runtime
+  no la lee y pedirla en local o preview inventa una dependencia que no existe.
 - **`postgres()` sin opciones no suelta conexiones.** No trae `idle_timeout`.
   Con 7 workers de build mas el HMR de dev se llegaron a 82 conexiones ociosas
   contra un `max_connections` de 100, y el build se caia con

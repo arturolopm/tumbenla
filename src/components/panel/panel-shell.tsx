@@ -44,6 +44,7 @@ const items = (slug: string, isOwner: boolean) => [
   ...(isOwner
     ? [
         { href: `/panel/${slug}`, label: 'Resumen', exact: true },
+        { href: `/panel/${slug}/sitios`, label: 'Sitios' },
         { href: `/panel/${slug}/carta`, label: 'La carta' },
         { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
         { href: `/panel/${slug}/noches`, label: 'Las noches' },

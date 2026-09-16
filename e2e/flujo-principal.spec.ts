@@ -78,6 +78,44 @@ test('public transparency shows one donation total and its delivered split', asy
   )
 })
 
+test('venue discovery searches by name or city and exposes the public contact links', async ({
+  page,
+}) => {
+  const anonymousGeocode = await page.request.get('/api/geocode?q=x')
+  expect(anonymousGeocode.status()).toBe(404)
+
+  await page.goto('/sitios')
+
+  const search = page.getByRole('searchbox', { name: 'Busca por nombre o ciudad' })
+  await search.fill('Bar La Nona')
+  await expect(page.getByRole('link', { name: 'Bar La Nona' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Veneno' })).toHaveCount(0)
+
+  await search.fill('Manizales')
+  await expect(page.getByText('5 sitios en el mapa con estos filtros')).toBeVisible()
+
+  await page.goto('/sitios/bar-la-nona')
+  const directionsHref = await page.getByRole('link', { name: 'Cómo llegar' }).getAttribute('href')
+  expect(directionsHref).toBeTruthy()
+  if (!directionsHref) throw new Error('The directions link did not have an href')
+
+  const directions = new URL(directionsHref)
+  expect(directions.origin).toBe('https://www.google.com')
+  expect(directions.pathname).toBe('/maps/dir/')
+  expect(directions.searchParams.get('api')).toBe('1')
+  expect(directions.searchParams.get('destination')).toBe('5.0689,-75.5174')
+
+  const footer = page.locator('footer')
+  await expect(footer).toContainText('TUMBENLA')
+  await expect(footer).toContainText(
+    'Nos reímos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista pone material de construcción donde hace falta.'
+  )
+  await expect(footer.getByRole('link', { name: 'hastaabajo@tumbenla.com' })).toHaveAttribute(
+    'href',
+    'mailto:hastaabajo@tumbenla.com'
+  )
+})
+
 test('owner can read the published menu in the first isolated context', async ({ browser }) => {
   const context = await authenticatedContext(browser, 'ownerA')
   try {
@@ -85,6 +123,109 @@ test('owner can read the published menu in the first isolated context', async ({
     await page.goto('/panel/bar-la-nona/carta')
     await expect(page.getByRole('heading', { name: 'La carta' })).toBeVisible()
     await expect(page.getByText('Mojito Reconstrucción')).toBeVisible()
+  } finally {
+    await context.close()
+  }
+})
+
+test('owner can find a second venue under Sitios and the active venue name follows the URL', async ({
+  browser,
+}) => {
+  const context = await authenticatedContext(browser, 'ownerA')
+  try {
+    const page = await context.newPage()
+    await page.goto('/panel/bar-la-nona/sitios')
+    await expect(page.getByRole('heading', { name: 'Tus sitios' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Registrar otro sitio' })).toHaveAttribute(
+      'href',
+      '/registrar-sitio'
+    )
+    const venueList = page.getByRole('list').filter({ hasText: 'Bar La Nona' })
+    await expect(venueList.getByText('Bar La Nona')).toBeVisible()
+    await expect(venueList.getByText('Billar La Enea')).toBeVisible()
+
+    await page.goto('/panel/billar-la-enea')
+    await expect(page.getByRole('button', { name: /Billar La Enea/ })).toBeVisible()
+  } finally {
+    await context.close()
+  }
+})
+
+test('owner address lookup places the first result without exposing geocoding publicly', async ({
+  browser,
+}) => {
+  const context = await authenticatedContext(browser, 'ownerA')
+  try {
+    const page = await context.newPage()
+    await page.goto('/panel/bar-la-nona/sitio')
+    const venueId = await page.locator('input[name="id"]').inputValue()
+    const authorizedStatus = await page.evaluate(
+      async (url) => (await fetch(url)).status,
+      `/api/geocode?q=x&venueId=${encodeURIComponent(venueId)}`
+    )
+    expect(authorizedStatus).toBe(400)
+
+    let geocodeRequest = ''
+    await page.route('**/api/geocode?*', async (route) => {
+      geocodeRequest = route.request().url()
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              lat: 4.6097,
+              lng: -74.0817,
+              displayName: 'Carrera 7 # 12-34, Bogotá, Colombia',
+              addressLine: 'Carrera 7 # 12-34',
+              neighborhood: 'La Candelaria',
+              city: 'Bogotá',
+              department: 'Bogotá D.C.',
+            },
+          ],
+        }),
+      })
+    })
+
+    await page.locator('input[name="addressLine"]').fill('Carrera 7 # 12-34')
+    await page.getByRole('button', { name: 'Ubicar esta dirección en el mapa' }).click()
+
+    await expect(page.locator('input[name="latitude"]')).toHaveValue('4.6097')
+    await expect(page.locator('input[name="longitude"]')).toHaveValue('-74.0817')
+    expect(new URL(geocodeRequest).searchParams.get('venueId')).toBeTruthy()
+  } finally {
+    await context.close()
+  }
+})
+
+test('owner chooses between a draft and immediate publication when saving a drink', async ({
+  browser,
+}, testInfo) => {
+  const context = await authenticatedContext(browser, 'ownerA')
+  try {
+    const page = await context.newPage()
+    const suffix = `${testInfo.retry}-${testInfo.repeatEachIndex}`
+    const draftName = `Borrador E2E ${suffix}`
+    const publishedName = `Trago E2E ${suffix}`
+    await page.goto('/panel/bar-la-nona/carta')
+    await page.getByRole('button', { name: 'Agregar algo a la carta' }).click()
+    await page.getByLabel('Cómo se llama').fill(draftName)
+    await page.getByLabel('Cuánto vale').fill('24000')
+
+    await expect(page.getByRole('button', { name: 'Guardar borrador' })).toBeVisible()
+    await page.getByRole('button', { name: 'Guardar borrador' }).click()
+
+    const draft = page.getByRole('listitem').filter({ hasText: draftName })
+    await expect(draft).toBeVisible()
+    await expect(draft.getByText('Borrador', { exact: true })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Agregar algo a la carta' }).click()
+    await page.getByLabel('Cómo se llama').fill(publishedName)
+    await page.getByLabel('Cuánto vale').fill('24000')
+    await page.getByRole('button', { name: 'Guardar y publicar' }).click()
+
+    const product = page.getByRole('listitem').filter({ hasText: publishedName })
+    await expect(product).toBeVisible()
+    await expect(product.getByText('A la venta')).toBeVisible()
   } finally {
     await context.close()
   }
@@ -207,7 +348,15 @@ test('one guest order is issued and redeemed by staff in separate contexts', asy
     await staff.getByLabel('O escríbelo').fill(redemptionCode)
     await staff.getByRole('button', { name: 'Buscar' }).click()
     await expect(staff.getByText('Ya pagado')).toBeVisible()
-    await expect(staff.getByText('Entrégalo.')).toBeVisible()
+    await expect(staff.getByText(/No cobres nada\. Entrega/)).toBeVisible()
+    await expect(
+      staff.getByText('Orden registrada. En Tumbenla ya quedó todo listo.')
+    ).toBeVisible()
+    await expect(staff.getByText('Toca para registrar otra orden')).toBeVisible()
+    await staff.getByRole('button', { name: 'Historial' }).click()
+    await expect(staff.getByRole('region', { name: 'Últimas órdenes registradas' })).toContainText(
+      'Mojito Reconstrucción'
+    )
 
     await expect
       .poll(
@@ -264,11 +413,13 @@ test('one QR fulfills a multi-unit bar order and tells staff the full amount', a
     const redemptionCode = formattedCode.replace(/[^A-Z0-9]/g, '')
     await staff.getByLabel('O escríbelo').fill(redemptionCode)
     await staff.getByRole('button', { name: 'Buscar' }).click()
+    await expect(staff.getByText(/Cobra en la barra.*60\.000/)).toBeVisible()
+    await expect(staff.getByText(/Este pedido no está pagado\. Cobra el total aquí/)).toBeVisible()
+    await expect(staff.getByText(/2 unidades de Mojito Reconstrucción/)).toBeVisible()
     await expect(
-      staff.getByRole('button', { name: /Cobrar.*60\.000.*2 unidades en este pedido/ })
+      staff.getByText('Orden registrada. En Tumbenla ya quedó todo listo.')
     ).toBeVisible()
-    await expect(staff.getByText('Cobra y entrégalo.')).toBeVisible()
-    await expect(staff.getByText('2 unidades en este pedido')).toBeVisible()
+    await expect(staff.getByText('Toca para registrar otra orden')).toBeVisible()
 
     await expect
       .poll(

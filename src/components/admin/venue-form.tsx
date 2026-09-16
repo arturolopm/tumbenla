@@ -26,7 +26,7 @@ const LocationPicker = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[340px] w-full animate-pulse rounded-xl border border-border bg-card" />
+      <div className='h-[340px] w-full animate-pulse rounded-xl border border-border bg-card' />
     ),
   }
 )
@@ -55,9 +55,9 @@ const initialState: ActionState = { status: 'idle' }
  * NO SE LE MUESTRA A QUIEN SE REGISTRA. Estuvo colgado en /registrar-sitio/nuevo
  * y era la peor pantalla del producto: le pedia un pin en el mapa —y en su
  * momento un compromiso entero— a alguien con quien todavia no habiamos
- * hablado, y encima su buscador de direcciones llama a /api/geocode, que exige
- * ser operador y le respondia 404. El alta son cuatro campos (decision 35);
- * esto lo llena un operador cuando ya verifico el DM.
+ * hablado. El alta son cuatro campos (decision 35); esto lo llena un operador
+ * cuando ya verifico el DM, o lo corrige despues un dueno verificado desde el
+ * panel de un sitio que ya le pertenece.
  *
  * `modo='panel'` esconde el selector de Estado, porque publicar es de la
  * plataforma. ESCONDERLO NO ES LA PROTECCION: la proteccion es que
@@ -111,12 +111,12 @@ export function VenueForm({
   const [location, setLocation] = useState<PickedLocation | null>(
     venue ? { lat: venue.lat, lng: venue.lng } : null
   )
-
-  // Lo que ofrece el geocoder, pendiente de que el operador lo acepte. Nunca se
-  // escribe solo: en OSM las direcciones colombianas son irregulares y lo que
-  // ya escribio el operador suele ser mejor.
-  const [suggestion, setSuggestion] = useState<GeocodeResult | null>(null)
-  const [applied, setApplied] = useState(0)
+  const [addressLine, setAddressLine] = useState(venue?.addressLine ?? prefill?.addressLine ?? '')
+  const [neighborhood, setNeighborhood] = useState(
+    venue?.neighborhood ?? prefill?.neighborhood ?? ''
+  )
+  const [city, setCity] = useState(venue?.city ?? prefill?.city ?? '')
+  const [department, setDepartment] = useState(venue?.department ?? '')
 
   useEffect(() => {
     if (state.status !== 'success') return
@@ -131,34 +131,48 @@ export function VenueForm({
 
   const handlePick = (result: GeocodeResult) => {
     setLocation({ lat: result.lat, lng: result.lng })
-    setSuggestion(result)
+    if (!addressLine.trim() && result.addressLine) setAddressLine(result.addressLine)
+    if (!neighborhood.trim() && result.neighborhood) setNeighborhood(result.neighborhood)
+    if (!city.trim() && result.city) setCity(result.city)
+    if (!department.trim() && result.department) setDepartment(result.department)
   }
 
+  const geocodeQuery = [addressLine, city, department].filter(Boolean).join(', ')
+
   return (
-    <form action={formAction} className="flex max-w-3xl flex-col gap-8">
-      {venue ? <input type="hidden" name="id" value={venue.id} /> : null}
+    <form action={formAction} className='flex max-w-3xl flex-col gap-8'>
+      {venue ? <input type='hidden' name='id' value={venue.id} /> : null}
       {/* Guardar con esto puesto no solo crea el sitio: ademas mete al
           solicitante como dueno y cierra la solicitud, en un solo acto. Ver
           saveVenueAction. */}
-      {prefill ? <input type="hidden" name="solicitudId" value={prefill.solicitudId} /> : null}
+      {prefill ? <input type='hidden' name='solicitudId' value={prefill.solicitudId} /> : null}
 
       {state.status === 'error' ? (
         <p
-          role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm"
+          role='alert'
+          className='rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm'
         >
           {state.error}
         </p>
       ) : null}
 
-      <Section title="Identidad">
-        <Field label="Nombre" error={fieldError('name')}>
-          <input name="name" defaultValue={venue?.name ?? prefill?.name ?? ''} required className={inputClass} />
+      <Section title='Identidad'>
+        <Field label='Nombre' error={fieldError('name')}>
+          <input
+            name='name'
+            defaultValue={venue?.name ?? prefill?.name ?? ''}
+            required
+            className={inputClass}
+          />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tipo" error={fieldError('type')}>
-            <select name="type" defaultValue={venue?.type ?? prefill?.type ?? 'bar'} className={inputClass}>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Tipo' error={fieldError('type')}>
+            <select
+              name='type'
+              defaultValue={venue?.type ?? prefill?.type ?? 'bar'}
+              className={inputClass}
+            >
               {VENUE_TYPES.map((type) => (
                 <option key={type} value={type}>
                   {TYPE_LABEL[type]}
@@ -168,12 +182,8 @@ export function VenueForm({
           </Field>
 
           {modo === 'admin' ? (
-            <Field label="Estado" error={fieldError('status')}>
-              <select
-                name="status"
-                defaultValue={venue?.status ?? 'draft'}
-                className={inputClass}
-              >
+            <Field label='Estado' error={fieldError('status')}>
+              <select name='status' defaultValue={venue?.status ?? 'draft'} className={inputClass}>
                 {VENUE_STATUSES.map((status) => (
                   <option key={status} value={status}>
                     {STATUS_LABEL[status]}
@@ -184,13 +194,13 @@ export function VenueForm({
           ) : null}
         </div>
 
-        <Field label="Frase corta" hint="Sale debajo del nombre en la tarjeta.">
-          <input name="tagline" defaultValue={venue?.tagline ?? ''} className={inputClass} />
+        <Field label='Frase corta' hint='Sale debajo del nombre en la tarjeta.'>
+          <input name='tagline' defaultValue={venue?.tagline ?? ''} className={inputClass} />
         </Field>
 
-        <Field label="Descripción">
+        <Field label='Descripción'>
           <textarea
-            name="description"
+            name='description'
             defaultValue={venue?.description ?? prefill?.description ?? ''}
             rows={4}
             className={cn(inputClass, 'h-auto py-2')}
@@ -199,106 +209,71 @@ export function VenueForm({
       </Section>
 
       <Section
-        title="Dónde queda"
-        hint="Busca la dirección, o pon el pin directo en el mapa si el sitio no aparece."
+        title='Dónde queda'
+        hint='Escribe la dirección y ubícala. El primer resultado pone el pin; puedes arrastrarlo si hace falta.'
       >
-        <AddressSearch onPick={handlePick} />
-
-        {suggestion ? (
-          <div className="flex flex-col gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
-            <p className="text-sm">
-              El geocoder propone:{' '}
-              <span className="text-muted-foreground">{suggestion.displayName}</span>
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setApplied((n) => n + 1)}
-                className="rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground text-sm"
-              >
-                Usar estos datos
-              </button>
-              <button
-                type="button"
-                onClick={() => setSuggestion(null)}
-                className="rounded-md border border-border px-3 py-1.5 text-sm"
-              >
-                Dejar lo que escribi
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Dirección" error={fieldError('addressLine')}>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Dirección' error={fieldError('addressLine')}>
             <input
-              // key: remontar el input es lo que hace que defaultValue tome el
-              // valor sugerido. Sin esto habria que volverlo controlado y
-              // reescribir todo el formulario alrededor de useState.
-              key={`address-${applied}`}
-              name="addressLine"
-              defaultValue={
-                (applied > 0 ? suggestion?.addressLine : null) ??
-                venue?.addressLine ??
-                prefill?.addressLine ??
-                ''
-              }
+              name='addressLine'
+              value={addressLine}
+              onChange={(event) => setAddressLine(event.target.value)}
+              placeholder='Carrera 23 # 64-18'
               required
               className={inputClass}
             />
           </Field>
 
-          <Field label="Barrio">
+          <Field label='Barrio'>
             <input
-              key={`hood-${applied}`}
-              name="neighborhood"
-              defaultValue={
-                (applied > 0 ? suggestion?.neighborhood : null) ??
-                venue?.neighborhood ??
-                prefill?.neighborhood ??
-                ''
-              }
+              name='neighborhood'
+              value={neighborhood}
+              onChange={(event) => setNeighborhood(event.target.value)}
               className={inputClass}
             />
           </Field>
 
-          <Field label="Ciudad" error={fieldError('city')}>
+          <Field label='Ciudad' error={fieldError('city')}>
             <input
-              key={`city-${applied}`}
-              name="city"
-              defaultValue={(applied > 0 ? suggestion?.city : null) ?? venue?.city ?? prefill?.city ?? ''}
+              name='city'
+              value={city}
+              onChange={(event) => setCity(event.target.value)}
               required
               className={inputClass}
             />
           </Field>
 
-          <Field label="Departamento" error={fieldError('department')}>
+          <Field label='Departamento' error={fieldError('department')}>
             <input
-              key={`dept-${applied}`}
-              name="department"
-              defaultValue={
-                (applied > 0 ? suggestion?.department : null) ?? venue?.department ?? ''
-              }
+              name='department'
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
               required
               className={inputClass}
             />
           </Field>
         </div>
 
+        <AddressSearch
+          query={geocodeQuery}
+          venueId={modo === 'panel' ? venue?.id : undefined}
+          onPick={handlePick}
+        />
+
         <LocationPicker value={location} onChange={setLocation} />
 
         {/* Lat/lng visibles y de solo lectura. Cuando algo se ve raro en el
             mapa, ver los numeros es como se depura. Van como hidden inputs
             aparte para que el formulario los envie de verdad. */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Latitud" error={fieldError('latitude')}>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Latitud' error={fieldError('latitude')}>
             <input
               value={location?.lat.toFixed(6) ?? ''}
               readOnly
               className={cn(inputClass, 'text-muted-foreground')}
             />
           </Field>
-          <Field label="Longitud" error={fieldError('longitude')}>
+          <Field label='Longitud' error={fieldError('longitude')}>
             <input
               value={location?.lng.toFixed(6) ?? ''}
               readOnly
@@ -306,13 +281,13 @@ export function VenueForm({
             />
           </Field>
         </div>
-        <input type="hidden" name="latitude" value={location?.lat ?? ''} />
-        <input type="hidden" name="longitude" value={location?.lng ?? ''} />
+        <input type='hidden' name='latitude' value={location?.lat ?? ''} />
+        <input type='hidden' name='longitude' value={location?.lng ?? ''} />
       </Section>
 
       <Section
-        title="Lo que declara el sitio"
-        hint="Un estimado, no un recibo. El reparto de verdad va en cada trago de la carta."
+        title='Lo que declara el sitio'
+        hint='Un estimado, no un recibo. El reparto de verdad va en cada trago de la carta.'
       >
         {/* Aca vivia "El compromiso": un porcentaje de las ventas, o un monto
             fijo por unidad. Se retiro entero (decision 34). Un porcentaje
@@ -323,65 +298,77 @@ export function VenueForm({
             compromiso y por eso sobrevive: es lo que /mi-historia multiplica
             por cada noche guardada, siempre rotulado "estimado". */}
         <Field
-          label="Aporte estimado por persona, por noche"
-          hint="Opcional. En pesos. Es un ESTIMADO que declara el sitio, no un recibo: se multiplica por cada noche que alguien guarde. Déjalo vacío si no hay una cifra que el sitio respalde; vacío muestra las noches sin pesos, que es mejor que un número inventado."
+          label='Aporte estimado por persona, por noche'
+          hint='Opcional. En pesos. Es un ESTIMADO que declara el sitio, no un recibo: se multiplica por cada noche que alguien guarde. Déjalo vacío si no hay una cifra que el sitio respalde; vacío muestra las noches sin pesos, que es mejor que un número inventado.'
           error={fieldError('estimatedPerPersonNight')}
         >
           <input
-            name="estimatedPerPersonNight"
-            type="number"
-            step="100"
-            min="0"
-            placeholder="Sin cifra"
+            name='estimatedPerPersonNight'
+            type='number'
+            step='100'
+            min='0'
+            placeholder='Sin cifra'
             defaultValue={venue?.estimatedPerPersonNight ?? ''}
             className={inputClass}
           />
         </Field>
       </Section>
 
-      <Section title="Contacto">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Teléfono">
-            <input name="phone" defaultValue={venue?.phone ?? prefill?.phone ?? ''} className={inputClass} />
-          </Field>
-          <Field label="WhatsApp">
-            <input name="whatsapp" defaultValue={venue?.whatsapp ?? prefill?.whatsapp ?? ''} className={inputClass} />
-          </Field>
-          <Field label="Instagram">
+      <Section title='Contacto'>
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Field label='Teléfono'>
             <input
-              name="instagram"
+              name='phone'
+              defaultValue={venue?.phone ?? prefill?.phone ?? ''}
+              className={inputClass}
+            />
+          </Field>
+          <Field label='WhatsApp'>
+            <input
+              name='whatsapp'
+              defaultValue={venue?.whatsapp ?? prefill?.whatsapp ?? ''}
+              className={inputClass}
+            />
+          </Field>
+          <Field label='Instagram'>
+            <input
+              name='instagram'
               defaultValue={venue?.instagram ?? prefill?.instagram ?? ''}
               className={inputClass}
             />
           </Field>
-          <Field label="TikTok" hint="Sin la arroba.">
+          <Field label='TikTok' hint='Sin la arroba.'>
             <input
-              name="tiktok"
+              name='tiktok'
               defaultValue={venue?.tiktok ?? prefill?.tiktok ?? ''}
               className={inputClass}
             />
           </Field>
-          <Field label="Correo del sitio" hint="El del bar, no el de quien lo administra.">
+          <Field label='Correo del sitio' hint='El del bar, no el de quien lo administra.'>
             <input
-              name="email"
-              type="email"
+              name='email'
+              type='email'
               defaultValue={venue?.email ?? prefill?.email ?? ''}
               className={inputClass}
             />
           </Field>
-          <Field label="Sitio web">
-            <input name="website" defaultValue={venue?.website ?? prefill?.website ?? ''} className={inputClass} />
-          </Field>
-          <Field label="Horario">
+          <Field label='Sitio web'>
             <input
-              name="openingHours"
+              name='website'
+              defaultValue={venue?.website ?? prefill?.website ?? ''}
+              className={inputClass}
+            />
+          </Field>
+          <Field label='Horario'>
+            <input
+              name='openingHours'
               defaultValue={venue?.openingHours ?? prefill?.openingHours ?? ''}
               className={inputClass}
             />
           </Field>
-          <Field label="Imagen de portada (URL)">
+          <Field label='Imagen de portada (URL)'>
             <input
-              name="coverImageUrl"
+              name='coverImageUrl'
               defaultValue={venue?.coverImageUrl ?? ''}
               className={inputClass}
             />
@@ -389,16 +376,16 @@ export function VenueForm({
         </div>
       </Section>
 
-      <div className="flex items-center gap-3">
+      <div className='flex items-center gap-3'>
         <button
-          type="submit"
+          type='submit'
           disabled={pending || !location}
-          className="rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm transition-opacity hover:opacity-90 disabled:opacity-50"
+          className='rounded-md bg-primary px-4 py-2 font-semibold text-primary-foreground text-sm transition-opacity hover:opacity-90 disabled:opacity-50'
         >
           {pending ? 'Guardando…' : venue ? 'Guardar cambios' : 'Crear sitio'}
         </button>
         {!location ? (
-          <p className="text-muted-foreground text-sm">Falta ubicar el pin en el mapa.</p>
+          <p className='text-muted-foreground text-sm'>Falta ubicar el pin en el mapa.</p>
         ) : null}
       </div>
     </form>
@@ -418,10 +405,10 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-4">
+    <section className='flex flex-col gap-4'>
       <div>
-        <h2 className="font-display font-bold text-xl">{title}</h2>
-        {hint ? <p className="text-muted-foreground text-sm">{hint}</p> : null}
+        <h2 className='font-display font-bold text-xl'>{title}</h2>
+        {hint ? <p className='text-muted-foreground text-sm'>{hint}</p> : null}
       </div>
       {children}
     </section>
@@ -462,18 +449,18 @@ function Field({
     : children
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="font-medium text-sm">
+    <div className='flex flex-col gap-1.5'>
+      <label htmlFor={id} className='font-medium text-sm'>
         {label}
       </label>
       {control}
       {hint ? (
-        <span id={hintId} className="text-muted-foreground text-xs">
+        <span id={hintId} className='text-muted-foreground text-xs'>
           {hint}
         </span>
       ) : null}
       {error ? (
-        <span id={errorId} role="alert" className="text-destructive text-xs">
+        <span id={errorId} role='alert' className='text-destructive text-xs'>
           {error}
         </span>
       ) : null}

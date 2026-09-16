@@ -83,6 +83,17 @@ for (const account of accounts) {
       .values({ venueId: account.venue.id, userId, role: account.role })
       .onConflictDoNothing()
     console.log(`  ${account.email.padEnd(22)} → ${account.venue.slug} (${account.role})`)
+
+    // Owner A intentionally has two venues. It keeps the multi-venue switcher,
+    // active venue label, and "Sitios" screen inside the permanent browser
+    // harness instead of relying on a one-off manual account.
+    if (account.email === 'duenoa@prueba.local') {
+      await db
+        .insert(venueMember)
+        .values({ venueId: venues[1].id, userId, role: 'owner' })
+        .onConflictDoNothing()
+      console.log(`  ${account.email.padEnd(22)} → ${venues[1].slug} (owner, segundo sitio)`)
+    }
   } else {
     console.log(`  ${account.email.padEnd(22)} → operador (necesita estar en ADMIN_EMAILS)`)
   }
