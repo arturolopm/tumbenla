@@ -16,10 +16,46 @@ ShipFree includes Sentry instrumentation hooks for client, server, and edge runt
 
 ## Setup
 
-1. Create a Sentry project and obtain the DSN
-2. Set `SENTRY_DSN` in your environment
-3. Replace the placeholder `dsn` values in the Sentry config files
+The repository is already equivalent to the output of Sentry's Next.js wizard. Do not run the
+wizard over it: doing so would rewrite the existing instrumentation and may add a public example
+route.
+
+1. Create or select the `tumbenla/javascript-nextjs` Sentry project and copy its DSN.
+2. Create a Sentry organization auth token allowed to upload project releases and source maps.
+3. Add the following variables to both the Preview and Production scopes in Vercel:
+
+| Variable | Value | Visibility |
+| --- | --- | --- |
+| `SENTRY_DSN` | Project DSN | Public endpoint, server/edge runtime |
+| `NEXT_PUBLIC_SENTRY_DSN` | The same project DSN | Public endpoint, browser bundle |
+| `SENTRY_ORG` | `tumbenla` | Non-sensitive build configuration |
+| `SENTRY_PROJECT` | `javascript-nextjs` | Non-sensitive build configuration |
+| `SENTRY_AUTH_TOKEN` | Organization auth token | Sensitive, build-only |
+
+4. Redeploy each scope. `NEXT_PUBLIC_SENTRY_DSN` is embedded during the build, and source maps are
+   uploaded during that same build.
+5. Trigger one controlled browser error and one server error in Preview. Confirm both events use
+   the `preview` environment and show source-mapped application frames before deploying the same
+   configuration to Production.
 
 <Info>
-  The shipped config enables performance tracing and logs. Adjust sampling rates for production.
+  Missing DSNs disable Sentry cleanly. Preview and local development sample all traces; Production
+  samples 10%. Default PII collection is disabled in every runtime. Logs remain enabled.
 </Info>
+
+## Local development
+
+Sentry is disabled when the DSNs are blank, which is the default in `.env.example`. Local
+credentials are unnecessary unless you specifically want to test ingestion or a local production
+build's source-map upload. Never commit `SENTRY_AUTH_TOKEN`.
+
+## Verification
+
+Do not keep `/sentry-example-page` in the application. For initial verification, add a temporary
+throw in a Preview-only branch or use Sentry's wizard-generated example only long enough to verify
+the deployment, then remove it before promotion. A successful check includes:
+
+- browser and server events arriving in the correct Sentry project;
+- the environment reported as `preview`;
+- stack frames resolving to TypeScript source rather than minified bundles;
+- request cookies and authorization headers absent from event data.
