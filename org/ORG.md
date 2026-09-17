@@ -112,16 +112,16 @@ Detalle completo en `org/crecimiento/CRECIMIENTO.md` (adquisicion) y
 `org/crecimiento/RETENCION.md` (retencion). El resumen:
 
 **Lado sitio:** lo ve → solicita alta (`venueApplication`) → lo verificamos →
-publicado (`venue`) → primera noche con fotos (`partyNight`) → primer aporte
-reportado (`venueContribution`) → **primer aporte verificado** ← activacion →
-sigue reportando mes a mes ← retencion
+publicado (`venue`) → producto publicado → **primer trago entregado**
+(`order_redemption`) ← activacion → sigue usando su carta ← retencion
 
-**Lado rumbero:** lo ve → sale a un sitio → **reclama una foto** (`photoClaim`)
-← activacion → cuenta y `/mi-historia` → vuelve y reclama otra noche ← retencion
+**Lado rumbero:** lo ve → sale a un sitio → pide y recibe un producto
+(`order_redemption`) ← activacion → cuenta y `/mi-historia` → vuelve cuando haya
+otra noche ← retencion
 
-**El lazo que los une:** un sitio sube fotos → los rumberos de esa noche las
-reclaman → el sitio ve que su noche movio gente → reporta el aporte → el aporte
-verificado sale en `/transparencia` → eso es lo que convence al siguiente sitio.
+**El lazo que los une:** un sitio publica una carta → los rumberos piden y
+reciben el producto → Tumbenla compra material y publica la factura → la prueba
+queda disponible para el siguiente sitio y la siguiente noche.
 
 La metrica que compone es **fotos reclamadas por noche publicada**. Es la unica
 que mide el lazo entero y no un lado suelto.
@@ -135,7 +135,7 @@ gringo con precio, plan y embudo de un solo lado. Aca no hay nada de eso, asi qu
 **se usan filtradas**, nunca al pie de la letra.
 
 Todas leen `.agents/product-marketing.md` antes de trabajar. Ese archivo lleva
-las ocho prohibiciones que mandan sobre cualquier recomendacion que salga de
+las prohibiciones que mandan sobre cualquier recomendacion que salga de
 ellas.
 
 | Se usan tal cual | Se usan adaptadas | No se usan (no hay modelo de negocio para eso) |

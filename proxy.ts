@@ -8,8 +8,8 @@ import { COOKIE_CIUDAD } from '@/config/ciudades'
  * POR QUE POR IP Y NO CON navigator.geolocation: la API del navegador dispara
  * un permiso del sistema en la primera visita. Pedirle a alguien que entrega su
  * ubicacion exacta antes de haberle mostrado nada es la forma mas rapida de que
- * le de "bloquear" y de que no vuelva. Para decidir si alguien esta en Manizales
- * o no, la ciudad por IP alcanza y no cuesta un permiso.
+ * le de "bloquear" y de que no vuelva. Para decidir si alguien esta cerca de una
+ * ciudad activa, la ciudad por IP alcanza y no cuesta un permiso.
  *
  * POR QUE UNA COOKIE Y NO LEER LA CABECERA EN LA PAGINA: leer cabeceras dentro
  * de un Server Component vuelve la ruta dinamica y /sitios pierde el ISR. La

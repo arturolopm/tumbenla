@@ -137,7 +137,10 @@ const actions = load('src/app/actions/carta.ts', {
   '@/database/schema': schema,
   '@/config/env': { env: {} },
   '@/lib/auth/venue-access': access,
-  '@/lib/comercio/types': { KINDS_DE_PRODUCTO: ['coctel'], PORCENTAJE_MINIMO_DE_RECONSTRUCCION: 40 },
+  '@/lib/comercio/types': {
+    KINDS_DE_PRODUCTO: ['coctel'],
+    PORCENTAJE_MINIMO_DE_RECONSTRUCCION: 40,
+  },
   '@/lib/storage': { storage: {} },
   '@/lib/utils/id': { createId: () => 'image-id' },
   'next/cache': { revalidatePath: () => {} },
@@ -339,16 +342,74 @@ for (const path of [
   'src/components/layout/le-entro.tsx',
   'src/app/(publico)/page.tsx',
   'src/app/(publico)/como-funciona/page.tsx',
+  'src/app/(publico)/registrar-sitio/page.tsx',
+  'src/components/layout/site-footer.tsx',
+  'src/app/(publico)/sitios/page.tsx',
+  'src/app/(publico)/sitios/[slug]/page.tsx',
+  'src/app/(publico)/transparencia/page.tsx',
+  'src/app/(publico)/mi-historia/page.tsx',
+  'src/components/commerce/customer-orders.tsx',
+  'src/app/(publico)/terminos/page.tsx',
+  'src/app/(publico)/privacidad/page.tsx',
+  'src/app/layout.tsx',
+  'src/app/manifest.ts',
+  'src/lib/seo.ts',
+  'src/app/_og/imagen.tsx',
 ])
   await check(`public copy: ${path}`, () => {
     const text = read(path).replace(/\s+/g, ' ')
     assert.doesNotMatch(
       text,
-      /\bdona(?:r|ción|cion)?\b|porcentaje de la noche|plata fija|parte de lo que te tomas|parte de sus ventas|plata no pasa|no procesamos pagos|verificamos el compromiso/i
+      /porcentaje de la noche|plata fija|parte de lo que te tomas|parte de sus ventas|plata no pasa|no procesamos pagos|verificamos el compromiso|cada trago es un ladrillo|clientes nuevos|promociones gratis/i
     )
-    assert.match(text, /pesos/i)
-    assert.match(text, /producto|trago|cóctel/i)
-    assert.match(text, /material/i)
+    if (
+      path === 'src/app/(publico)/page.tsx' ||
+      path === 'src/app/(publico)/como-funciona/page.tsx' ||
+      path === 'src/app/(publico)/sitios/[slug]/page.tsx' ||
+      path === 'src/app/(publico)/terminos/page.tsx'
+    ) {
+      assert.match(text, /pesos/i)
+      assert.match(text, /producto|trago|cóctel/i)
+      assert.match(text, /material/i)
+    }
   })
+await check('canonical public message', () => {
+  const home = read('src/app/(publico)/page.tsx')
+  assert.match(home, /El ritmo nos levanta/)
+  assert.match(home, /Tumbenla/)
+  assert.match(home, /y volvamosla a parar/)
+  assert.match(home, /href=['"]\/sitios['"]/, 'homepage map CTA')
+  assert.match(read('src/components/layout/le-entro.tsx'), /href=['"]\/registrar-sitio['"]/)
+})
+await check('public copy does not fix a launch city', () => {
+  for (const path of [
+    'src/app/(publico)/page.tsx',
+    'src/app/(publico)/como-funciona/page.tsx',
+    'src/app/(publico)/registrar-sitio/page.tsx',
+    'src/app/(publico)/sitios/page.tsx',
+    'src/app/layout.tsx',
+    'src/app/manifest.ts',
+    'src/lib/seo.ts',
+    'src/app/_og/imagen.tsx',
+  ]) {
+    assert.doesNotMatch(read(path), /Manizales|Arrancamos en/i, path)
+  }
+})
+await check('public accounting labels are current', () => {
+  const text = [
+    read('src/app/(publico)/transparencia/page.tsx'),
+    read('src/app/(publico)/mi-historia/page.tsx'),
+    read('src/components/commerce/customer-orders.tsx'),
+  ].join('\n')
+  assert.match(text, /Para reconstruir/)
+  assert.match(text, /Ya en material/)
+  assert.match(text, /Pendiente de convertir en material/)
+  assert.doesNotMatch(text, /Total donado|Ya entregado|Pendiente por entregar/)
+})
+await check('public map does not surface legacy venue contributions', () => {
+  const queries = read('src/lib/venues/queries.ts')
+  assert.doesNotMatch(queries, /venueContribution/)
+  assert.match(queries, /materialDesde|baratoPrecio/)
+})
 console.log(`${checks} passed; ${failures} failed`)
 if (failures) process.exitCode = 1

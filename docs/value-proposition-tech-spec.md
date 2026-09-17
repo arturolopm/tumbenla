@@ -609,7 +609,7 @@ export const VALUE_PROP_FLAGS = {
 ## 13. Próximos Pasos Inmediatos
 
 1. **[Tripartita]** Reunión 30 min: Producto + Crecimiento + Datos → aprobar scope MVP (birthdate + consent + source tracking + benchmarks vistas)
-2. **[Datos]** Validar queries benchmark con datos locales (Manizales seed)
+2. **[Datos]** Validar queries benchmark con datos locales (seed de prueba)
 3. **[Ingeniería]** Crear migración #1 (user) + tests → feature flag `USER_BIRTHDATE`
 4. **[Crecimiento]** Redactar templates: birthday_v1, we_miss_you_v1, last_chance_v1 (pasar VOZ.md)
 5. **[Producto]** Decidir: ¿birthdate obligatorio u opcional en registro? (Recomendación: opcional, consent por defecto false)

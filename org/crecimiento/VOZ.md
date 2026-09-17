@@ -9,8 +9,25 @@ mensaje de WhatsApp. Manda sobre lo que diga cualquier skill importada.
 (`PRODUCT.md`, Decision 16.)
 
 Le hablamos a un combo que sale de rumba, no a un donante que socorre a una
-victima. La gente sale como sale siempre; lo que cambia es que el sitio pone su
-parte. Ese es todo el argumento y no necesita adorno moral.
+victima. La gente sale como sale siempre; lo que cambia es que un producto
+concreto deja un reparto visible y Tumbenla publica la prueba. Ese es todo el
+argumento y no necesita adorno moral.
+
+Toda pieza sigue **Why → How → What**:
+
+1. **Why:** la rumba puede dejar algo visible en la ciudad sin convertirse en un acto de caridad.
+2. **How:** un producto muestra su precio y reparto en pesos; el QR registra la entrega y las compras quedan publicadas.
+3. **What:** encuentra un sitio, pide el producto y revisa las facturas.
+
+La portada le habla primero al rumbero. El dueño tiene su recorrido en
+`/registrar-sitio`; no se mezclan beneficios ni llamados a la acción.
+
+Cuando hablemos con un sitio de capacidades futuras, se nombran como desarrollo,
+no como funciones activas: volver a contactar visitantes que dieron permiso,
+invitar a noches especiales y consultar datos agregados de productos, campañas y
+retorno. Nunca se ofrece una lista de correos o teléfonos como propiedad del
+sitio. Cada comunicación depende del consentimiento, la privacidad, la
+configuración final y el acuerdo comercial.
 
 ## Palabras quemadas
 
@@ -33,13 +50,22 @@ Tampoco las versiones tibias: "ponerle el hombro", "tender la mano".
 |---|---|
 | "Apoya a los damnificados" | "Este bar puso $X en material" |
 | "Mapa Solidario" | "Mapa del parche" |
-| "Quiero donar" | "Como me uno" |
+| "Quiero donar" | "Cómo me uno" |
 | "Ayudamos a reconstruir" | "Compramos el material y publicamos la factura" |
 | "Mas de 500 personas" | la cifra real de la base, o nada |
 | "Gracias por tu aporte" | "Tu noche en El Sitio: $X estimado" |
 
-El CTA de la portada es **"Como me uno"**, no "Quiero poner". Ese verbo se queda
-donde de verdad aplica: hablandole al dueno del bar, que es quien pone.
+El CTA de la portada es **"Cómo me uno"**, no "Quiero poner". Para un dueño el
+CTA es **"Ver cómo entrar"** y vive junto a sus beneficios verificables.
+
+Frases canónicas: **"El ritmo nos levanta"**, **"Tumbenla y volvamosla a
+parar"** y **"Salir sigue siendo salir"**. No se alteran ni se sustituyen por
+una explicación técnica en el hero. La propuesta no fija una ciudad de
+lanzamiento: la disponibilidad depende de la configuración activa.
+
+En transparencia se dice **"Para reconstruir"**, **"Ya en material"** y
+**"Pendiente de convertir en material"**. No se usa lenguaje de donante,
+atribución individual ni equivalencias como “cada trago es un ladrillo”.
 
 ## Cifras
 
@@ -60,7 +86,7 @@ citarlo; esa es la gracia.
 
 ## Tono
 
-Corto. Colombiano de Manizales, no neutro de doblaje. Sin signos de admiracion
+Corto. Colombiano, no neutro de doblaje. Sin signos de admiracion
 en cadena, sin emojis de manos aplaudiendo, sin "🚀". Una frase que un mesero le
 diria a un cliente, no una que un community manager le diria a un feed.
 

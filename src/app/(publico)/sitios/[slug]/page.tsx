@@ -8,7 +8,6 @@ import { listarCartaPublica } from '@/lib/comercio/queries'
 import { listNightsForVenue } from '@/lib/fiestas/queries'
 import { getVenueBySlug, listPublishedVenueSlugs } from '@/lib/venues/queries'
 import { formatCOP, formatDate } from '@/lib/utils/format'
-import { getVerifiedTotal, listVerifiedContributions } from '@/lib/venues/contributions'
 import { generateMetadata as buildMetadata } from '@/lib/seo'
 
 export const revalidate = 300
@@ -53,11 +52,8 @@ export async function generateMetadata({
 
   return buildMetadata({
     title: `${venue.name}, ${venue.city}`,
-    // Una frase estable y cierta, sin cifras. generateMetadata solo carga el
-    // sitio, no su carta, y meterle una segunda consulta para poner pesos en
-    // una meta description que ademas se cachea seria pagar dos veces por algo
-    // que envejece mal.
-    description: `${venue.name} pone parte de cada trago en material de construcción.`,
+    // Stable copy without figures: metadata only loads the venue, not its current menu.
+    description: `${venue.name} tiene un producto de Tumbenla en su carta, con una parte para material de construcción.`,
     canonical: `/sitios/${venue.slug}`,
   })
 }
@@ -68,29 +64,18 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
   if (!venue) notFound()
 
-  // Esta consulta NO depende de la sesion —solo de noches publicadas y fotos
-  // habilitadas— asi que la pagina sigue siendo estatica y conserva su ISR, del
-  // que depende que la base de Neon duerma. El estado "¿ya reclame esta foto?"
-  // si depende de quien mira, y por eso vive en /sitios/[slug]/noches/[id],
-  // que es dinamica y de bajo volumen por diseno.
+  // This query does not depend on the session: only published nights and enabled photos are
+  // involved, so the page stays static and keeps its ISR. The "did I claim this photo?" state
+  // depends on the viewer and therefore lives in the dynamic, low-volume night route.
   const noches = await listNightsForVenue(venue.id)
 
-  // Solo lo VERIFICADO, y el filtro vive dentro de la consulta, no aca. Un
-  // aporte que el sitio reporto y nosotros no hemos confirmado no existe para
-  // el publico: publicarlo seria afirmar bajo nuestro nombre algo que no
-  // comprobamos.
-  const aportes = await listVerifiedContributions(venue.id)
-  const totalAportado = await getVerifiedTotal(venue.id)
-
-  // La carta NO depende de la sesion, asi que el ISR de esta pagina sobrevive.
-  // Es de las mas visitadas del sitio y meterle algo que dependa de quien mira
-  // la volveria dinamica y despertaria la base en cada visita.
+  // The menu does not depend on the session, so this page keeps its ISR. It is one of the most
+  // visited routes and adding viewer-specific data would make every visit hit the database.
   const carta = await listarCartaPublica(venue.id)
 
-  // El PISO de lo que pone un trago, no el del trago mas barato: un trago caro
-  // con un porcentaje alto puede poner menos que uno barato con uno bajo, y
-  // "desde" es una afirmacion de piso. Es la misma regla que usa el chip de la
-  // tarjeta en listPublishedVenues.
+  // This is the floor of the material allocation, not the floor of the cheapest drink: a costly
+  // drink with a high percentage can allocate less than a cheap one with a lower percentage.
+  // "Desde" makes the floor claim explicit and matches the venue-card rule.
   const materialDesde = carta.length > 0 ? Math.min(...carta.map((p) => p.material)) : null
 
   const contactLinks = [
@@ -139,11 +124,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           ) : null}
         </div>
 
-        {/* Lo que se puede pedir AHORA, en pesos. Sale de `carta`, que esta
-            pagina ya carga, asi que no hay consulta nueva y el ISR sigue en
-            pie. Lo entregado no se repite aca: vive mas abajo, en "Lo que ya
-            entregó", y decir el mismo numero dos veces en una pantalla no lo
-            hace mas cierto. */}
+        {/* Current menu evidence, in pesos, comes from the same ISR-backed query as the public card. */}
         {materialDesde !== null ? (
           <p className='rounded-xl border-2 border-lime px-4 py-3 font-display text-label-lg text-lime uppercase'>
             Desde {formatCOP(materialDesde)} en material por trago
@@ -207,9 +188,7 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
           </Bloque>
         ) : null}
 
-        {/* How the commitment was checked. The product vouches for this claim
-            publicly, so how it was verified belongs on the page, not in a
-            database column nobody reads. */}
+        {/* Venue verification is public because the map claim depends on it. */}
         {venue.verified ? (
           <Bloque titulo='Cómo lo confirmamos'>
             <p className='text-pretty text-body-md text-muted-foreground'>
@@ -221,52 +200,6 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
       {carta.length > 0 ? (
         <CartaPublica venueId={venue.id} slug={venue.slug} productos={carta} />
-      ) : null}
-
-      {aportes.length > 0 ? (
-        <section className='mt-10 rounded-xl border border-lime p-8'>
-          <h2 className='font-display font-extrabold text-headline-md uppercase'>
-            Lo que ya entregó
-          </h2>
-          <p className='mt-2 font-display font-black text-4xl text-lime leading-none tabular-nums'>
-            {formatCOP(totalAportado.total, totalAportado.currency)}
-          </p>
-          {/* La atribucion no es cortesia: la cifra la reporta el sitio y la
-              confirmamos nosotros, y decir las dos cosas es la diferencia entre
-              un dato y una afirmacion nuestra sin respaldo. */}
-          <p className='mt-3 max-w-prose text-pretty text-body-md text-muted-foreground'>
-            Reportado por el sitio y confirmado por nosotros. Cada entrega va con la fecha en que la
-            confirmamos.
-          </p>
-
-          <ul className='mt-6 flex flex-col gap-2'>
-            {aportes.map((aporte) => (
-              <li
-                key={aporte.id}
-                className='flex flex-wrap items-baseline justify-between gap-2 border-border border-t pt-2 text-body-md'
-              >
-                <span className='text-muted-foreground'>
-                  {formatDate(aporte.periodStart)} – {formatDate(aporte.periodEnd)}
-                </span>
-                <span className='tabular-nums'>
-                  {formatCOP(Number.parseFloat(aporte.amount), aporte.currency)}
-                </span>
-                {aporte.purchaseSlug ? (
-                  <Link
-                    href={`/transparencia/${aporte.purchaseSlug}`}
-                    className='w-full text-primary-text text-sm hover:underline sm:w-auto'
-                  >
-                    Se fue en {aporte.purchaseTitle} →
-                  </Link>
-                ) : (
-                  <span className='w-full text-muted-foreground text-sm sm:w-auto'>
-                    Todavía sin gastar
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
       ) : null}
 
       {noches.length > 0 ? (

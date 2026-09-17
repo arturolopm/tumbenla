@@ -112,14 +112,14 @@ export default async function CustomerHistoryPage() {
                 value={formatCOP(Number(contribution.spentMinor) / 100)}
               />
               <ContributionMetric
-                label='Total donado'
+                label='Para reconstruir'
                 value={formatCOP(Number(contribution.donatedMinor) / 100)}
               />
             </div>
 
             <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
-              El total gastado cuenta las unidades reales pagadas y aún no devueltas. El total
-              donado suma únicamente el reparto final de las unidades entregadas; por eso puede
+              El total gastado cuenta las unidades reales pagadas y aún no devueltas. Para
+              reconstruir suma únicamente el reparto final de las unidades entregadas; por eso puede
               actualizarse después de tu pedido.
             </p>
 

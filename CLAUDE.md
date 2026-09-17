@@ -181,8 +181,8 @@ const MOTIVO_TEXTO = { ya_redimido: 'Ese trago ya se entregó.' }; // NO
 const REASON_TEXT = { already_redeemed: 'Ese trago ya se entregó.' }; // si
 ```
 
-Por que: el producto es solo de Manizales, pero el codigo lo lee cualquiera que entre al repo, y
-media libreria del stack ya esta en ingles. Un `venueId` al lado de un `saldoDeSitio` obliga a
+Por que: el producto puede operar en cualquier ciudad activa, pero el codigo lo lee cualquiera que
+entre al repo, y media libreria del stack ya esta en ingles. Un `venueId` al lado de un `saldoDeSitio` obliga a
 traducir mentalmente en cada linea.
 
 **Hay deuda de esto y se paga EN EL CAMINO.** Son 57 archivos y 81 exports con nombre en español (el
@@ -356,7 +356,7 @@ remove the step or defer it until it returns value. Record durable decisions in
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **tumbenla** (4618 symbols, 10142 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **tumbenla** (4622 symbols, 10147 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 

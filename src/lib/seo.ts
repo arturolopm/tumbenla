@@ -10,19 +10,19 @@ const brandConfig = getBrandConfig()
 export const siteConfig = {
   name: brandConfig.name,
   description:
-    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Mira cuáles son, dónde quedan, y en qué se fue la plata.',
+    'Sitios con un producto de Tumbenla en su carta. Mira dónde salir y qué compras de material ya tienen factura.',
   url: getBaseUrl(),
   twitterHandle: '@tumbenla',
   creator: 'Tumbenla',
   locale: 'es_CO',
   keywords: [
     'Tumbenla',
-    'bares que donan',
-    'discotecas que donan',
-    'rumba con causa',
+    'bares Tumbenla',
+    'discotecas Tumbenla',
+    'rumba y reconstrucción',
     'material de construcción',
     'reconstrucción Colombia',
-    'donaciones Colombia',
+    'compras de material Colombia',
     'vida nocturna Colombia',
     'bares Colombia',
     'discotecas Colombia',
@@ -89,11 +89,8 @@ const getOpenGraph = (options: SEOOptions) => {
     description: options.description || siteConfig.description,
     siteName: siteConfig.name,
     locale: siteConfig.locale,
-    // SOLO cuando la pagina trae una imagen propia. Sin esta condicion, el
-    // valor explicito le gana SIEMPRE al archivo `opengraph-image.tsx`, que es
-    // la convencion de Next: la imagen dibujada existiria y no la usaria nadie.
-    // Aca vivia un `|| '/opengraph-image.png'` que apuntaba al PNG del
-    // boilerplate, y por eso compartir el sitio mostraba "Launch SaaS in days".
+    // Only include a page-specific image. Otherwise an explicit value always wins over Next's
+    // generated opengraph-image convention and the reviewed social image is never used.
     ...(options.image && {
       images: [
         {
@@ -117,8 +114,7 @@ const getTwitterCard = (options: SEOOptions) => {
     title: options.title || siteConfig.name,
     description: options.description || siteConfig.description,
     creator: siteConfig.twitterHandle,
-    // Mismo motivo que en getOpenGraph: si no se declara, manda
-    // `twitter-image.tsx`.
+    // Same reason as getOpenGraph: without an explicit image, Next uses twitter-image.tsx.
     ...(options.image && { images: [options.image] }),
   }
 }

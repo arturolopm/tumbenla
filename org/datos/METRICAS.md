@@ -137,9 +137,9 @@ las resume en tres cifras comparables, siempre con `funding_classification = 're
 
 | Métrica | Definición canónica |
 |---|---|
-| Total donado | Asignación final para reconstruir de unidades entregadas. En app exige cobro `approved`; en barra es el principal de la deuda nacida al entregar. Excluye disputas, sandbox y legado sin verificar. |
-| Ya entregado | Parte del total anterior atribuida a una compra de material `verified`, publicada y con recibo público. La atribución está limitada por el giro bancario verificado y nunca puede exceder `Total donado`. |
-| Pendiente por entregar | `Total donado - Ya entregado`. No es ingreso de Tumbenla; es la asignación que todavía no tiene una compra de material publicada contra ella. |
+| Para reconstruir | Asignación final para reconstruir de unidades entregadas. En app exige cobro `approved`; en barra es el principal de la deuda nacida al entregar. Excluye disputas, sandbox y legado sin verificar. |
+| Ya en material | Parte del total anterior atribuida a una compra de material `verified`, publicada y con recibo público. La atribución está limitada por el giro bancario verificado y nunca puede exceder `Para reconstruir`. |
+| Pendiente de convertir en material | `Para reconstruir - Ya en material`. No es ingreso de Tumbenla; es la asignación que todavía no tiene una compra de material publicada contra ella. |
 
 La consulta canónica vive en `getFoundationTransparencyStages` de
 `src/lib/commerce/transparency-service.ts`. Su forma relacional es:
@@ -194,7 +194,7 @@ from donado_app, donado_barra, compras_con_recibo;
 En `/mi-historia`, `Total gastado` suma `commerce_order_unit.gross_minor` para la persona y la
 clasificación real, incluyendo unidades `issued`, `redeemed` o `refund_reserved`, y unidades app
 `expired` que todavía conservan el pasivo de devolución. Excluye `pending_payment`, `void` y
-`refunded`. `Total donado` aplica los mismos filtros de asignación final del resumen público, además
+`refunded`. `Para reconstruir` aplica los mismos filtros de asignación final del resumen público, además
 del `product_order.user_id`. Los pedidos no reales pueden mostrarse como historial, pero nunca
 alimentan estas dos cifras.
 
@@ -297,7 +297,7 @@ lista de deseos.
 
 1. **De donde llego una solicitud de sitio.** `venue_application` no guarda
    origen (calle, vecino, Instagram). Sin eso, **ningun experimento de canal del
-   lado sitio es concluyente**. Es una columna y un campo en `/quiero-poner`.
+   lado sitio es concluyente**. Es una columna y un campo en `/registrar-sitio`.
    Bloquea: EXP-001.
 2. **Cuanta gente ve el mapa y no reclama nada.** No hay analitica instalada ni
    evento de vista. Hoy solo existe el numerador: se puede contar quien reclamo,

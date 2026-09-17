@@ -8,7 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: brand.name,
     short_name: brand.name,
     description:
-      'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Mira cuáles son, dónde quedan, y en qué se fue la plata.',
+      'Sitios con un producto de Tumbenla en su carta y compras de material con factura.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
@@ -32,7 +32,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         name: 'Ver los sitios',
         short_name: 'Sitios',
-        description: 'Bares y discotecas que están poniendo',
+        description: 'Sitios con un producto de Tumbenla publicado',
         url: '/sitios',
       },
       {

@@ -35,8 +35,8 @@ No proxy/config/explorer edits, dependencies, product decisions or unrelated for
   `/sitios` is static/ISR with 300-second revalidation. The build logs non-blocking local
   pooler warnings from the database configuration.
 - Browser validation against the local dev server: `?ciudad=pereira` showed the inactive-city
-  gate and Manizales CTA; `?ciudad=manizales` showed the normal explorer; the CTA from
-  `?ciudad=pereira&vista=mapa` resolved to `?ciudad=manizales&vista=mapa`.
+  gate and active-city CTA; an active-city override showed the normal explorer; the CTA from
+  `?ciudad=pereira&vista=mapa` preserved `vista=mapa` while selecting the active city.
 - GitNexus `detect-changes --scope unstaged`: whole dirty tree reports CRITICAL because it
   includes pre-existing panel/action work. This slice's pre-edit impact was LOW. Do not infer
   that whole-tree result is the city gate's blast radius.

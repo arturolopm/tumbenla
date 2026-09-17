@@ -93,7 +93,7 @@ export function CustomerOrders({ orders }: { orders: readonly CustomerOrder[] })
       </ul>
 
       <p className='mt-4 max-w-prose text-pretty text-body-md text-muted-foreground'>
-        El total donado usa únicamente pedidos reales con reparto financiero terminado. Las pruebas
+        Para reconstruir usa únicamente pedidos reales con reparto financiero terminado. Las pruebas
         y los registros históricos por verificar siguen visibles, pero nunca entran en ese total.
       </p>
     </section>
