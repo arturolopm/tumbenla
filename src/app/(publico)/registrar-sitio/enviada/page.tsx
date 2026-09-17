@@ -1,11 +1,11 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 
 import { CopiarTexto } from '@/components/sitios/copiar-texto'
 import { CORREO_CONTACTO, INSTAGRAM_VERIFICACION, urlInstagram } from '@/config/contacto'
 import { auth } from '@/lib/auth/auth'
-import { getLiveApplication } from '@/lib/venues/claims'
+import { getApplicationByToken, getLiveApplication } from '@/lib/venues/claims'
 
 /**
  * Qué sigue después de mandar la solicitud.
@@ -29,18 +29,27 @@ export const metadata = {
 export default async function EnviadaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ id?: string }>
+  searchParams: Promise<{ id?: string; t?: string }>
 }) {
   const [session, params] = await Promise.all([
     auth.api.getSession({ headers: await headers() }),
     searchParams,
   ])
 
-  if (!session) redirect('/login?redirectAfter=/registrar-sitio')
+  /**
+   * Dos formas de llegar, y cada una con su propia regla.
+   *
+   * `?t=` es el token al portador de quien mando la solicitud SIN cuenta: es lo
+   * unico que tiene para volver, asi que no puede exigir sesion.
+   * `?id=` sigue filtrando por userId, o sea que poner el id de la solicitud de
+   * otra persona en la URL no muestra nada.
+   */
+  const solicitud = params.t
+    ? await getApplicationByToken(params.t)
+    : session
+      ? await getLiveApplication(session.user.id, params.id)
+      : null
 
-  // getLiveApplication filtra por userId, asi que poner el id de la solicitud
-  // de otra persona en la URL no muestra nada.
-  const solicitud = await getLiveApplication(session.user.id, params.id)
   if (!solicitud) notFound()
 
   const mensaje = `Hola, soy de ${solicitud.name} y quiero registrarlo en Tumbenla. Mi correo es ${solicitud.contactEmail}`
@@ -93,9 +102,9 @@ export default async function EnviadaPage({
 
         <Paso numero={3} titulo='Nosotros hacemos el resto'>
           <p className='text-body-md text-muted-foreground'>
-            Cuando llegue tu mensaje te escribimos a{' '}
-            <strong className='text-street-white'>{solicitud.contactEmail}</strong> para acordar
-            cuánto vas a poner. Ahí te damos el panel y publicamos el sitio.
+            Cuando confirmemos el mensaje y el correo, te avisamos si aprobamos el sitio. En ese
+            correo te contamos cómo entrar al panel con el mismo correo, sin invitaciones ni otro
+            paso de aprobación.
           </p>
         </Paso>
       </ol>

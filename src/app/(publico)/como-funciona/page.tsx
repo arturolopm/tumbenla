@@ -6,7 +6,7 @@ import { generateMetadata as buildMetadata } from '@/lib/seo'
 export const metadata: Metadata = buildMetadata({
   title: 'Nuestra Causa',
   description:
-    'Cómo escogemos los sitios, cómo confirmamos lo que prometen, y cómo publicamos en qué se fue la plata.',
+    'Un trago con su precio y su reparto en pesos, una entrega con QR y las facturas del material que compramos.',
   canonical: '/como-funciona',
 })
 
@@ -115,7 +115,7 @@ export default function NuestraCausaPage() {
                 </span>
               </div>
               <p className="max-w-md text-pretty text-body-lg text-muted-foreground">
-                La disciplina aburrida: confirmar cada compromiso, guardar cada factura y
+                La disciplina aburrida: revisar cada producto, guardar cada factura y
                 publicarla. Es el esqueleto que sostiene lo otro sin apagarle el ruido.
               </p>
             </div>
@@ -134,31 +134,33 @@ export default function NuestraCausaPage() {
       <section className="relative z-10 mx-auto flex w-full max-w-3xl flex-col gap-12 px-margin-mobile py-section-gap lg:px-margin-desktop">
         <Bloque titulo="Para el que sale">
           <p>
-            Entras a la lista de sitios, escoges uno y vas. Ya está. No tienes que donar nada
-            aparte ni registrarte: el sitio pone su parte de lo que vendió esa noche.
+            Escoges un sitio y un producto de su carta. Antes de pedirlo ves el precio y el
+            reparto en pesos: cuánto va a material y cuánto se queda en el sitio.
           </p>
           <p>
-            Cada tarjeta dice exactamente cuánto pone ese sitio. Unos ponen un porcentaje de la
-            noche, otros una plata fija por cada trago o botella.
+            Puedes pedirlo como invitado o con cuenta. En la barra muestras el QR: el personal
+            lo escanea y te entrega el trago. La confirmación aparece en tu pantalla.
           </p>
         </Bloque>
 
-        <Bloque titulo="Cómo confirmamos lo que dicen">
+        <Bloque titulo="Qué revisamos antes de publicar">
           <p>
-            Hablamos con cada sitio antes de publicarlo y dejamos escrito cómo lo confirmamos.
-            Eso aparece en la página del sitio.
+            Confirmamos los datos del sitio y revisamos cada producto antes de publicarlo:
+            qué vas a pedir, cuánto cuesta y cómo se reparte el precio.
           </p>
           <p>
-            Somos honestos con el límite: hoy verificamos el compromiso, no cada peso. La
-            verificación automática de cuánto entregó cada sitio es lo siguiente que vamos a
-            construir, y cuando esté lista lo vas a ver acá.
+            El pedido conserva el precio y el reparto que viste. El escaneo registra la entrega.
+            La plata para material entra a lo que pone el sitio; las compras se publican con
+            factura en transparencia.
           </p>
         </Bloque>
 
         <Bloque titulo="Qué pasa con la plata">
           <p>
-            La plata no pasa por esta página. No cobramos, no procesamos pagos y no guardamos
-            tarjetas. Los sitios entregan su parte y nosotros compramos el material.
+            El pago corresponde al producto que escogiste, con su reparto declarado. Si pagas
+            en la app, el escaneo confirma la entrega. Si pagas en la barra, el personal
+            escanea primero y después cobra. Nosotros compramos el material y publicamos
+            la factura.
           </p>
           <p>
             Cada compra queda publicada con su fecha, el detalle de lo que se compró y la
@@ -179,20 +181,19 @@ export default function NuestraCausaPage() {
             Si tienes un bar o una discoteca
           </h2>
           <p className="mt-3 text-pretty text-body-md text-muted-foreground">
-            Tú decides cuánto pones y sobre qué. Puede ser un porcentaje de la noche, o una
-            plata fija por cerveza, por cóctel o por botella. Lo único que pedimos es que sea
-            claro y que lo puedas sostener.
+            Armas un producto: un cóctel, una cerveza, un combo o una botella. Defines el precio
+            y qué parte va para reconstruir. El mínimo es 40%; desde 50% aparece destacado en la
+            carta pública.
           </p>
 
           <ol className="mt-6 flex flex-col gap-3 text-body-md text-muted-foreground">
-            <li>1. Nos escribes y nos cuentas cuánto quieres poner.</li>
-            <li>2. Lo dejamos por escrito y confirmamos los datos del sitio.</li>
-            <li>3. Publicamos tu sitio en la lista y en el mapa.</li>
-            <li>4. Entregas tu parte, compramos material y publicamos la factura.</li>
+            <li>1. Registras tu sitio para que confirmemos sus datos.</li>
+            <li>2. Armas el producto, defines un reparto de mínimo 40% y lo publicas en tu carta.</li>
+            <li>3. Tu personal escanea cada entrega. Compramos material y publicamos la factura.</li>
           </ol>
 
           <Link
-            href="/quiero-poner"
+            href="/registrar-sitio"
             className="mt-6 inline-block rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90"
           >
             Quiero poner

@@ -1,15 +1,9 @@
 import 'server-only'
 
-import { asc, desc, eq, sql } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import {
-  materialPurchase,
-  user,
-  venue,
-  venueContribution,
-  venueContributionMedia,
-} from '@/database/schema'
+import { materialPurchase, venueContribution } from '@/database/schema'
 
 /**
  * Lecturas de aportes.
@@ -20,66 +14,6 @@ import {
  * alguien le va a olvidar el filtro, y el error se veria como una cifra sin
  * verificar publicada bajo nuestro nombre.
  */
-
-/** Los aportes de un sitio, para SU panel. Todos los estados: el sitio tiene
- *  que ver lo que mando y en que va. */
-export const listContributionsForPanel = async (venueId: string) => {
-  return db
-    .select({
-      id: venueContribution.id,
-      periodStart: venueContribution.periodStart,
-      periodEnd: venueContribution.periodEnd,
-      amount: venueContribution.amount,
-      currency: venueContribution.currency,
-      note: venueContribution.note,
-      status: venueContribution.status,
-      verifiedAt: venueContribution.verifiedAt,
-      verifiedNote: venueContribution.verifiedNote,
-      recibos: sql<number>`(select count(*) from ${venueContributionMedia} where ${venueContributionMedia.contributionId} = ${venueContribution.id})::int`,
-    })
-    .from(venueContribution)
-    .where(eq(venueContribution.venueId, venueId))
-    .orderBy(desc(venueContribution.periodStart))
-}
-
-/** La cola del operador. Lo pendiente primero y lo mas viejo arriba. */
-export const listContributionsForAdmin = async () => {
-  return db
-    .select({
-      id: venueContribution.id,
-      periodStart: venueContribution.periodStart,
-      periodEnd: venueContribution.periodEnd,
-      amount: venueContribution.amount,
-      currency: venueContribution.currency,
-      note: venueContribution.note,
-      status: venueContribution.status,
-      verifiedNote: venueContribution.verifiedNote,
-      purchaseId: venueContribution.purchaseId,
-      createdAt: venueContribution.createdAt,
-      venueId: venue.id,
-      venueSlug: venue.slug,
-      venueNombre: venue.name,
-      quienMando: user.email,
-    })
-    .from(venueContribution)
-    .innerJoin(venue, eq(venueContribution.venueId, venue.id))
-    .leftJoin(user, eq(venueContribution.submittedByUserId, user.id))
-    .orderBy(asc(venueContribution.createdAt))
-}
-
-/** Los recibos de un aporte. */
-export const listContributionMedia = async (contributionId: string) => {
-  return db
-    .select({
-      id: venueContributionMedia.id,
-      kind: venueContributionMedia.kind,
-      url: venueContributionMedia.url,
-      caption: venueContributionMedia.caption,
-    })
-    .from(venueContributionMedia)
-    .where(eq(venueContributionMedia.contributionId, contributionId))
-    .orderBy(asc(venueContributionMedia.createdAt))
-}
 
 /**
  * Lo que un sitio ha entregado, PARA PANTALLA PUBLICA.
@@ -122,17 +56,4 @@ export const getVerifiedTotal = async (venueId: string) => {
     currency: fila?.currency ?? 'COP',
     aportes: fila?.n ?? 0,
   }
-}
-
-/** Las compras a las que un operador puede atar un aporte. */
-export const listPurchasesForLinking = async () => {
-  return db
-    .select({
-      id: materialPurchase.id,
-      title: materialPurchase.title,
-      purchasedAt: materialPurchase.purchasedAt,
-    })
-    .from(materialPurchase)
-    .orderBy(desc(materialPurchase.purchasedAt))
-    .limit(50)
 }

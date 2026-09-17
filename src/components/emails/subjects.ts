@@ -12,6 +12,7 @@ export type EmailSubjectType =
   | 'solicitud-aprobada'
   | 'solicitud-rechazada'
   | 'welcome'
+  | 'pedido'
 
 /**
  * Returns the email subject line for a given email type.
@@ -32,6 +33,8 @@ export function getEmailSubject(type: EmailSubjectType): string {
       return `Cambia tu contraseña de ${brandName}`
     case 'invitation':
       return `Te invitaron a un equipo en ${brandName}`
+    case 'pedido':
+      return 'Tu pedido, con el código'
     // El unico asunto en espanol: es el unico de esta lista que le llega a
     // alguien del producto y no a una cuenta de prueba del boilerplate.
     case 'venue-invitation':

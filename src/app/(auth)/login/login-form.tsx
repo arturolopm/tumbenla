@@ -1,72 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogPanel,
-  DialogPopup,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { client } from '@/lib/auth/auth-client'
 import { DESTINO_POR_DEFECTO, esDestinoValido, leerDestino } from '@/lib/auth/redirect'
-import { cn, getBaseUrl } from '@/lib/utils'
-import { quickValidateEmail } from '@/lib/messaging/email/validation'
+import { type LoginInput, loginSchema, normalizeEmail } from '@/lib/auth/schemas'
+import { cn } from '@/lib/utils'
 import { SocialLoginButtons } from '../components/social-login-buttons'
 import { mensajeDeError } from '../fallo-de-red'
+import { ForgotPasswordDialog } from './forgot-password-dialog'
 
-const validateEmailField = (emailValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!emailValue || !emailValue.trim()) {
-    errors.push('Escribe tu correo.')
-    return errors
-  }
-
-  const validation = quickValidateEmail(emailValue.trim().toLowerCase())
-  if (!validation.isValid) {
-    errors.push(validation.reason || 'Ese correo no parece valido.')
-  }
-
-  return errors
-}
-
-const PASSWORD_VALIDATIONS = {
-  required: {
-    test: (value: string) => Boolean(value && typeof value === 'string'),
-    message: 'Escribe tu contraseña.',
-  },
-  notEmpty: {
-    test: (value: string) => value.trim().length > 0,
-    message: 'La contraseña no puede ir vacia.',
-  },
-}
-
-const validatePassword = (passwordValue: string): string[] => {
-  const errors: string[] = []
-
-  if (!PASSWORD_VALIDATIONS.required.test(passwordValue)) {
-    errors.push(PASSWORD_VALIDATIONS.required.message)
-    return errors
-  }
-
-  if (!PASSWORD_VALIDATIONS.notEmpty.test(passwordValue)) {
-    errors.push(PASSWORD_VALIDATIONS.notEmpty.message)
-    return errors
-  }
-
-  return errors
-}
-
+/**
+ * Validation lives in `@/lib/auth/schemas` and is applied by react-hook-form
+ * through its zod resolver.
+ *
+ * What used to be here: two hand-written validators, a `PASSWORD_VALIDATIONS`
+ * object that disagreed with the register form's object of the same name, and
+ * one `useState` per field plus an error array plus a "show error" flag each.
+ * That machinery is what let the real bug through — the email was read from the
+ * DOM and the password from React state, so browser autofill submitted an empty
+ * password while the field showed dots.
+ *
+ * The forgot-password dialog moved into its own file (`./forgot-password-dialog`):
+ * it was ~120 lines of embedded state plus a `keydown` window listener standing
+ * in for a `<form onSubmit>`, and it called a Better-Auth route that 1.4 removed.
+ */
 export default function LoginPage({
   githubAvailable,
   googleAvailable,
@@ -83,89 +49,36 @@ export default function LoginPage({
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
-  const [_mounted, setMounted] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordErrors, setPasswordErrors] = useState<string[]>([])
-  const [showValidationError, setShowValidationError] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
-
-  const [callbackUrl, setCallbackUrl] = useState(DESTINO_POR_DEFECTO)
-
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false)
-  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
-  const [isSubmittingReset, setIsSubmittingReset] = useState(false)
-  const [isResetButtonHovered, setIsResetButtonHovered] = useState(false)
-  const [resetStatus, setResetStatus] = useState<{
-    type: 'success' | 'error' | null
-    message: string
-  }>({ type: null, message: '' })
 
-  const [email, setEmail] = useState('')
-  const [emailErrors, setEmailErrors] = useState<string[]>([])
-  const [showEmailValidationError, setShowEmailValidationError] = useState(false)
+  // Read, don't mirror into state through an effect: the value is a pure
+  // function of the URL and is needed on the first render anyway.
+  const callbackUrl = useMemo(() => leerDestino(searchParams), [searchParams])
 
-  useEffect(() => {
-    setMounted(true)
+  // One hook replaces the per-field state, the error arrays and the
+  // "show error" flags. `register` binds the input to the form, so what gets
+  // validated and what gets submitted are the same value by construction —
+  // browser autofill included.
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    formState: { errors },
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+  })
 
-    if (!searchParams) {
-      return
-    }
+  // Registered once so the blur wrapper can still call RHF's own handler.
+  const emailField = register('email')
 
-    setCallbackUrl(leerDestino(searchParams))
-  }, [searchParams])
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' && forgotPasswordOpen) {
-        handleForgotPassword()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [forgotPasswordEmail, forgotPasswordOpen])
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newEmail = e.target.value
-    setEmail(newEmail)
-
-    const errors = validateEmailField(newEmail)
-    setEmailErrors(errors)
-    setShowEmailValidationError(false)
-  }
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPassword = e.target.value
-    setPassword(newPassword)
-
-    const errors = validatePassword(newPassword)
-    setPasswordErrors(errors)
-    setShowValidationError(false)
-  }
-
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
+  // RHF hands over data already parsed by the schema: trimmed, lowercased and
+  // guaranteed present. No FormData reading, no manual validation pass.
+  const onSubmit = handleSubmit(async ({ email, password }) => {
     setIsLoading(true)
-
-    const formData = new FormData(e.currentTarget)
-    const emailRaw = formData.get('email') as string
-    const email = emailRaw.trim().toLowerCase()
-
-    const emailValidationErrors = validateEmailField(email)
-    setEmailErrors(emailValidationErrors)
-    setShowEmailValidationError(emailValidationErrors.length > 0)
-
-    const passwordValidationErrors = validatePassword(password)
-    setPasswordErrors(passwordValidationErrors)
-    setShowValidationError(passwordValidationErrors.length > 0)
-
-    if (emailValidationErrors.length > 0 || passwordValidationErrors.length > 0) {
-      setIsLoading(false)
-      return
-    }
 
     try {
       const safeCallbackUrl = esDestinoValido(callbackUrl) ? callbackUrl : DESTINO_POR_DEFECTO
@@ -178,7 +91,14 @@ export default function LoginPage({
         },
         {
           onError: (ctx) => {
-            console.error('Login error:', ctx.error)
+            // `console.error(ctx.error)` printed `{}`: the fields are not
+            // enumerable, so the object logged empty and told nobody anything.
+            console.error('[login] fallo', {
+              status: ctx.error?.status,
+              statusText: ctx.error?.statusText,
+              code: ctx.error?.code,
+              message: ctx.error?.message,
+            })
 
             if (
               ctx.error.code?.includes('EMAIL_NOT_VERIFIED') ||
@@ -198,44 +118,44 @@ export default function LoginPage({
               return
             }
 
-            const errorMessage: string[] = ['Correo o contraseña incorrectos']
-            if (
-              ctx.error.code?.includes('BAD_REQUEST') ||
-              ctx.error.message?.includes('Email and password sign in is not enabled')
-            ) {
-              errorMessage.push('Entrar con correo esta desactivado ahora mismo.')
+            // The message is chosen, not accumulated. It used to start as
+            // 'Correo o contraseña incorrectos' and then append a second line,
+            // so EVERY failure — a dropped connection included — accused the
+            // person of typing their password wrong. That is worse than saying
+            // nothing: it sends them to reset a password that was fine.
+            const code = ctx.error.code ?? ''
+            const raw = ctx.error.message ?? ''
+
+            let message = 'No se pudo entrar. Intenta de nuevo.'
+
+            if (code.includes('MISSING_CREDENTIALS')) {
+              message = 'Faltan el correo o la contraseña.'
             } else if (
-              ctx.error.code?.includes('INVALID_CREDENTIALS') ||
-              ctx.error.message?.includes('invalid password')
+              code.includes('EMAIL_PASSWORD_DISABLED') ||
+              raw.includes('Email and password sign in is not enabled')
             ) {
-              errorMessage.push('Correo o contraseña incorrectos. Intenta de nuevo.')
+              message = 'Entrar con correo y contraseña está desactivado ahora mismo.'
+            } else if (code.includes('too many attempts') || raw.includes('rate limit')) {
+              message = 'Demasiados intentos. Espera un momento.'
+            } else if (code.includes('account locked')) {
+              message = 'Tu cuenta quedó bloqueada por seguridad. Cambia tu contraseña.'
+            } else if (code.includes('FAILED_TO_CREATE_SESSION')) {
+              message = 'No se pudo abrir la sesión. Intenta más tarde.'
             } else if (
-              ctx.error.code?.includes('USER_NOT_FOUND') ||
-              ctx.error.message?.includes('not found')
+              code.includes('INVALID_EMAIL_OR_PASSWORD') ||
+              code.includes('INVALID_CREDENTIALS') ||
+              code.includes('USER_NOT_FOUND') ||
+              raw.includes('Invalid email or password')
             ) {
-              errorMessage.push('No hay ninguna cuenta con ese correo. Crea una primero.')
-            } else if (ctx.error.code?.includes('MISSING_CREDENTIALS')) {
-              errorMessage.push('Faltan el correo o la contraseña.')
-            } else if (ctx.error.code?.includes('EMAIL_PASSWORD_DISABLED')) {
-              errorMessage.push('Entrar con correo y contraseña esta desactivado.')
-            } else if (ctx.error.code?.includes('FAILED_TO_CREATE_SESSION')) {
-              errorMessage.push('No se pudo abrir la sesion. Intenta mas tarde.')
-            } else if (ctx.error.code?.includes('too many attempts')) {
-              errorMessage.push(
-                'Demasiados intentos. Espera un rato o cambia tu contraseña.'
-              )
-            } else if (ctx.error.code?.includes('account locked')) {
-              errorMessage.push(
-                'Tu cuenta quedo bloqueada por seguridad. Cambia tu contraseña.'
-              )
-            } else if (ctx.error.code?.includes('network')) {
-              errorMessage.push('Falló la conexion. Revisa tu internet e intenta de nuevo.')
-            } else if (ctx.error.message?.includes('rate limit')) {
-              errorMessage.push('Demasiadas peticiones. Espera un momento.')
+              // The server says which half was wrong to NOBODY, on purpose:
+              // that is how account enumeration works. The real reason is in
+              // the server log, in development.
+              message = 'Correo o contraseña incorrectos.'
+            } else if (ctx.error.status === 0 || !ctx.error.status) {
+              message = mensajeDeError(ctx.error, 'No se pudo conectar. Revisa tu internet.')
             }
 
-            setPasswordErrors(errorMessage)
-            setShowValidationError(true)
+            setError('root', { message })
           },
         }
       )
@@ -257,92 +177,19 @@ export default function LoginPage({
       // rechazado— y antes solo se registraba en la consola: el formulario se
       // desbloqueaba sin decir nada y parecia que el boton no servia.
       console.error('Uncaught login error:', err)
-      setPasswordErrors([mensajeDeError(err, 'No se pudo entrar. Intenta de nuevo.')])
-      setShowValidationError(true)
+      // A form-level error, not a field one: nothing is wrong with what they
+      // typed. `root` is RHF's slot for exactly this.
+      setError('root', {
+        message: mensajeDeError(err, 'No se pudo entrar. Intenta de nuevo.'),
+      })
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleForgotPassword = async () => {
-    if (!forgotPasswordEmail) {
-      setResetStatus({
-        type: 'error',
-        message: 'Escribe tu correo',
-      })
-      return
-    }
-
-    const emailValidation = quickValidateEmail(forgotPasswordEmail.trim().toLowerCase())
-    if (!emailValidation.isValid) {
-      setResetStatus({
-        type: 'error',
-        message: 'Ese correo no parece valido',
-      })
-      return
-    }
-
-    try {
-      setIsSubmittingReset(true)
-      setResetStatus({ type: null, message: '' })
-
-      const response = await fetch('/api/auth/forget-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: forgotPasswordEmail,
-          redirectTo: `${getBaseUrl()}/reset-password`,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        let errorMessage = errorData.message || 'No se pudo pedir el cambio de contraseña'
-
-        if (
-          errorMessage.includes('Invalid body parameters') ||
-          errorMessage.includes('invalid email')
-        ) {
-          errorMessage = 'Ese correo no parece valido'
-        } else if (errorMessage.includes('Email is required')) {
-          errorMessage = 'Escribe tu correo'
-        } else if (
-          errorMessage.includes('user not found') ||
-          errorMessage.includes('User not found')
-        ) {
-          errorMessage = 'No hay ninguna cuenta con ese correo'
-        }
-
-        throw new Error(errorMessage)
-      }
-
-      setResetStatus({
-        type: 'success',
-        message: 'Te mandamos un enlace para cambiarla.',
-      })
-
-      setTimeout(() => {
-        setForgotPasswordOpen(false)
-        setResetStatus({ type: null, message: '' })
-      }, 2000)
-    } catch (error) {
-      console.error('Error requesting password reset:', { error })
-      setResetStatus({
-        type: 'error',
-        message:
-          error instanceof Error ? error.message : 'No se pudo pedir el cambio de contraseña.',
-      })
-    } finally {
-      setIsSubmittingReset(false)
-    }
-  }
+  })
 
   // Los cuatro, no solo dos: con solo Microsoft configurado el divisor
   // desaparecia y los botones sociales igual se pintaban debajo.
-  const hasSocial =
-    githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
+  const hasSocial = githubAvailable || googleAvailable || facebookAvailable || microsoftAvailable
   const showDivider = hasSocial
 
   return (
@@ -351,9 +198,7 @@ export default function LoginPage({
         <h1 className='font-display font-black text-4xl uppercase leading-none tracking-tighter'>
           Entra
         </h1>
-        <p className='text-body-md text-muted-foreground'>
-          Para ver tus noches y lo que pusieron.
-        </p>
+        <p className='text-body-md text-muted-foreground'>Para ver tus noches y lo que pusieron.</p>
       </div>
 
       <form onSubmit={onSubmit} className={`mt-8 space-y-8`}>
@@ -364,29 +209,33 @@ export default function LoginPage({
             </div>
             <Input
               id='email'
-              name='email'
               placeholder='tu@correo.com'
-              required
               autoCapitalize='none'
               size={'lg'}
               autoComplete='email'
               autoCorrect='off'
-              value={email}
-              onChange={handleEmailChange}
+              aria-invalid={Boolean(errors.email)}
+              {...emailField}
+              onBlur={(event) => {
+                // Rewrites the box, not just the submitted value: seeing the
+                // spaces disappear is how you know the field took it.
+                const clean = normalizeEmail(event.target.value)
+                if (clean !== event.target.value) {
+                  setValue('email', clean, { shouldValidate: true })
+                }
+                void emailField.onBlur(event)
+              }}
               className={cn(
                 'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                showEmailValidationError &&
-                  emailErrors.length > 0 &&
+                errors.email &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
-            {showEmailValidationError && emailErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {emailErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.email ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.email.message}
+              </p>
+            ) : null}
           </div>
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
@@ -402,20 +251,17 @@ export default function LoginPage({
             <div className='relative'>
               <Input
                 id='password'
-                name='password'
-                required
                 type={showPassword ? 'text' : 'password'}
                 autoCapitalize='none'
                 autoComplete='current-password'
                 autoCorrect='off'
                 placeholder='Tu contraseña'
-                value={password}
                 size={'lg'}
-                onChange={handlePasswordChange}
+                aria-invalid={Boolean(errors.password)}
+                {...register('password')}
                 className={cn(
                   'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                  showValidationError &&
-                    passwordErrors.length > 0 &&
+                  errors.password &&
                     'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
                 )}
               />
@@ -428,14 +274,20 @@ export default function LoginPage({
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-            {showValidationError && passwordErrors.length > 0 && (
-              <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                {passwordErrors.map((error, index) => (
-                  <p key={index}>{error}</p>
-                ))}
-              </div>
-            )}
+            {errors.password ? (
+              <p role='alert' className='mt-1 text-body-sm text-destructive-foreground'>
+                {errors.password.message}
+              </p>
+            ) : null}
           </div>
+
+          {/* Whatever is not a field problem: bad credentials, a locked
+              account, a request that never left the browser. */}
+          {errors.root ? (
+            <p role='alert' className='text-body-sm text-destructive-foreground'>
+              {errors.root.message}
+            </p>
+          ) : null}
         </div>
 
         <Button
@@ -515,70 +367,7 @@ export default function LoginPage({
         </Link>
       </div>
 
-      <Dialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen}>
-        <DialogPopup>
-          <DialogHeader>
-            <DialogTitle className='font-display font-bold text-headline-md uppercase'>
-              Recuperar la contraseña
-            </DialogTitle>
-            <DialogDescription className='text-body-md text-muted-foreground'>
-              Escribe tu correo. Si hay una cuenta con ese correo, te llega un enlace para
-              ponerle una contraseña nueva.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogPanel className='space-y-4'>
-            <div className='space-y-2'>
-              <div className='flex items-center justify-between'>
-                <Label htmlFor='reset-email'>Correo</Label>
-              </div>
-              <Input
-                id='reset-email'
-                value={forgotPasswordEmail}
-                onChange={(event) => setForgotPasswordEmail(event.target.value)}
-                placeholder='tu@correo.com'
-                size={'lg'}
-                type='email'
-                className={cn(
-                  'transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                  resetStatus.type === 'error' &&
-                    'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
-                )}
-              />
-              {resetStatus.type === 'error' && (
-                <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-                  <p>{resetStatus.message}</p>
-                </div>
-              )}
-            </div>
-            {resetStatus.type === 'success' && (
-              <div className='mt-1 space-y-1 text-xs text-success-foreground'>
-                <p>{resetStatus.message}</p>
-              </div>
-            )}
-          </DialogPanel>
-          <DialogFooter>
-            <Button
-              type='button'
-              onClick={handleForgotPassword}
-              onMouseEnter={() => setIsResetButtonHovered(true)}
-              onMouseLeave={() => setIsResetButtonHovered(false)}
-              className='group inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90'
-              disabled={isSubmittingReset}
-            >
-              <span className='flex items-center gap-1'>
-                {isSubmittingReset ? 'Mandando…' : 'Mandar el enlace'}
-                <span className='inline-flex transition-transform duration-200 group-hover:translate-x-0.5'>
-                  {isResetButtonHovered ? (
-                    <ArrowRight className='h-4 w-4' aria-hidden='true' />
-                  ) : (
-                    <ChevronRight className='h-4 w-4' aria-hidden='true' />
-                  )}
-                </span>
-              </span>
-            </Button>
-          </DialogFooter>
-        </DialogPopup>
-      </Dialog>
+      <ForgotPasswordDialog open={forgotPasswordOpen} onOpenChange={setForgotPasswordOpen} />
     </>
   )
 }

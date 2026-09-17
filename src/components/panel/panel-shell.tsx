@@ -18,76 +18,80 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { MenuCuenta } from '@/components/layout/menu-cuenta'
+import { AccountMenu } from '@/components/layout/account-menu'
 
 /**
- * El panel de un sitio, para su dueno y su personal.
+ * A venue's panel, for its owner and its staff.
  *
- * Es hermano de AdminShell y no el mismo componente a proposito. Se parecen hoy
- * y no van a parecerse manana: el de la plataforma modera toda la red, este
- * administra un sitio. Compartirlos obligaria a que cada item del menu supiera
- * cual de los dos paneles lo esta pintando, que es como se termina con un
- * enlace de operacion visible para el mesero de un bar.
+ * It is AdminShell's sibling and deliberately not the same component. They look
+ * alike today and will not look alike tomorrow: the platform one moderates the
+ * whole network, this one administers one venue. Sharing them would force every
+ * menu item to know which of the two panels is painting it, which is how you end
+ * up with an operations link visible to a bar's waiter.
  *
- * MenuCuenta va en la cabecera, y no solo en la barra publica: es el conmutador
- * de sombreros. La misma persona puede salir de rumba Y tener un bar —lo
- * personal cuelga de photo_claim, lo laboral de venue_member, sobre la MISMA
- * cuenta— y hasta ahora quien entraba al panel se quedaba sin ninguna de las
- * dos salidas, ni a /mi-historia ni a Salir, porque SiteNav solo se pinta en
- * (publico).
+ * AccountMenu goes in the header, and not only in the public bar: it is the hat
+ * switch. The same person can go out AND own a bar — the personal side hangs off
+ * photo_claim, the work side off venue_member, on the SAME account — and until
+ * now whoever entered the panel was left without either exit, neither to
+ * /mi-historia nor to sign out, because SiteNav only renders under (publico).
  */
 
-type Sitio = { slug: string; nombre: string; role: string }
+type Venue = { slug: string; name: string; role: string }
 
-const items = (slug: string, esDueno: boolean) => [
-  { href: `/panel/${slug}`, label: 'Resumen', exacto: true },
-  { href: `/panel/${slug}/noches`, label: 'Las noches' },
-  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
-  { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
-  { href: `/panel/${slug}/noches`, label: 'Las noches' },
-  { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
-  { href: `/panel/${slug}/aportes`, label: 'Lo que entregas' },
-  { href: `/panel/${slug}/sitio`, label: 'El sitio' },
-  ...(esDueno ? [{ href: `/panel/${slug}/equipo`, label: 'Equipo' }] : []),
+/** Staff only scan; owners and platform operators manage the venue. */
+const items = (slug: string, isOwner: boolean) => [
+  { href: `/panel/${slug}/escanear`, label: 'Escanear' },
+  ...(isOwner
+    ? [
+        { href: `/panel/${slug}`, label: 'Resumen', exact: true },
+        { href: `/panel/${slug}/sitios`, label: 'Sitios' },
+        { href: `/panel/${slug}/carta`, label: 'La carta' },
+        { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
+        { href: `/panel/${slug}/noches`, label: 'Las noches' },
+        { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
+        { href: `/panel/${slug}/sitio`, label: 'El sitio' },
+        { href: `/panel/${slug}/equipo`, label: 'Equipo' },
+      ]
+    : []),
 ]
 
 export function PanelShell({
-  sitio,
-  sitios,
+  venue,
+  venues,
   email,
-  esDueno,
-  esPlataforma,
+  isOwner,
+  isPlatform,
   children,
 }: {
-  sitio: Sitio
-  sitios: Sitio[]
+  venue: Venue
+  venues: Venue[]
   email: string
-  esDueno: boolean
-  esPlataforma: boolean
+  isOwner: boolean
+  isPlatform: boolean
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const nav = items(sitio.slug, esDueno)
+  const nav = items(venue.slug, isOwner)
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="px-2 py-1 font-display font-extrabold text-lg">
+          <Link href='/' className='px-2 py-1 font-display font-extrabold text-lg'>
             TUMBENLA
           </Link>
         </SidebarHeader>
 
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel className="truncate">{sitio.nombre}</SidebarGroupLabel>
+            <SidebarGroupLabel className='truncate'>{venue.name}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {nav.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       isActive={
-                        item.exacto ? pathname === item.href : pathname.startsWith(item.href)
+                        item.exact ? pathname === item.href : pathname.startsWith(item.href)
                       }
                       render={<Link href={item.href}>{item.label}</Link>}
                     />
@@ -97,19 +101,20 @@ export function PanelShell({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Solo si de verdad hay entre que escoger. Un selector de un elemento
-              es ruido que hay que leer para descubrir que no hacia falta. */}
-          {sitios.length > 1 ? (
+          {/* Only when there is genuinely something to choose between. A picker
+              with one element is noise you have to read to find out it was not
+              needed. */}
+          {venues.length > 1 ? (
             <SidebarGroup>
               <SidebarGroupLabel>Tus otros sitios</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {sitios
-                    .filter((s) => s.slug !== sitio.slug)
-                    .map((s) => (
-                      <SidebarMenuItem key={s.slug}>
+                  {venues
+                    .filter((other) => other.slug !== venue.slug)
+                    .map((other) => (
+                      <SidebarMenuItem key={other.slug}>
                         <SidebarMenuButton
-                          render={<Link href={`/panel/${s.slug}`}>{s.nombre}</Link>}
+                          render={<Link href={`/panel/${other.slug}`}>{other.name}</Link>}
                         />
                       </SidebarMenuItem>
                     ))}
@@ -120,29 +125,29 @@ export function PanelShell({
         </SidebarContent>
 
         <SidebarFooter>
-          <p className="truncate px-2 py-1 text-muted-foreground text-xs" title={email}>
+          <p className='truncate px-2 py-1 text-muted-foreground text-xs' title={email}>
             {email}
           </p>
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-border border-b px-4">
+        <header className='flex h-14 items-center gap-3 border-border border-b px-4'>
           <SidebarTrigger />
-          <p className="truncate font-medium text-sm">{sitio.nombre}</p>
-          {/* Un operador entrando al panel de un sitio ajeno tiene que verlo.
-              Sin este aviso es facil creer que se esta mirando el propio y
-              tocar datos de alguien mas. */}
-          {esPlataforma ? (
-            <span className="rounded-full border border-primary px-2 py-0.5 text-primary-text text-xs">
+          <p className='truncate font-medium text-sm'>{venue.name}</p>
+          {/* An operator entering someone else's panel has to see it. Without
+              this notice it is easy to believe you are looking at your own and
+              touch somebody else's data. */}
+          {isPlatform ? (
+            <span className='rounded-full border border-primary px-2 py-0.5 text-primary-text text-xs'>
               Estás entrando como operación
             </span>
           ) : null}
-          <div className="ml-auto">
-            <MenuCuenta />
+          <div className='ml-auto'>
+            <AccountMenu />
           </div>
         </header>
-        <div className="p-4 sm:p-6">{children}</div>
+        <div className='p-4 sm:p-6'>{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

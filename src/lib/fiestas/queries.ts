@@ -103,22 +103,12 @@ export const listMyClaimedPhotos = async (userId: string): Promise<ClaimedPhoto[
     .orderBy(desc(partyNight.happenedAt))
 }
 
-/**
- * El resumen de aportes.
- *
- * Las noches se cuentan como night_id DISTINTOS, no como fotos: diez fotos de
- * la misma noche son una noche. El estimado multiplica cada noche por lo que
- * ESE sitio declaro poner por persona, no por un promedio de la red, y las
- * noches en sitios sin estimado declarado se cuentan aparte para poder decir
- * que el total esta incompleto.
- */
+/** Las noches y fotos de una persona. Los aportes vienen de sus pedidos pagados. */
 export const getHistorySummary = async (userId: string): Promise<HistorySummary> => {
   const rows = await db
     .selectDistinct({
       nightId: partyNight.id,
       venueId: venue.id,
-      estimated: venue.estimatedPerPersonNight,
-      currency: venue.pledgeCurrency,
     })
     .from(photoClaim)
     .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
@@ -132,29 +122,16 @@ export const getHistorySummary = async (userId: string): Promise<HistorySummary>
     .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
     .where(and(eq(photoClaim.userId, userId), eq(partyPhoto.status, 'available')))
 
-  let estimatedAmount = 0
-  let nightsWithoutEstimate = 0
   const venues = new Set<string>()
 
   for (const row of rows) {
     venues.add(row.venueId)
-    // postgres-js devuelve decimal como string. Ver la nota en schema.ts.
-    const perNight = row.estimated === null ? null : Number.parseFloat(row.estimated)
-    if (perNight === null || !Number.isFinite(perNight)) {
-      nightsWithoutEstimate += 1
-      continue
-    }
-    estimatedAmount += perNight
   }
 
   return {
     nights: rows.length,
     venues: venues.size,
     photos,
-    estimatedAmount,
-    currency: rows[0]?.currency ?? 'COP',
-    estimateIsPartial: nightsWithoutEstimate > 0,
-    nightsWithoutEstimate,
   }
 }
 

@@ -1,25 +1,22 @@
 import { notFound } from 'next/navigation'
 
 import { PanelShell } from '@/components/panel/panel-shell'
-import {
-  getVenueForPanel,
-  listMyVenues,
-  requireVenueAccess,
-} from '@/lib/auth/venue-access'
+import { getVenueForPanel, listMyVenues, requireVenueAccess } from '@/lib/auth/venue-access'
 
 /**
- * Aca si esta el gate, porque aca si se conoce el slug.
+ * The gate lives here, because this is where the slug is known.
  *
- * requireVenueAccess no vuelve sin permiso: manda al login sin sesion, y da 404
- * a quien tiene sesion y no pertenece a este sitio. 404 y no 403, por lo mismo
- * que /admin: el panel de un sitio ajeno no le confirma a nadie que existe.
+ * requireVenueAccess never returns without permission: it sends you to the
+ * login with no session, and 404s whoever has a session but does not belong to
+ * this venue. 404 and not 403, for the same reason as /admin: someone else's
+ * panel does not confirm to anyone that it exists.
  *
- * Y COMO SIEMPRE: esto no protege las server actions. Cada una de
- * src/app/actions/equipo.ts llama assertVenueAccess por su cuenta.
+ * AND AS ALWAYS: this does not protect the server actions. Every one of
+ * src/app/actions/equipo.ts calls assertVenueAccess on its own.
  */
 export const dynamic = 'force-dynamic'
 
-export default async function PanelSitioLayout({
+export default async function PanelVenueLayout({
   children,
   params,
 }: {
@@ -28,22 +25,23 @@ export default async function PanelSitioLayout({
 }) {
   const { slug } = await params
 
-  const sitio = await getVenueForPanel(slug)
-  if (!sitio) notFound()
+  const venue = await getVenueForPanel(slug)
+  if (!venue) notFound()
 
-  const acceso = await requireVenueAccess(sitio.id, `/panel/${slug}`)
+  const access = await requireVenueAccess(venue.id, `/panel/${slug}`)
 
-  // Un operador de la plataforma no tiene membresias: su lista de sitios propios
-  // va vacia y el selector no aparece, que es lo correcto. Entra por /admin.
-  const sitios = acceso.esPlataforma ? [] : await listMyVenues(acceso.userId)
+  // A platform operator has no memberships: their own venue list comes back
+  // empty and the picker does not appear, which is correct. They come in
+  // through /admin.
+  const venues = access.esPlataforma ? [] : await listMyVenues(access.userId)
 
   return (
     <PanelShell
-      sitio={{ slug: sitio.slug, nombre: sitio.nombre, role: acceso.role ?? 'owner' }}
-      sitios={sitios.map((s) => ({ slug: s.slug, nombre: s.nombre, role: s.role }))}
-      email={acceso.email}
-      esDueno={acceso.esPlataforma || acceso.role === 'owner'}
-      esPlataforma={acceso.esPlataforma}
+      venue={{ slug: venue.slug, name: venue.nombre, role: access.role ?? 'owner' }}
+      venues={venues.map((one) => ({ slug: one.slug, name: one.nombre, role: one.role }))}
+      email={access.email}
+      isOwner={access.esPlataforma || access.role === 'owner'}
+      isPlatform={access.esPlataforma}
     >
       {children}
     </PanelShell>

@@ -18,7 +18,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { MenuCuenta } from '@/components/layout/menu-cuenta'
+import { AccountMenu } from '@/components/layout/account-menu'
 
 /**
  * Reusa src/components/ui/sidebar.tsx, que eran 21.8 KB ya construidos y sin
@@ -30,18 +30,25 @@ const NAV = [
   { href: '/admin', label: 'Resumen' },
   { href: '/admin/sitios', label: 'Sitios' },
   { href: '/admin/solicitudes', label: 'Solicitudes' },
-  { href: '/admin/aportes', label: 'Aportes' },
+  { href: '/admin/productos', label: 'Productos' },
+  { href: '/admin/cuentas', label: 'Cuentas' },
 ]
 
 export function AdminShell({
   email,
-  solicitudesAbiertas = 0,
+  pendientes = {},
   children,
 }: {
   email: string
-  /** Cuantas solicitudes esperan respuesta. Va en el menu porque una solicitud
-   *  sin mirar es alguien esperando, y no hay ninguna otra senal de que exista. */
-  solicitudesAbiertas?: number
+  /**
+   * Cuantas cosas esperan respuesta, por ruta. Van en el menu porque cada una
+   * es alguien esperando y no hay ninguna otra senal de que exista: nadie
+   * recibe un correo cuando entra una solicitud o un producto nuevo.
+   *
+   * Antes esto era un solo numero cableado a /admin/solicitudes. Con dos colas
+   * ya no daba, y con tres iba a ser una condicion mas dentro del JSX.
+   */
+  pendientes?: Record<string, number>
   children: React.ReactNode
 }) {
   const pathname = usePathname()
@@ -50,7 +57,7 @@ export function AdminShell({
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="px-2 py-1 font-display font-extrabold text-lg">
+          <Link href='/' className='px-2 py-1 font-display font-extrabold text-lg'>
             TUMBENLA
           </Link>
         </SidebarHeader>
@@ -71,9 +78,9 @@ export function AdminShell({
                       render={
                         <Link href={item.href}>
                           {item.label}
-                          {item.href === '/admin/solicitudes' && solicitudesAbiertas > 0 ? (
-                            <span className="ml-auto rounded-full bg-primary px-2 text-primary-foreground text-xs">
-                              {solicitudesAbiertas}
+                          {(pendientes[item.href] ?? 0) > 0 ? (
+                            <span className='ml-auto rounded-full bg-primary px-2 text-primary-foreground text-xs'>
+                              {pendientes[item.href]}
                             </span>
                           ) : null}
                         </Link>
@@ -87,21 +94,21 @@ export function AdminShell({
         </SidebarContent>
 
         <SidebarFooter>
-          <p className="truncate px-2 py-1 text-muted-foreground text-xs" title={email}>
+          <p className='truncate px-2 py-1 text-muted-foreground text-xs' title={email}>
             {email}
           </p>
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-3 border-border border-b px-4">
+        <header className='flex h-14 items-center gap-3 border-border border-b px-4'>
           <SidebarTrigger />
-          <p className="font-medium text-sm">Operación</p>
-          <div className="ml-auto">
-            <MenuCuenta />
+          <p className='font-medium text-sm'>Operación</p>
+          <div className='ml-auto'>
+            <AccountMenu />
           </div>
         </header>
-        <div className="p-4 sm:p-6">{children}</div>
+        <div className='p-4 sm:p-6'>{children}</div>
       </SidebarInset>
     </SidebarProvider>
   )

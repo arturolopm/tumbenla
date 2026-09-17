@@ -17,9 +17,11 @@ export type Solicitud = {
   id: string
   status: string
   name: string
-  type: string
-  city: string
-  addressLine: string
+  // Nullable desde la decision 35: el formulario de cuatro campos no los pide y
+  // los pone el operador al aprobar. Las solicitudes viejas si los traen.
+  type: string | null
+  city: string | null
+  addressLine: string | null
   neighborhood: string | null
   instagram: string
   contactEmail: string
@@ -35,8 +37,6 @@ export type Solicitud = {
   venueId: string | null
   venueSlug: string | null
   venueNombre: string | null
-  solicitante: string
-  solicitanteEmail: string
 }
 
 export function SolicitudesCola({
@@ -78,9 +78,14 @@ export function SolicitudesCola({
                 <div className='flex flex-wrap items-start justify-between gap-3'>
                   <div className='min-w-0'>
                     <p className='font-display font-bold text-headline-md uppercase'>{s.name}</p>
+                    {/* Una solicitud nueva no trae direccion, barrio, ciudad ni
+                        tipo: los pone el operador al aprobar (decision 35). Sin
+                        este filtro la linea salia como ", , · " y parecia un
+                        dato roto en vez de un dato que todavia no existe. */}
                     <p className='text-muted-foreground text-sm'>
-                      {s.addressLine}
-                      {s.neighborhood ? `, ${s.neighborhood}` : ''}, {s.city} · {s.type}
+                      {[s.addressLine, s.neighborhood, s.city].filter(Boolean).join(', ') ||
+                        'Sin dirección todavía'}
+                      {s.type ? ` · ${s.type}` : ''}
                     </p>
                   </div>
                   <div className='text-right'>
@@ -128,24 +133,16 @@ export function SolicitudesCola({
                   </div>
                 </div>
 
-                <div className='mt-3 text-body-md'>
-                  <span className='text-muted-foreground'>Queda de dueño: </span>
-                  {s.solicitante}{' '}
-                  <a
-                    href={`mailto:${s.solicitanteEmail}`}
-                    className='text-primary-text hover:underline'
-                  >
-                    {s.solicitanteEmail}
-                  </a>
-                  {s.solicitanteEmail !== s.contactEmail ? (
-                    // No es un error, y por eso es un aviso y no un bloqueo: es
-                    // normal aplicar con el correo personal y poner el del bar
-                    // como contacto. Pero el DM cita el de contacto, asi que el
-                    // operador tiene que verlo antes de comparar.
-                    <span className='ml-2 text-muted-foreground text-xs'>
-                      (distinto del correo de contacto)
-                    </span>
-                  ) : null}
+                <div className='mt-3 rounded-lg border border-primary border-dashed p-3'>
+                  <p className='font-display text-label-lg text-primary-text uppercase'>
+                    La cuenta no bloquea la aprobación
+                  </p>
+                  <p className='mt-1 text-body-md text-muted-foreground'>
+                    Cuando confirmes el DM y este correo, puedes aprobar. Si ya hay una cuenta con
+                    <strong className='text-street-white'> {s.contactEmail} </strong> verificado,
+                    recibe el panel ahora; si no, el correo de aprobación le muestra cómo crearlo y
+                    se amarra solo al verificarlo.
+                  </p>
                 </div>
 
                 {s.venueId ? (
@@ -195,10 +192,6 @@ export function SolicitudesCola({
                     </button>
                   ) : null}
 
-                  {/* Aprobar no es un boton que resuelva solo: lleva al
-                      formulario del sitio, donde el operador pone el pin y el
-                      compromiso. Guardar ahi es lo que crea el sitio y asigna
-                      al dueno, en un solo acto. */}
                   <Link
                     href={`/admin/sitios/nuevo?solicitud=${s.id}`}
                     className='rounded-lg bg-primary px-4 py-2 font-display text-label-lg text-primary-foreground uppercase'

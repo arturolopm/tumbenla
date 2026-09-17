@@ -11,18 +11,18 @@ export default async function NochesPage({ params }: { params: Promise<{ slug: s
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/noches`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/noches`, ['owner'])
   const noches = await listNightsForPanel(sitio.id)
 
   return (
-    <div className="flex max-w-4xl flex-col gap-8">
+    <div className='flex max-w-4xl flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           Las noches
         </h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
-          Crea la noche, sube las fotos y publícala. Publicada, la gente que salió esa noche
-          puede entrar a buscarse y guardar las suyas.
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
+          Crea la noche, sube las fotos y publícala. Publicada, la gente que salió esa noche puede
+          entrar a buscarse y guardar las suyas.
         </p>
       </header>
 

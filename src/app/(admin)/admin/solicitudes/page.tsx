@@ -24,8 +24,10 @@ export default async function SolicitudesPage() {
           bar; lo segundo, que quien escribe es quien llenó el formulario.
         </p>
         <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
-          Aprobar da el panel. <strong className='text-street-white'>No publica el sitio</strong>:
-          eso es aparte, cuando confirmes lo que pone.
+          Aprobar crea o completa el sitio. Si ya existe una cuenta verificada con ese correo,
+          recibe el panel de una; si no, lo reclama al verificarlo desde el correo de aprobación.
+          <strong className='text-street-white'> No publica el sitio</strong>: eso depende del
+          estado que elijas al guardarlo.
         </p>
       </header>
 

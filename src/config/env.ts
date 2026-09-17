@@ -20,6 +20,24 @@ export const env = createEnv({
     // app at boot. isTruthy() below does the coercion.
     BILLING_ENABLED: z.string().optional(),
 
+    // Commerce collection is separate from the subscription boilerplate below.
+    // It is validated again when checkout is used so builds without merchant
+    // credentials can still serve non-commerce pages, while payment fails closed.
+    COMMERCE_PAYMENT_PROVIDER: z.enum(['epayco', 'fake']).optional(),
+    COMMERCE_PAYMENT_ENVIRONMENT: z.enum(['test', 'live']).optional(),
+    COMMERCE_FUNDING_CLASSIFICATION: z.enum(['sandbox', 'real']).optional(),
+    COMMERCE_PAYMENT_CONFIG_VERSION: z.string().optional(),
+    COMMERCE_NEW_OPERATIONS_ENABLED: z.string().optional(),
+    EPAYCO_PUBLIC_KEY: z.string().optional(),
+    EPAYCO_PRIVATE_KEY: z.string().optional(),
+    EPAYCO_CUSTOMER_ID: z.string().optional(),
+    EPAYCO_P_KEY: z.string().optional(),
+    EPAYCO_MERCHANT_NAME: z.string().optional(),
+    // JSON array of retired credential bindings retained only to reconcile
+    // attempts created before rotation. See payment-service-factory.ts.
+    EPAYCO_PREVIOUS_CONFIGS_JSON: z.string().optional(),
+    CRON_SECRET: z.string().optional(),
+
     // Apex domain for sharing the session cookie across subdomains, e.g. '.tumbenla.com'.
     // Left unset, cross-subdomain cookies stay off, which is correct for a single host.
     COOKIE_DOMAIN: z.string().optional(),
@@ -177,6 +195,18 @@ export const env = createEnv({
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     BILLING_ENABLED: process.env.BILLING_ENABLED,
+    COMMERCE_PAYMENT_PROVIDER: process.env.COMMERCE_PAYMENT_PROVIDER,
+    COMMERCE_PAYMENT_ENVIRONMENT: process.env.COMMERCE_PAYMENT_ENVIRONMENT,
+    COMMERCE_FUNDING_CLASSIFICATION: process.env.COMMERCE_FUNDING_CLASSIFICATION,
+    COMMERCE_PAYMENT_CONFIG_VERSION: process.env.COMMERCE_PAYMENT_CONFIG_VERSION,
+    COMMERCE_NEW_OPERATIONS_ENABLED: process.env.COMMERCE_NEW_OPERATIONS_ENABLED,
+    EPAYCO_PUBLIC_KEY: process.env.EPAYCO_PUBLIC_KEY,
+    EPAYCO_PRIVATE_KEY: process.env.EPAYCO_PRIVATE_KEY,
+    EPAYCO_CUSTOMER_ID: process.env.EPAYCO_CUSTOMER_ID,
+    EPAYCO_P_KEY: process.env.EPAYCO_P_KEY,
+    EPAYCO_MERCHANT_NAME: process.env.EPAYCO_MERCHANT_NAME,
+    EPAYCO_PREVIOUS_CONFIGS_JSON: process.env.EPAYCO_PREVIOUS_CONFIGS_JSON,
+    CRON_SECRET: process.env.CRON_SECRET,
     COOKIE_DOMAIN: process.env.COOKIE_DOMAIN,
     ADMIN_EMAILS: process.env.ADMIN_EMAILS,
     EMAIL_VERIFICATION_ENABLED: process.env.EMAIL_VERIFICATION_ENABLED,
@@ -292,7 +322,10 @@ const SECRETOS_DE_RELLENO = new Set([
   'your-secret-key-here-generate-with-openssl-rand-base64-32',
 ])
 
-if (env.NODE_ENV === 'production' && SECRETOS_DE_RELLENO.has(process.env.BETTER_AUTH_SECRET ?? '')) {
+if (
+  env.NODE_ENV === 'production' &&
+  SECRETOS_DE_RELLENO.has(process.env.BETTER_AUTH_SECRET ?? '')
+) {
   throw new Error(
     'BETTER_AUTH_SECRET es un valor de ejemplo del repositorio. Genera uno real con ' +
       '`openssl rand -base64 32` y ponlo en las variables de entorno del despliegue.'

@@ -18,7 +18,7 @@ export default async function FotosPage({ params }: { params: Promise<{ slug: st
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/fotos`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/fotos`, ['owner'])
 
   const [pendientes, reportes] = await Promise.all([
     listPendingPhotosForVenue(sitio.id),
@@ -26,12 +26,12 @@ export default async function FotosPage({ params }: { params: Promise<{ slug: st
   ])
 
   return (
-    <div className="flex max-w-4xl flex-col gap-8">
+    <div className='flex max-w-4xl flex-col gap-8'>
       <header>
-        <h1 className="font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           Por revisar
         </h1>
-        <p className="mt-2 max-w-prose text-body-md text-muted-foreground">
+        <p className='mt-2 max-w-prose text-body-md text-muted-foreground'>
           Nada de esto se ve todavía. Una foto solo sale cuando tú la habilitas, y solo puede
           guardarla quien salga en ella.
         </p>

@@ -1,0 +1,1079 @@
+{
+  "baseline": "d01f3c9",
+  "date": "2026-09-11",
+  "index": "Refreshed using analyze --force --index-only after incremental FTS failure",
+  "limitations": "Static graph does not capture all React action bindings; source inspection and runtime tests are also required.",
+  "reports": [
+    {
+      "target": {
+        "id": "Function:src/app/actions/pedidos.ts:crearPedidoAction",
+        "name": "crearPedidoAction",
+        "type": "Function",
+        "filePath": "src/app/actions/pedidos.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 0,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 0,
+        "processes_affected": 0,
+        "modules_affected": 0
+      },
+      "byDepthCounts": {},
+      "affected_processes": [],
+      "affected_modules": [],
+      "byDepth": {}
+    },
+    {
+      "target": {
+        "id": "Function:src/app/actions/pedidos.ts:confirmarPago",
+        "name": "confirmarPago",
+        "type": "Function",
+        "filePath": "src/app/actions/pedidos.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 2,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 2,
+        "processes_affected": 1,
+        "modules_affected": 1
+      },
+      "byDepthCounts": {
+        "1": 2
+      },
+      "affected_processes": [
+        {
+          "name": "crearPedidoAction",
+          "type": "Function",
+          "filePath": "src/app/actions/pedidos.ts",
+          "affected_process_count": 1,
+          "total_hits": 1,
+          "earliest_broken_step": 1
+        }
+      ],
+      "affected_modules": [
+        {
+          "name": "Actions",
+          "hits": 1,
+          "impact": "direct"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "Function:src/app/actions/pedidos.ts:crearPedidoAction",
+            "name": "crearPedidoAction",
+            "filePath": "src/app/actions/pedidos.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_83_crearpedidoaction",
+                "label": "CrearPedidoAction → Repartir",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          },
+          {
+            "depth": 1,
+            "id": "File:scripts/prueba-confirmacion-concurrente.ts",
+            "name": "prueba-confirmacion-concurrente.ts",
+            "filePath": "scripts/prueba-confirmacion-concurrente.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/app/actions/escanear.ts:redimirAction",
+        "name": "redimirAction",
+        "type": "Function",
+        "filePath": "src/app/actions/escanear.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 4,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 1,
+        "processes_affected": 2,
+        "modules_affected": 2
+      },
+      "byDepthCounts": {
+        "1": 1,
+        "2": 2,
+        "3": 1
+      },
+      "affected_processes": [
+        {
+          "name": "EscanearPage",
+          "type": "Function",
+          "filePath": "src/app/(panel)/panel/[slug]/escanear/page.tsx",
+          "affected_process_count": 10,
+          "total_hits": 21,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "Escaner",
+          "type": "Function",
+          "filePath": "src/components/panel/escaner.tsx",
+          "affected_process_count": 4,
+          "total_hits": 10,
+          "earliest_broken_step": 1
+        }
+      ],
+      "affected_modules": [
+        {
+          "name": "Panel",
+          "hits": 3,
+          "impact": "direct"
+        },
+        {
+          "name": "Fiestas",
+          "hits": 1,
+          "impact": "indirect"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "Function:src/components/panel/escaner.tsx:entregar",
+            "name": "entregar",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_77_escaner",
+                "label": "Escaner → GetVenueRole",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_108_escanearpage",
+                "label": "EscanearPage → NuevoIntento",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_78_escaner",
+                "label": "Escaner → Cumple",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_50_escanearpage",
+                "label": "EscanearPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              }
+            ]
+          }
+        ],
+        "2": [
+          {
+            "depth": 2,
+            "id": "Function:src/components/panel/escaner.tsx:Escaner",
+            "name": "Escaner",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_50_escanearpage",
+                "label": "EscanearPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_78_escaner",
+                "label": "Escaner → Cumple",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_109_escanearpage",
+                "label": "EscanearPage → Cn",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_110_escanearpage",
+                "label": "EscanearPage → FormatCOP",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_224_escanearpage",
+                "label": "EscanearPage → ApagarCamara",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_77_escaner",
+                "label": "Escaner → GetVenueRole",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_108_escanearpage",
+                "label": "EscanearPage → NuevoIntento",
+                "processType": "cross_community",
+                "step": 2
+              }
+            ]
+          },
+          {
+            "depth": 2,
+            "id": "Function:src/components/panel/escaner.tsx:leer",
+            "name": "leer",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 2
+              }
+            ]
+          }
+        ],
+        "3": [
+          {
+            "depth": 3,
+            "id": "Function:src/app/(panel)/panel/[slug]/escanear/page.tsx:EscanearPage",
+            "name": "EscanearPage",
+            "filePath": "src/app/(panel)/panel/[slug]/escanear/page.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_107_escanearpage",
+                "label": "EscanearPage → ParseAllowlist",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_108_escanearpage",
+                "label": "EscanearPage → NuevoIntento",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_109_escanearpage",
+                "label": "EscanearPage → Cn",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_110_escanearpage",
+                "label": "EscanearPage → FormatCOP",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_224_escanearpage",
+                "label": "EscanearPage → ApagarCamara",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_50_escanearpage",
+                "label": "EscanearPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_222_escanearpage",
+                "label": "EscanearPage → GetVenueRole",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_223_escanearpage",
+                "label": "EscanearPage → Cumple",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/lib/comercio/libro.ts:publicarMovimiento",
+        "name": "publicarMovimiento",
+        "type": "Function",
+        "filePath": "src/lib/comercio/libro.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 13,
+      "risk": "CRITICAL",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 7,
+        "processes_affected": 7,
+        "modules_affected": 3
+      },
+      "byDepthCounts": {
+        "1": 7,
+        "2": 4,
+        "3": 2
+      },
+      "affected_processes": [
+        {
+          "name": "EscanearPage",
+          "type": "Function",
+          "filePath": "src/app/(panel)/panel/[slug]/escanear/page.tsx",
+          "affected_process_count": 7,
+          "total_hits": 13,
+          "earliest_broken_step": 2
+        },
+        {
+          "name": "Escaner",
+          "type": "Function",
+          "filePath": "src/components/panel/escaner.tsx",
+          "affected_process_count": 4,
+          "total_hits": 12,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "confirmarPago",
+          "type": "Function",
+          "filePath": "src/app/actions/pedidos.ts",
+          "affected_process_count": 9,
+          "total_hits": 9,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "crearPedidoAction",
+          "type": "Function",
+          "filePath": "src/app/actions/pedidos.ts",
+          "affected_process_count": 1,
+          "total_hits": 1,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "liquidarAction",
+          "type": "Function",
+          "filePath": "src/app/actions/liquidar.ts",
+          "affected_process_count": 1,
+          "total_hits": 1,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "redimirAction",
+          "type": "Function",
+          "filePath": "src/app/actions/escanear.ts",
+          "affected_process_count": 1,
+          "total_hits": 1,
+          "earliest_broken_step": 1
+        },
+        {
+          "name": "devolverAction",
+          "type": "Function",
+          "filePath": "src/app/actions/liquidar.ts",
+          "affected_process_count": 1,
+          "total_hits": 1,
+          "earliest_broken_step": 1
+        }
+      ],
+      "affected_modules": [
+        {
+          "name": "Actions",
+          "hits": 6,
+          "impact": "direct"
+        },
+        {
+          "name": "Panel",
+          "hits": 3,
+          "impact": "indirect"
+        },
+        {
+          "name": "Comercio",
+          "hits": 1,
+          "impact": "direct"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "File:scripts/prueba-libro.ts",
+            "name": "prueba-libro.ts",
+            "filePath": "scripts/prueba-libro.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          },
+          {
+            "depth": 1,
+            "id": "Function:scripts/prueba-libro.ts:entregaPagadaEnLaApp",
+            "name": "entregaPagadaEnLaApp",
+            "filePath": "scripts/prueba-libro.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          },
+          {
+            "depth": 1,
+            "id": "Function:src/app/actions/escanear.ts:redimirAction",
+            "name": "redimirAction",
+            "filePath": "src/app/actions/escanear.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_77_escaner",
+                "label": "Escaner → GetVenueRole",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 4
+              },
+              {
+                "id": "proc_78_escaner",
+                "label": "Escaner → Cumple",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_112_redimiraction",
+                "label": "RedimirAction → ParseAllowlist",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 4
+              }
+            ]
+          },
+          {
+            "depth": 1,
+            "id": "Function:src/app/actions/liquidar.ts:liquidarAction",
+            "name": "liquidarAction",
+            "filePath": "src/app/actions/liquidar.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_93_liquidaraction",
+                "label": "LiquidarAction → ParseAllowlist",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          },
+          {
+            "depth": 1,
+            "id": "Function:src/app/actions/liquidar.ts:devolverAction",
+            "name": "devolverAction",
+            "filePath": "src/app/actions/liquidar.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_116_devolveraction",
+                "label": "DevolverAction → ParseAllowlist",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          },
+          {
+            "depth": 1,
+            "id": "Function:src/app/actions/pedidos.ts:confirmarPago",
+            "name": "confirmarPago",
+            "filePath": "src/app/actions/pedidos.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_13_confirmarpago",
+                "label": "ConfirmarPago → Limpia",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_15_confirmarpago",
+                "label": "ConfirmarPago → HasNonEmpty",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_6_confirmarpago",
+                "label": "ConfirmarPago → GetThemeColors",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_17_confirmarpago",
+                "label": "ConfirmarPago → CreateLogProvider",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_37_confirmarpago",
+                "label": "ConfirmarPago → GetFromEmailAddress",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_38_confirmarpago",
+                "label": "ConfirmarPago → ResolveProviderNameFromEnv",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_14_confirmarpago",
+                "label": "ConfirmarPago → ConEsquema",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_16_confirmarpago",
+                "label": "ConfirmarPago → GetProvider",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_36_confirmarpago",
+                "label": "ConfirmarPago → Pesos",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          },
+          {
+            "depth": 1,
+            "id": "Function:src/lib/comercio/caducar.ts:caducarPedidosVencidos",
+            "name": "caducarPedidosVencidos",
+            "filePath": "src/lib/comercio/caducar.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          }
+        ],
+        "2": [
+          {
+            "depth": 2,
+            "id": "File:scripts/prueba-confirmacion-concurrente.ts",
+            "name": "prueba-confirmacion-concurrente.ts",
+            "filePath": "scripts/prueba-confirmacion-concurrente.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          },
+          {
+            "depth": 2,
+            "id": "File:scripts/caducar-pedidos.ts",
+            "name": "caducar-pedidos.ts",
+            "filePath": "scripts/caducar-pedidos.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          },
+          {
+            "depth": 2,
+            "id": "Function:src/app/actions/pedidos.ts:crearPedidoAction",
+            "name": "crearPedidoAction",
+            "filePath": "src/app/actions/pedidos.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_83_crearpedidoaction",
+                "label": "CrearPedidoAction → Repartir",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          },
+          {
+            "depth": 2,
+            "id": "Function:src/components/panel/escaner.tsx:entregar",
+            "name": "entregar",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_77_escaner",
+                "label": "Escaner → GetVenueRole",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_108_escanearpage",
+                "label": "EscanearPage → NuevoIntento",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_78_escaner",
+                "label": "Escaner → Cumple",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              },
+              {
+                "id": "proc_50_escanearpage",
+                "label": "EscanearPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 3
+              }
+            ]
+          }
+        ],
+        "3": [
+          {
+            "depth": 3,
+            "id": "Function:src/components/panel/escaner.tsx:Escaner",
+            "name": "Escaner",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_52_escanearpage",
+                "label": "EscanearPage → CuentaDePlataforma",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_224_escanearpage",
+                "label": "EscanearPage → ApagarCamara",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_77_escaner",
+                "label": "Escaner → GetVenueRole",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_108_escanearpage",
+                "label": "EscanearPage → NuevoIntento",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_51_escanearpage",
+                "label": "EscanearPage → BuscarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_78_escaner",
+                "label": "Escaner → Cumple",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_109_escanearpage",
+                "label": "EscanearPage → Cn",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_110_escanearpage",
+                "label": "EscanearPage → FormatCOP",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_50_escanearpage",
+                "label": "EscanearPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              }
+            ]
+          },
+          {
+            "depth": 3,
+            "id": "Function:src/components/panel/escaner.tsx:leer",
+            "name": "leer",
+            "filePath": "src/components/panel/escaner.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_171_escaner",
+                "label": "Escaner → NuevoIntento",
+                "processType": "cross_community",
+                "step": 2
+              },
+              {
+                "id": "proc_170_escaner",
+                "label": "Escaner → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/app/actions/liquidar.ts:liquidarAction",
+        "name": "liquidarAction",
+        "type": "Function",
+        "filePath": "src/app/actions/liquidar.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 0,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 0,
+        "processes_affected": 0,
+        "modules_affected": 0
+      },
+      "byDepthCounts": {},
+      "affected_processes": [],
+      "affected_modules": [],
+      "byDepth": {}
+    },
+    {
+      "target": {
+        "id": "Function:src/app/actions/liquidar.ts:devolverAction",
+        "name": "devolverAction",
+        "type": "Function",
+        "filePath": "src/app/actions/liquidar.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 0,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 0,
+        "processes_affected": 0,
+        "modules_affected": 0
+      },
+      "byDepthCounts": {},
+      "affected_processes": [],
+      "affected_modules": [],
+      "byDepth": {}
+    },
+    {
+      "target": {
+        "id": "Function:src/lib/comercio/caducar.ts:caducarPedidosVencidos",
+        "name": "caducarPedidosVencidos",
+        "type": "Function",
+        "filePath": "src/lib/comercio/caducar.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 1,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 1,
+        "processes_affected": 0,
+        "modules_affected": 0
+      },
+      "byDepthCounts": {
+        "1": 1
+      },
+      "affected_processes": [],
+      "affected_modules": [],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "File:scripts/caducar-pedidos.ts",
+            "name": "caducar-pedidos.ts",
+            "filePath": "scripts/caducar-pedidos.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/lib/comercio/queries.ts:ordenPorToken",
+        "name": "ordenPorToken",
+        "type": "Function",
+        "filePath": "src/lib/comercio/queries.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 1,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 1,
+        "processes_affected": 1,
+        "modules_affected": 1
+      },
+      "byDepthCounts": {
+        "1": 1
+      },
+      "affected_processes": [
+        {
+          "name": "OrdenPage",
+          "type": "Function",
+          "filePath": "src/app/orden/[token]/page.tsx",
+          "affected_process_count": 5,
+          "total_hits": 5,
+          "earliest_broken_step": 1
+        }
+      ],
+      "affected_modules": [
+        {
+          "name": "Comercio",
+          "hits": 1,
+          "impact": "direct"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "Function:src/app/orden/[token]/page.tsx:OrdenPage",
+            "name": "OrdenPage",
+            "filePath": "src/app/orden/[token]/page.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": [
+              {
+                "id": "proc_209_ordenpage",
+                "label": "OrdenPage → FormatCOP",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_207_ordenpage",
+                "label": "OrdenPage → Limpia",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_210_ordenpage",
+                "label": "OrdenPage → Cn",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_103_ordenpage",
+                "label": "OrdenPage → NormalizarCodigo",
+                "processType": "cross_community",
+                "step": 1
+              },
+              {
+                "id": "proc_208_ordenpage",
+                "label": "OrdenPage → ConEsquema",
+                "processType": "cross_community",
+                "step": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/lib/comercio/queries.ts:estadoDeOrdenPorToken",
+        "name": "estadoDeOrdenPorToken",
+        "type": "Function",
+        "filePath": "src/lib/comercio/queries.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 1,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 1,
+        "processes_affected": 0,
+        "modules_affected": 1
+      },
+      "byDepthCounts": {
+        "1": 1
+      },
+      "affected_processes": [],
+      "affected_modules": [
+        {
+          "name": "Estado",
+          "hits": 1,
+          "impact": "direct"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "Function:src/app/api/orden/[token]/estado/route.ts:GET",
+            "name": "GET",
+            "filePath": "src/app/api/orden/[token]/estado/route.ts",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          }
+        ]
+      }
+    },
+    {
+      "target": {
+        "id": "Function:src/lib/comercio/queries.ts:misPedidos",
+        "name": "misPedidos",
+        "type": "Function",
+        "filePath": "src/lib/comercio/queries.ts"
+      },
+      "direction": "upstream",
+      "impactedCount": 1,
+      "risk": "LOW",
+      "epistemic": "exact",
+      "summary": {
+        "direct": 1,
+        "processes_affected": 0,
+        "modules_affected": 1
+      },
+      "byDepthCounts": {
+        "1": 1
+      },
+      "affected_processes": [],
+      "affected_modules": [
+        {
+          "name": "Mi-historia",
+          "hits": 1,
+          "impact": "direct"
+        }
+      ],
+      "byDepth": {
+        "1": [
+          {
+            "depth": 1,
+            "id": "Function:src/app/(publico)/mi-historia/page.tsx:MiHistoriaPage",
+            "name": "MiHistoriaPage",
+            "filePath": "src/app/(publico)/mi-historia/page.tsx",
+            "relationType": "CALLS",
+            "confidence": 0.85,
+            "processes": []
+          }
+        ]
+      }
+    }
+  ]
+}

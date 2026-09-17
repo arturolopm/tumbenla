@@ -35,9 +35,13 @@ export const metadata: Metadata = {
     isRootLayout: true,
   }),
   icons: {
-    icon: '/image.png',
-    shortcut: '/image.png',
-    apple: '/image.png',
+    icon: [
+      { url: '/tumbenla-favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/tumbenla-favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/tumbenla-favicon-48.png', sizes: '48x48', type: 'image/png' },
+    ],
+    shortcut: '/tumbenla-favicon-32.png',
+    apple: [{ url: '/tumbenla-logo-180.png', sizes: '180x180', type: 'image/png' }],
   },
 }
 
@@ -53,7 +57,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className="dark">
+    <html lang='es' className='dark'>
       <body
         className={`${montserrat.variable} ${geistMono.variable} ${anybody.variable} font-sans antialiased`}
       >

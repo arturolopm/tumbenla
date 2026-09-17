@@ -20,7 +20,7 @@ export default async function NochePanelPage({
   const sitio = await getVenueForPanel(slug)
   if (!sitio) notFound()
 
-  await requireVenueAccess(sitio.id, `/panel/${slug}/noches/${nightId}`)
+  await requireVenueAccess(sitio.id, `/panel/${slug}/noches/${nightId}`, ['owner'])
 
   // La noche tiene que ser DE ESTE SITIO. Sin el eq(venueId), poner el id de la
   // noche de otro bar en la URL abriria sus fotos desde un panel propio.
@@ -40,18 +40,18 @@ export default async function NochePanelPage({
   const fotos = await listPhotosForPanel(noche.id)
 
   return (
-    <div className="flex max-w-4xl flex-col gap-8">
+    <div className='flex max-w-4xl flex-col gap-8'>
       <header>
         <Link
           href={`/panel/${slug}/noches`}
-          className="text-muted-foreground text-sm hover:text-primary-text"
+          className='text-muted-foreground text-sm hover:text-primary-text'
         >
           ← Todas las noches
         </Link>
-        <h1 className="mt-2 font-display font-black text-3xl uppercase leading-none tracking-tighter">
+        <h1 className='mt-2 font-display font-black text-3xl uppercase leading-none tracking-tighter'>
           {noche.title || formatDate(noche.happenedAt)}
         </h1>
-        <p className="mt-2 text-body-md text-muted-foreground">
+        <p className='mt-2 text-body-md text-muted-foreground'>
           {formatDate(noche.happenedAt)} ·{' '}
           {noche.status === 'published' ? 'Publicada' : 'En borrador'}
         </p>

@@ -4,7 +4,7 @@ import { LngLatBounds, type MapLibreMap, Marker } from 'maplibre-gl'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef } from 'react'
 
-import { pledgeShortLabel } from '@/components/sitios/pledge-badge'
+import { aporteShortLabel } from '@/components/sitios/aporte-badge'
 import { FOCUS_ZOOM, SINGLE_VENUE_PADDING_DEG, fitPaddingFor } from '@/lib/mapa/config'
 import type { VenueSummary } from '@/lib/venues/types'
 import { MapAttribution } from './map-attribution'
@@ -48,11 +48,19 @@ const LONG_PRESS_SLOP_PX = 10
 /**
  * El pin de Stitch: un punto con glow y un anillo que late alrededor.
  *
- * El color distingue la FORMA del compromiso, no su tamano: naranja para los
- * que ponen un porcentaje, ambar para los que ponen un monto fijo. Los dos
- * tienen el mismo diametro y el mismo brillo a proposito. Un bar que pone
- * $1.000 por cerveza no esta prometiendo menos que uno que pone 10%, y pintar
- * uno mas fuerte que el otro los rankearia sin decirlo.
+ * EL COLOR DICE SI PUEDES PEDIR AHI, y estos dos SI van con pesos distintos.
+ *
+ * Antes distinguia la forma del compromiso —porcentaje contra monto fijo— con
+ * los dos exactamente igual de brillantes, porque rankear a un bar que pone
+ * $1.000 por cerveza contra uno que pone 10% habria sido deshonesto: no hay
+ * forma de saber cual pone mas.
+ *
+ * Aca no aplica ese argumento. "Tiene carta, puedes pedir un trago ya" contra
+ * "todavia no vende nada" no es un ranking moral: es la pregunta funcional que
+ * el mapa existe para contestar. Por eso el que vende se lleva el naranja de
+ * marca, el glow y el anillo que late, y el que no, un tono apagado y NINGUN
+ * anillo. Un sitio del que no puedes pedir nada no deberia estar latiendo para
+ * llamar la atencion.
  */
 /**
  * EL ELEMENTO EXTERIOR NO LLEVA NI UNA CLASE QUE TOQUE `transform` NI `scale`.
@@ -74,10 +82,8 @@ const MARKER_BASE =
 const DOT_BASE =
   'absolute inset-0 rounded-full transition-transform duration-200 motion-reduce:transition-none'
 
-const DOT_TONE = {
-  percentage: 'bg-primary shadow-[0_0_15px_var(--primary)]',
-  fixed_per_unit: 'bg-party shadow-[0_0_15px_var(--party)]',
-} as const
+const DOT_CON_CARTA = 'bg-primary shadow-[0_0_15px_var(--primary)]'
+const DOT_SIN_CARTA = 'bg-muted-foreground'
 
 // La lima es el punto mas brillante de la paleta (15.3:1). Por eso es el estado
 // seleccionado y nada mas: si apareciera en dos sitios a la vez dejaria de
@@ -87,16 +93,20 @@ const DOT_ACTIVE = 'bg-lime shadow-[0_0_18px_var(--lime)] scale-150'
 const RING_BASE =
   '-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute top-1/2 left-1/2 size-12 animate-ping rounded-full border opacity-40 motion-reduce:animate-none'
 
-const RING_TONE = {
-  percentage: 'border-primary',
-  fixed_per_unit: 'border-party',
-} as const
+/** Se puede pedir un trago aca ahora mismo. */
+const tieneCarta = (venue: VenueSummary) => venue.chip.materialDesde !== null
 
 const dotClass = (venue: VenueSummary, active: boolean) =>
-  `${DOT_BASE} ${active ? DOT_ACTIVE : DOT_TONE[venue.pledge.type]}`
+  `${DOT_BASE} ${active ? DOT_ACTIVE : tieneCarta(venue) ? DOT_CON_CARTA : DOT_SIN_CARTA}`
 
-const ringClass = (venue: VenueSummary, active: boolean) =>
-  `${RING_BASE} ${active ? 'border-lime' : RING_TONE[venue.pledge.type]}`
+/**
+ * El anillo solo existe para los que venden, o para el seleccionado. Devuelve
+ * null cuando no va, y quien lo llama no pinta el nodo.
+ */
+const ringClass = (venue: VenueSummary, active: boolean): string | null => {
+  if (active) return `${RING_BASE} border-lime`
+  return tieneCarta(venue) ? `${RING_BASE} border-primary` : null
+}
 
 /**
  * La tarjeta sobre el pin.
@@ -162,21 +172,17 @@ export function VenuesMap({
       </MapCanvas>
 
       {/* Leyenda. En la maqueta explicaba tres categorias de sitio que aca no
-          existen; la distincion real de este producto es la forma del
-          compromiso, que es lo que explica. La lima no aparece porque no es una
-          categoria: es el estado seleccionado. */}
+          existen; la distincion real de este producto es si puedes pedir algo o
+          todavia no. La lima no aparece porque no es una categoria: es el
+          estado seleccionado. */}
       <div className="absolute right-4 bottom-12 z-20 flex flex-col gap-2 rounded-xl border-2 border-secondary bg-background/90 p-4 backdrop-blur-md">
         <div className="flex items-center gap-2">
-          <span className="size-3 shrink-0 rounded-full bg-primary" />
-          <span className="font-display text-label-sm text-street-white">
-            Pone un porcentaje
-          </span>
+          <span className="size-3 shrink-0 rounded-full bg-primary shadow-[0_0_10px_var(--primary)]" />
+          <span className="font-display text-label-sm text-street-white">Puedes pedir aquí</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="size-3 shrink-0 rounded-full bg-party" />
-          <span className="font-display text-label-sm text-street-white">
-            Pone un monto fijo
-          </span>
+          <span className="size-3 shrink-0 rounded-full bg-muted-foreground" />
+          <span className="font-display text-label-sm text-street-white">Todavía sin carta</span>
         </div>
       </div>
 
@@ -255,9 +261,13 @@ function VenueMarkers({
 
       // El anillo que late. Decorativo, escondido del arbol de accesibilidad:
       // el nombre accesible ya lo da el aria-label del enlace.
+      // Solo los sitios que venden laten. `ringClass` devuelve null para los
+      // demas, y entonces el nodo se crea igual pero va sin clases: hace falta
+      // que exista porque el efecto de mas abajo le reescribe la clase cuando
+      // el sitio pasa a estar seleccionado.
       const ring = document.createElement('span')
       ring.setAttribute('aria-hidden', 'true')
-      ring.className = ringClass(venue, false)
+      ring.className = ringClass(venue, false) ?? ''
       el.appendChild(ring)
 
       // textContent y no innerHTML: el nombre y el barrio vienen de la base de
@@ -265,15 +275,20 @@ function VenueMarkers({
       const tip = document.createElement('span')
       tip.className = TIP_BASE
 
-      const tipPledge = document.createElement('span')
-      tipPledge.className = 'block font-display text-label-sm text-lime uppercase'
-      tipPledge.textContent = pledgeShortLabel(venue.pledge)
-
       const tipName = document.createElement('span')
       tipName.className = 'block truncate font-bold text-body-md text-street-white'
       tipName.textContent = venue.name
 
-      tip.append(tipPledge, tipName)
+      // Un sitio sin entregas y sin carta no tiene nada verificable que decir,
+      // asi que el tooltip queda con el nombre solo en vez de una linea vacia.
+      const aporte = aporteShortLabel(venue.chip)
+      if (aporte) {
+        const tipAporte = document.createElement('span')
+        tipAporte.className = 'block font-display text-label-sm text-lime uppercase'
+        tipAporte.textContent = aporte
+        tip.append(tipAporte)
+      }
+      tip.append(tipName)
       el.appendChild(tip)
 
       // Hover de escritorio: resalta la tarjeta en la lista. La tarjeta flotante
@@ -490,7 +505,7 @@ function VenueMarkers({
       if (!own) continue
       const activo = id === activeId
       entry.dot.className = dotClass(own, activo)
-      entry.ring.className = ringClass(own, activo)
+      entry.ring.className = ringClass(own, activo) ?? ''
     }
 
     if (!activeId) return

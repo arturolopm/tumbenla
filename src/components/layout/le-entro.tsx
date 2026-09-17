@@ -37,8 +37,9 @@ export function LeEntro() {
 
             <h3 className="font-display font-bold text-headline-md uppercase">Salgo de rumba</h3>
             <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
-              Sales a los sitios de la red como sales siempre. Guardas las fotos de tus noches,
-              y ves cuánto pusieron esas noches en material. Sin donar aparte y sin cuotas.
+              Escoges un trago de la carta y ves, en pesos, cuánto va a material y cuánto se
+              queda en el sitio antes de pedirlo. Muestras el QR en la barra y el personal
+              lo escanea para entregártelo.
             </p>
 
             <Link
@@ -56,13 +57,13 @@ export function LeEntro() {
 
             <h3 className="font-display font-bold text-headline-md uppercase">Tengo un sitio</h3>
             <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
-              Tú decides cuánto pones y sobre qué: un porcentaje de la noche, o una plata fija
-              por trago. Lo dejamos por escrito, publicamos tu sitio en el mapa, y cada compra
-              queda con su factura.
+              Armas un producto con su precio y su reparto: cuántos pesos van a material y
+              cuántos se quedan en tu sitio. Lo revisamos antes de publicarlo. Tu personal
+              escanea cada entrega; nosotros compramos material y publicamos la factura.
             </p>
 
             <Link
-              href="/quiero-poner"
+              href="/registrar-sitio"
               className="mt-8 inline-block self-start rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
             >
               Quiero poner

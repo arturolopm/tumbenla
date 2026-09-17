@@ -16,6 +16,7 @@ import {
 import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
 import { getActiveProviderName } from '@/lib/messaging/email/mailer'
 import { isEmailVerificationEnabled } from '@/config/feature-flags'
+import { isIsolatedBrowserTest } from '@/lib/isolated-browser-test'
 
 /**
  * Todas las direcciones por las que ESTE despliegue responde.
@@ -35,15 +36,31 @@ import { isEmailVerificationEnabled } from '@/config/feature-flags'
  * chequeo de origen existe para impedir.
  */
 const origenesPropios = (): string[] => {
-  const candidatos = [
-    getBaseUrl(),
-    env.VERCEL_URL?.trim(),
-    env.VERCEL_BRANCH_URL?.trim(),
-  ].filter((valor): valor is string => Boolean(valor))
+  const candidatos = [getBaseUrl(), env.VERCEL_URL?.trim(), env.VERCEL_BRANCH_URL?.trim()].filter(
+    (valor): valor is string => Boolean(valor)
+  )
+
+  // EN DESARROLLO, ADEMAS, EL LOOPBACK.
+  //
+  // Probar en el telefono obliga a poner NEXT_PUBLIC_APP_URL con la IP de la
+  // red, y en ese momento `localhost` deja de estar en la lista: el Mac abre la
+  // app por localhost, el chequeo de origen la rechaza, y sale un 403
+  // INVALID_ORIGIN que en pantalla se lee como "correo o contraseña
+  // incorrectos". Es exactamente la trampa que ya esta documentada en
+  // PRODUCT.md, y morderla cuesta media hora de buscar donde no es.
+  //
+  // Que esto sea SOLO de desarrollo no es un detalle: en produccion confiar en
+  // localhost le abriria la puerta a cualquier pagina servida desde la maquina
+  // de quien visita.
+  const locales = isProd
+    ? []
+    : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://0.0.0.0:3000']
 
   return [
     ...new Set(
-      candidatos.map((valor) => (valor.startsWith('http') ? valor : `https://${valor}`))
+      [...candidatos, ...locales].map((valor) =>
+        valor.startsWith('http') ? valor : `https://${valor}`
+      )
     ),
   ]
 }
@@ -51,6 +68,37 @@ const origenesPropios = (): string[] => {
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
   trustedOrigins: origenesPropios(),
+  rateLimit: {
+    enabled: !isIsolatedBrowserTest(),
+  },
+
+  /**
+   * Server-side auth logging.
+   *
+   * WHY IT EXISTS: when signing in fails, the browser is the worst place to
+   * find out why. Better-Auth answers with a deliberately vague
+   * "Invalid email or password" — correct, because telling an attacker which
+   * half was wrong hands them a way to enumerate accounts — and the client
+   * error object serialises to `{}` in the console. So the person debugging
+   * sees nothing at all.
+   *
+   * This puts the real reason on the SERVER, where only we read it. Verbose in
+   * development; in production it stays at `error` so a login failure does not
+   * write one line per attempt.
+   *
+   * It never logs the password, and never logs enough for the log itself to
+   * become the leak the vague message exists to prevent.
+   */
+  logger: {
+    disabled: false,
+    level: isProd ? 'error' : 'debug',
+    log: (level, message, ...args) => {
+      const prefix = `[auth:${level}]`
+      if (level === 'error') console.error(prefix, message, ...args)
+      else if (level === 'warn') console.warn(prefix, message, ...args)
+      else console.log(prefix, message, ...args)
+    },
+  },
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),
@@ -196,8 +244,7 @@ export const auth = betterAuth({
           })
 
           const otpWasLoggedOnly =
-            getActiveProviderName() === 'log' ||
-            result.message.toLowerCase().includes('logged')
+            getActiveProviderName() === 'log' || result.message.toLowerCase().includes('logged')
 
           if (!isProd || otpWasLoggedOnly) {
             console.info('🔑 VERIFICATION CODE FOR LOGIN/SIGNUP', {

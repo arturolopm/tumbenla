@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { normalizarHandle } from '@/config/contacto'
+import { generarToken } from '@/lib/venues/invitations'
 import { db } from '@/database'
 import { venue, venueApplication } from '@/database/schema'
 import { assertAdmin } from '@/lib/auth/admin'
@@ -15,16 +16,22 @@ import {
   sendApplicationDmRequestEmail,
 } from '@/lib/messaging/email/mailer'
 import { tieneDueno } from '@/lib/venues/claims'
-import { VENUE_TYPES } from '@/lib/venues/types'
 
 /**
  * El alta de un sitio.
  *
- * UNA SOLICITUD NO CREA EL SITIO, y no es una decision de diseno suelta: es la
- * consecuencia de que el formulario ya no pida ni el compromiso ni las
- * coordenadas. `venue.pledge_type`, `latitude` y `longitude` son NOT NULL, asi
- * que no hay fila que insertar todavia. El sitio nace cuando un operador
- * aprueba y completa lo que falta.
+ * SON CUATRO CAMPOS (decision 35): nombre, Instagram, correo y WhatsApp. Cada
+ * uno hace falta para verificar a quien escribe o para contestarle, y nada mas
+ * entra por aca.
+ *
+ * UNA SOLICITUD NO CREA EL SITIO. `latitude` y `longitude` son NOT NULL y el
+ * formulario no las pide, asi que no hay fila que insertar todavia. El sitio
+ * nace cuando un operador aprueba y completa lo que falta.
+ *
+ * Y NO SE PIDE CUENTA PARA MANDARLA. Antes habia que registrarse y verificar el
+ * correo antes de VER el formulario, o sea el paso mas caro primero. La
+ * solicitud nace sin dueno y se amarra cuando esa persona entra con el correo
+ * verificado, con el mismo mecanismo de los pedidos de invitado (decision 29b).
  *
  * De paso tapa un hueco real: cuando registrar creaba el sitio y daba la
  * propiedad en el acto, cualquiera podia apartar el nombre de un bar ajeno y el
@@ -40,7 +47,7 @@ import { VENUE_TYPES } from '@/lib/venues/types'
 export type ReclamoState =
   | { status: 'idle' }
   | { status: 'error'; error: string; fieldErrors?: Record<string, string[]> }
-  | { status: 'success'; mensaje: string; id: string }
+  | { status: 'success'; mensaje: string; id: string; token: string }
 
 const handleSchema = (etiqueta: string) =>
   z
@@ -62,41 +69,39 @@ const opcional = (max = 200) =>
     .transform((v) => (v ? v : null))
 
 /** Recorre error.cause hasta encontrar la restriccion, o se rinde. */
-const esViolacionDeInstagram = (error: unknown): boolean => {
+/**
+ * Si el error que reboto es la violacion de ESTA restriccion.
+ *
+ * SE RECORRE LA CADENA DE `cause`: drizzle envuelve el error del driver en un
+ * DrizzleQueryError cuyo message es "Failed query: insert into ...", y el
+ * nombre de la restriccion solo aparece en el error de postgres-js que va
+ * adentro. Mirar solo el primer nivel deja caer el caso en el mensaje generico
+ * de "intenta de nuevo", que aqui es justo el consejo equivocado: volver a
+ * intentar no lo va a arreglar.
+ */
+const violaRestriccion = (error: unknown, nombre: string): boolean => {
   let actual: unknown = error
   for (let i = 0; i < 5 && actual; i++) {
     const e = actual as { message?: string; constraint_name?: string; cause?: unknown }
-    if (e.constraint_name === 'venue_application_instagram_vivas_key') return true
-    if (e.message?.includes('venue_application_instagram_vivas_key')) return true
+    if (e.constraint_name === nombre) return true
+    if (e.message?.includes(nombre)) return true
     actual = e.cause
   }
   return false
 }
 
 const solicitudSchema = z.object({
-  // Lo obligatorio: el minimo para poder verificar y despues publicar.
+  // Los cuatro, y nada mas. Cada uno se gana el puesto: el nombre para buscar
+  // el sitio, el Instagram porque es el instrumento de verificacion, el correo
+  // porque es lo que el DM tiene que citar Y por donde la solicitud se amarra a
+  // una cuenta, y el WhatsApp porque es por donde de verdad contesta un bar en
+  // Manizales cuando la solicitud se queda quieta.
   name: z.string().trim().min(2, 'El nombre del sitio es obligatorio').max(120),
-  type: z.enum(VENUE_TYPES),
-  city: z.string().trim().min(2, 'La ciudad es obligatoria').max(120),
-  addressLine: z.string().trim().min(4, 'La dirección es obligatoria').max(200),
   instagram: handleSchema('El Instagram'),
   contactEmail: z.email('Ese correo no parece válido').transform((v) => v.trim().toLowerCase()),
-
-  // Lo opcional: ayuda, no bloquea.
-  tiktok: z
-    .string()
-    .trim()
-    .max(120)
-    .optional()
-    .transform((v) => (v ? normalizarHandle(v) : null)),
+  // Se pide, pero no bloquea: un bar que solo atiende por DM de Instagram no
+  // tiene por que quedarse afuera, y el DM es el filtro de verdad.
   whatsapp: opcional(40),
-  phone: opcional(40),
-  neighborhood: opcional(120),
-  website: opcional(300),
-  openingHours: opcional(200),
-  description: opcional(2000),
-  /** Una IDEA, no un compromiso. No toca ninguna columna pledge_*. */
-  pledgeIdea: opcional(1000),
 
   /** Solo si escogio un sitio que ya existe en el buscador. */
   venueId: z
@@ -110,11 +115,10 @@ export const solicitarSitioAction = async (
   _previous: ReclamoState,
   formData: FormData
 ): Promise<ReclamoState> => {
+  // A session alone is never evidence that this applicant owns the contact
+  // email. The application is linked immediately only when that exact address
+  // is already verified; every other case follows the same delayed claim path.
   const session = await auth.api.getSession({ headers: await headers() })
-  if (!session) return { status: 'error', error: 'Inicia sesión para registrar tu sitio.' }
-  if (!session.user.emailVerified) {
-    return { status: 'error', error: 'Verifica tu correo antes de registrar tu sitio.' }
-  }
 
   // Los vacios NO se descartan, a diferencia del formulario de admin. Si un
   // campo obligatorio llegara como `undefined`, Zod falla por tipo antes de
@@ -137,6 +141,10 @@ export const solicitarSitioAction = async (
   }
 
   const datos = parsed.data
+  const trustedApplicantId =
+    session?.user.emailVerified && session.user.email.trim().toLowerCase() === datos.contactEmail
+      ? session.user.id
+      : null
 
   // Si dice reclamar un sitio que ya existe, tiene que existir de verdad y no
   // tener dueno. El id viene del formulario, asi que se comprueba contra la
@@ -158,36 +166,41 @@ export const solicitarSitioAction = async (
     }
   }
 
-  // Su propia solicitud viva, si la tiene: volver a mandar el formulario la
-  // actualiza en vez de chocar contra el indice unico consigo misma.
-  const [propia] = await db
-    .select({ id: venueApplication.id })
-    .from(venueApplication)
-    .where(
-      and(
-        eq(venueApplication.userId, session.user.id),
-        sql`${venueApplication.status} in ('pending', 'verifying')`
-      )
-    )
-    .limit(1)
+  /**
+   * Su propia solicitud viva: volver a mandar el formulario la actualiza en vez
+   * de chocar contra el indice unico consigo misma.
+   *
+   * SOLO CON SESION, y esto no es una limitacion que sobro: es un hueco de
+   * apropiacion si se hiciera por correo. Sin cuenta de por medio, cualquiera
+   * que sepa el correo de contacto de un bar podria volver a mandar el
+   * formulario y reescribirle el Instagram a una solicitud viva ajena. Con
+   * sesion se busca por userId, que no se puede escribir desde el formulario.
+   * Sin sesion, solo se inserta.
+   */
+  const [propia] = trustedApplicantId
+    ? await db
+        .select({ id: venueApplication.id })
+        .from(venueApplication)
+        .where(
+          and(
+            eq(venueApplication.userId, trustedApplicantId),
+            sql`${venueApplication.status} in ('pending', 'verifying')`
+          )
+        )
+        .limit(1)
+    : []
 
   const valores = {
-    userId: session.user.id,
+    userId: trustedApplicantId,
     venueId: datos.venueId,
     name: datos.name,
-    type: datos.type,
-    city: datos.city,
-    addressLine: datos.addressLine,
     instagram: datos.instagram,
     contactEmail: datos.contactEmail,
-    tiktok: datos.tiktok,
     whatsapp: datos.whatsapp,
-    phone: datos.phone,
-    neighborhood: datos.neighborhood,
-    website: datos.website,
-    openingHours: datos.openingHours,
-    description: datos.description,
-    pledgeIdea: datos.pledgeIdea,
+    // Por donde vuelve a su solicitud quien la mando sin cuenta. Se genera
+    // siempre, no solo para los invitados: una sola forma de enlazar es una
+    // rama menos que mantener.
+    publicToken: generarToken(),
   }
 
   try {
@@ -199,28 +212,40 @@ export const solicitarSitioAction = async (
 
       revalidatePath('/registrar-sitio')
       revalidatePath('/admin/solicitudes')
-      return { status: 'success', mensaje: 'Solicitud actualizada.', id: propia.id }
+      return {
+        status: 'success',
+        mensaje: 'Solicitud actualizada.',
+        id: propia.id,
+        token: valores.publicToken,
+      }
     }
 
     const [fila] = await db.insert(venueApplication).values(valores).returning({
       id: venueApplication.id,
+      publicToken: venueApplication.publicToken,
     })
 
     revalidatePath('/registrar-sitio')
     revalidatePath('/admin/solicitudes')
-    return { status: 'success', mensaje: 'Solicitud enviada.', id: fila.id }
+    return {
+      status: 'success',
+      mensaje: 'Solicitud enviada.',
+      id: fila.id,
+      token: fila.publicToken ?? valores.publicToken,
+    }
   } catch (error) {
-    // El indice unico parcial sobre lower(instagram) es lo unico que puede
-    // fallar aca de forma esperable: significa que OTRA persona ya tiene una
-    // solicitud viva por esa cuenta.
-    //
-    // SE RECORRE LA CADENA DE `cause`: drizzle envuelve el error del driver en
-    // un DrizzleQueryError cuyo message es "Failed query: insert into ...", y
-    // el nombre de la restriccion solo aparece en el error de postgres-js que
-    // va adentro. Mirar solo el primer nivel dejaba caer este caso en el
-    // mensaje generico de "intenta de nuevo", que aqui es justo el consejo
-    // equivocado: volver a intentar no lo va a arreglar.
-    if (esViolacionDeInstagram(error)) {
+    // Los dos indices unicos parciales son lo unico que puede fallar aca de
+    // forma esperable. El del correo es nuevo y hace el trabajo que antes hacia
+    // gratis la sesion: una sola solicitud viva por persona.
+    if (violaRestriccion(error, 'venue_application_email_vivas_key')) {
+      return {
+        status: 'error',
+        error: 'Ya hay una solicitud en curso con ese correo. Revísala, o escríbenos.',
+        fieldErrors: { contactEmail: ['Ya hay una solicitud en curso con este correo'] },
+      }
+    }
+
+    if (violaRestriccion(error, 'venue_application_instagram_vivas_key')) {
       return {
         status: 'error',
         error:
@@ -334,8 +359,8 @@ export const rechazarSolicitudAction = async (
     await sendApplicationDecisionEmail({
       to: solicitud.contactEmail,
       venueName: solicitud.name,
-      aprobada: false,
-      nota: nota?.trim() || undefined,
+      approved: false,
+      note: nota?.trim() || undefined,
     })
   } catch {
     // El rechazo ya quedo guardado; que el correo falle no lo revierte.

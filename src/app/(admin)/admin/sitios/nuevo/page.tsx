@@ -8,10 +8,9 @@ import { getApplication } from '@/lib/venues/claims'
  * Crear un sitio, a mano o aprobando una solicitud.
  *
  * Con ?solicitud=<id> el formulario llega prellenado con lo que el sitio ya
- * dijo, y guardar hace las tres cosas de una: crea el sitio, mete al
- * solicitante como dueno y cierra la solicitud. Se hace asi para que no exista
- * el estado intermedio "aprobada pero sin sitio", que dejaria a alguien
- * esperando un panel que nadie va a crear.
+ * dijo, y guardar cierra la solicitud junto con el sitio. Si ya hay una cuenta
+ * que verificó el mismo correo, recibe el panel en esa transacción; si no, lo
+ * reclama cuando verifique ese correo después de la aprobación.
  */
 export const dynamic = 'force-dynamic'
 
@@ -53,15 +52,13 @@ export default async function NuevoSitioPage({
           </p>
           <p className='mt-2 text-body-md text-muted-foreground'>
             Falta lo que la solicitud no pide:{' '}
-            <strong className='text-street-white'>el punto en el mapa</strong> y{' '}
-            <strong className='text-street-white'>el compromiso</strong>. Al guardar, el sitio queda
-            creado y el panel queda a nombre de quien lo pidió.
+            <strong className='text-street-white'>
+              el tipo, la dirección y el punto en el mapa
+            </strong>
+            . Sácalos del Instagram del bar, que es donde ya estás mirando para verificar el DM. Al
+            guardar, el sitio queda creado. Si esa persona ya verificó el correo citado, recibe el
+            panel de una; si no, el correo de aprobación le explica cómo reclamarlo sin invitación.
           </p>
-          {solicitud.pledgeIdea ? (
-            <p className='mt-2 text-body-md text-muted-foreground'>
-              Lo que tenía en mente: “{solicitud.pledgeIdea}” — es una idea suya, no un compromiso.
-            </p>
-          ) : null}
         </div>
       ) : null}
 

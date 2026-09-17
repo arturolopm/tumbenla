@@ -1,0 +1,5 @@
+GUION RETIRADO · 2026-09-13
+
+La locución de brag.mp4 cuenta el modelo anterior y no se reutiliza. En particular, “parte de sus ventas”, “consumiendo ahí ya está poniendo”, “después mire cuánto puso usted” y “de paso ayuda” contradicen el producto o la voz actuales.
+
+Las tres piezas nuevas no llevan locución: el texto en pantalla contiene el mensaje completo y cada MP4 se entiende sin sonido. Si se produce una versión narrada más adelante, debe partir de composition-brief.md y volver a validarse contra PRODUCT.md, .agents/product-marketing.md y org/crecimiento/VOZ.md.

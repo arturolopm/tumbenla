@@ -3,7 +3,7 @@ import 'server-only'
 import { and, asc, desc, eq, ilike, or, sql } from 'drizzle-orm'
 
 import { db } from '@/database'
-import { user, venue, venueApplication, venueMember } from '@/database/schema'
+import { venue, venueApplication, venueMember } from '@/database/schema'
 
 /**
  * Buscar un sitio para reclamarlo.
@@ -86,6 +86,37 @@ export const getLiveApplication = async (userId: string, id?: string) => {
 }
 
 /**
+ * Una solicitud por su token publico, para quien la mando SIN cuenta.
+ *
+ * VA APARTE de getLiveApplication a proposito. La propiedad de seguridad de esa
+ * funcion es que SIEMPRE filtra por userId; meterle una rama "o por token" la
+ * volveria condicional, y una condicion de seguridad que a veces aplica es la
+ * clase de cosa que alguien borra sin darse cuenta seis meses despues.
+ *
+ * El token es un enlace al portador, mismo modelo que /orden/[token]: quien
+ * tiene la URL ve la solicitud. Por eso la pantalla que lo usa va noindex y NO
+ * DEJA EDITAR NADA — corregir datos sigue pidiendo sesion, porque un token que
+ * ademas reescribe es un hueco mas grande que un barrio mal escrito.
+ */
+export const getApplicationByToken = async (token: string) => {
+  const [fila] = await db
+    .select({
+      id: venueApplication.id,
+      status: venueApplication.status,
+      name: venueApplication.name,
+      instagram: venueApplication.instagram,
+      contactEmail: venueApplication.contactEmail,
+      city: venueApplication.city,
+      userId: venueApplication.userId,
+    })
+    .from(venueApplication)
+    .where(eq(venueApplication.publicToken, token))
+    .limit(1)
+
+  return fila ?? null
+}
+
+/**
  * La cola del operador. Lo mas viejo arriba: una solicitud vieja es alguien
  * esperando hace mas tiempo.
  *
@@ -116,14 +147,8 @@ export const listApplications = async () => {
       venueId: venueApplication.venueId,
       venueSlug: venue.slug,
       venueNombre: venue.name,
-      // La cuenta que aplica: quien queda de dueno si se aprueba. Va aparte del
-      // contactEmail a proposito, porque son dos cosas distintas y el operador
-      // tiene que poder compararlas.
-      solicitante: user.name,
-      solicitanteEmail: user.email,
     })
     .from(venueApplication)
-    .innerJoin(user, eq(venueApplication.userId, user.id))
     .leftJoin(venue, eq(venueApplication.venueId, venue.id))
     .orderBy(asc(venueApplication.createdAt))
 }

@@ -1,8 +1,10 @@
 import { relations, sql } from 'drizzle-orm'
 import {
   boolean,
+  check,
   decimal,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -230,21 +232,38 @@ export const venue = pgTable(
     coverImageUrl: text('cover_image_url'),
     logoUrl: text('logo_url'),
 
-    // The pledge lives inline rather than in its own table because a venue has
-    // exactly one live commitment in this phase. That keeps /sitios a single
-    // table scan with no join and the admin screen a single form. If pledge
-    // HISTORY is ever needed, add venue_pledge with these same columns plus
-    // venueId and supersededAt, backfill from here, and leave these as a cache
-    // of the active pledge. No rewrite either way.
-    //
-    // 'percentage' | 'fixed_per_unit'
-    pledgeType: text('pledge_type').notNull(),
+    /**
+     * DEAD. All nine `pledge*` columns below, and `venue_pledgeType_idx`.
+     *
+     * The general commitment — "this bar puts 10% of its sales in" — was
+     * retired (decision 34) in favour of the per-product split. Nothing writes
+     * or reads these any more.
+     *
+     * THEY ARE STILL HERE ON PURPOSE, and dropping them early is the bug.
+     * `vercel.json` runs `bun run migrate && bun run build`, so the new schema
+     * is live seconds before the new code, and Drizzle's `db.select()` names
+     * every column explicitly rather than emitting `select *`. Dropping them in
+     * this deploy makes the version still serving /sitios ask for
+     * `venue.pledge_type` and get an error. Same rule as `order_redemption
+     * .code_hash`, and it is written down in PRODUCT.md, "Migraciones".
+     *
+     * `pledge_type` only loses its NOT NULL here, because createVenue stops
+     * supplying it. The DROPs go in the deploy after this one.
+     */
+    pledgeType: text('pledge_type'),
     // Set when pledgeType is 'percentage'.
     pledgePercentage: decimal('pledge_percentage', { precision: 5, scale: 2 }),
     // Set when pledgeType is 'fixed_per_unit'.
     pledgeAmount: decimal('pledge_amount', { precision: 10, scale: 2 }),
     // 'botella' | 'trago' | 'cerveza' | 'coctel' | 'entrada'
     pledgeUnit: text('pledge_unit'),
+    // Dead like the rest, and it was never really the pledge's: it was read as
+    // the currency of `estimated_per_person_night` below. Nothing has ever
+    // WRITTEN it — not the seed, not toColumns, not the admin form — and
+    // getHistorySummary already fell back to 'COP' when it came back empty. So
+    // it is a default wearing a column's clothes, and the code now uses the
+    // MONEDA constant. Renaming it to `currency` would have been the same
+    // deploy-window break as a DROP; PRODUCT.md names renames explicitly.
     pledgeCurrency: text('pledge_currency').default('COP').notNull(),
     // 'ventas_totales' | 'ventas_licor' | 'cover'   (percentage only)
     pledgeBasis: text('pledge_basis'),
@@ -741,19 +760,38 @@ export const venueApplication = pgTable(
     id: text('id')
       .primaryKey()
       .$defaultFn(() => createId(ID_PREFIX.venueApplication)),
-    /** Quien aplica, y quien queda de dueno si se aprueba. Sale de la sesion,
-     *  nunca de un campo del formulario. */
-    userId: text('user_id')
-      .notNull()
-      .references(() => user.id, { onDelete: 'cascade' }),
+    /**
+     * The account that may eventually own this venue.
+     *
+     * Nullable on purpose (decision 35): the short public form does not require
+     * a session. An operator can approve after the manual DM + contact-email
+     * check even when this is null. Ownership is granted only to an account
+     * whose verified email matches contactEmail, either during approval or when
+     * that account later enters through /entrar.
+     */
+    userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
     /** Solo cuando reclama un sitio que ya existe. Null = propone uno nuevo. */
     venueId: text('venue_id').references(() => venue.id, { onDelete: 'cascade' }),
 
+    /**
+     * Por donde vuelve a su solicitud quien la mando SIN cuenta.
+     *
+     * Nullable porque las filas viejas no lo tienen y agregar una columna
+     * NOT NULL revienta la migracion. Es un enlace al portador, con el mismo
+     * modelo de confianza que `product_order.public_token`: quien tiene la URL
+     * ve la solicitud. Por eso la pantalla que lo usa va `noindex` y NO deja
+     * editar nada; corregir datos sigue pidiendo sesion.
+     */
+    publicToken: text('public_token'),
+
     // La propuesta. Lo obligatorio es el minimo para poder verificar.
     name: text('name').notNull(),
-    type: text('type').notNull(),
-    city: text('city').notNull(),
-    addressLine: text('address_line').notNull(),
+    // Estos tres pasan a nullable: el formulario de cuatro campos (decision 35)
+    // ya no los pide, y los pone operacion al aprobar. Sin esto, cada insert
+    // del formulario nuevo falla.
+    type: text('type'),
+    city: text('city'),
+    addressLine: text('address_line'),
     /** El instrumento de verificacion: sin cuenta oficial no hay DM que
      *  comprobar, y sin eso este MVP no sabe quien es quien. */
     instagram: text('instagram').notNull(),
@@ -800,9 +838,30 @@ export const venueApplication = pgTable(
     uniqueIndex('venue_application_instagram_vivas_key')
       .on(sql`lower(${table.instagram})`)
       .where(sql`${table.status} in ('pending', 'verifying')`),
+    /**
+     * Y una sola VIVA por correo de contacto.
+     *
+     * Es lo que reemplaza al limite que antes daba la sesion gratis: una
+     * solicitud viva por cuenta. Sin cuenta de por medio, cada fila basura
+     * cuesta un Instagram distinto Y un correo distinto, y aun asi no compra
+     * nada sin el DM. Deliberadamente NO se agrega un limitador por IP: pide
+     * estado que este proyecto no tiene, gasta CU-horas de Neon en cada POST
+     * anonimo, y si algun dia la cola se inunda la palanca correcta es el
+     * firewall de Vercel, que es configuracion y no codigo.
+     */
+    uniqueIndex('venue_application_email_vivas_key')
+      .on(sql`lower(${table.contactEmail})`)
+      .where(sql`${table.status} in ('pending', 'verifying')`),
+    uniqueIndex('venue_application_publicToken_key').on(table.publicToken),
     index('venue_application_status_idx').on(table.status),
     index('venue_application_userId_idx').on(table.userId),
     index('venue_application_venueId_idx').on(table.venueId),
+    // Por aca entra el amarre cuando el dueno de una solicitud de invitado
+    // inicia sesion. Corre en /entrar, o sea en CADA inicio de sesion, asi que
+    // no puede ser un scan. Parcial: solo interesan las que no tienen dueno.
+    index('venue_application_contactEmail_idx')
+      .on(sql`lower(${table.contactEmail})`)
+      .where(sql`${table.userId} is null`),
   ]
 )
 
@@ -915,6 +974,20 @@ export const venueContribution = pgTable(
     purchaseId: text('purchase_id').references(() => materialPurchase.id, {
       onDelete: 'set null',
     }),
+    /**
+     * How this contribution came to exist.
+     *
+     * 'manual'    — a historical record from the retired self-reporting path.
+     * 'productos' — generated by settling drinks sold through the app.
+     *
+     * The bridge exists so the public question ("how much has this venue put
+     * into materials?") keeps having ONE answer. /transparencia and
+     * getVerifiedTotal() go on working untouched, and the new machinery feeds
+     * the trust surface that already earned its keep instead of standing up a
+     * parallel one. Settling IS the act of verification, so decision 19 holds.
+     */
+    // New records come from the automated settlement path.
+    source: text('source').default('productos').notNull(),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at')
       .defaultNow()
@@ -928,9 +1001,8 @@ export const venueContribution = pgTable(
   ]
 )
 
-/** The receipt behind a contribution: a transfer screenshot, an invoice, a
- *  photo of the handover. A child table rather than a CSV in a column, same as
- *  material_purchase_media. */
+/** Historic media from the retired self-reporting path. New settlements use
+ * `venue_settlement.reference`; this table remains so old evidence is kept. */
 export const venueContributionMedia = pgTable(
   'venue_contribution_media',
   {
@@ -970,5 +1042,564 @@ export const venueContributionMediaRelations = relations(venueContributionMedia,
   contribution: one(venueContribution, {
     fields: [venueContributionMedia.contributionId],
     references: [venueContribution.id],
+  }),
+}))
+
+// ---------------------------------------------------------------------------
+// Vender el trago
+//
+// A venue builds a product (a cocktail, a beer, a combo, a bottle), states in
+// its description how each peso splits, and someone orders it. Payment happens
+// either here or at the counter; either way a single-use QR is issued and the
+// bartender scans it to hand the drink over. That scan is the fact everything
+// else hangs off.
+//
+// PRODUCT.md decisions 26-32 explain the mechanism. The one that constrains
+// this schema: every order carries a QR and the bartender cannot tell which
+// ones are already paid until after scanning, so not scanning is never the
+// cheap move. That is why redemption is its own table with its own state, and
+// not a nullable timestamp on the order.
+// ---------------------------------------------------------------------------
+
+/**
+ * Something a venue sells with a declared split.
+ *
+ * The split is stored as ONE percentage, not two. The venue's share is the
+ * remainder, so the invalid state of two numbers that fail to add up to 100
+ * cannot be represented.
+ *
+ * A draft may use any value while it is being composed, but publishing requires
+ * a minimum 40% reconstruction share. The database enforces that public state.
+ */
+export const venueProduct = pgTable(
+  'venue_product',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueProduct)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull(),
+    name: text('name').notNull(),
+    // 'coctel' | 'cerveza' | 'botella' | 'combo' | 'entrada' | 'otro'
+    // ASCII in the database, accented label in the UI (decision 25).
+    kind: text('kind').notNull(),
+    description: text('description'),
+
+    price: decimal('price', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    /** How much of the price goes to materials. The venue keeps the rest. */
+    donationPercentage: decimal('donation_percentage', { precision: 5, scale: 2 }).notNull(),
+
+    imageUrl: text('image_url'),
+    storageKey: text('storage_key'),
+
+    // 'draft' | 'pending_review' | 'published' | 'paused' | 'archived'
+    status: text('status').default('draft').notNull(),
+    reviewedByUserId: text('reviewed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at'),
+    reviewNote: text('review_note'),
+    publishedAt: timestamp('published_at'),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('venue_product_venueId_idx').on(table.venueId),
+    index('venue_product_status_idx').on(table.status),
+    uniqueIndex('venue_product_venueId_slug_key').on(table.venueId, table.slug),
+    check(
+      'venue_product_published_min_donation_percentage',
+      sql`${table.status} <> 'published' OR ${table.donationPercentage} >= 40`
+    ),
+  ]
+)
+
+/**
+ * The customer-facing order and its single payment/delivery boundary.
+ *
+ * A customer order belongs to one venue and can contain multiple product lines.
+ * It owns the public bearer URL, aggregate money state, and payment method. The
+ * line table below keeps frozen product promises and unit lifecycle boundaries.
+ */
+export const customerOrder = pgTable(
+  'customer_order',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.customerOrder)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'restrict' }),
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    buyerName: text('buyer_name').notNull(),
+    buyerEmail: text('buyer_email').notNull(),
+    totalUnits: integer('total_units').notNull(),
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    publicToken: text('public_token').notNull(),
+    payMethod: text('pay_method').notNull(),
+    status: text('status').default('pending').notNull(),
+    provider: text('provider'),
+    providerReference: text('provider_reference'),
+    paidAt: timestamp('paid_at'),
+    expiresAt: timestamp('expires_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index('customer_order_venueId_idx').on(table.venueId),
+    index('customer_order_userId_idx').on(table.userId),
+    index('customer_order_status_idx').on(table.status),
+    index('customer_order_createdAt_idx').on(table.createdAt),
+    uniqueIndex('customer_order_providerReference_key').on(table.providerReference),
+    uniqueIndex('customer_order_publicToken_key').on(table.publicToken),
+    check('customer_order_total_units_check', sql`${table.totalUnits} between 1 and 20`),
+    check('customer_order_total_amount_check', sql`${table.totalAmount} > 0`),
+  ]
+)
+
+/**
+ * One frozen product line in a customer order.
+ *
+ * THE FIVE MONEY COLUMNS ARE A SNAPSHOT, not a join. If the venue changes the
+ * price or the split tomorrow, this row keeps what the buyer was actually shown
+ * (decision 30). A split that can be rewritten after the fact is not a promise.
+ *
+ * Rounding, settled once so it never drifts: donationAmount is the rounded
+ * share and venueAmount is the remainder, so the two always add back to the
+ * total exactly.
+ *
+ * `status` tracks the MONEY only. Delivery lives entirely in order_redemption,
+ * because an order of three drinks can be half delivered and a single column
+ * cannot say that.
+ *
+ * References are `restrict`, not `cascade`: deleting a product must never
+ * delete the order somebody paid for.
+ */
+export const productOrder = pgTable(
+  'product_order',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.productOrder)),
+    /** Nullable only for rolling deploy compatibility. New writes always set both fields. */
+    customerOrderId: text('customer_order_id').references(() => customerOrder.id, {
+      onDelete: 'restrict',
+    }),
+    lineOrdinal: integer('line_ordinal'),
+    productId: text('product_id')
+      .notNull()
+      .references(() => venueProduct.id, { onDelete: 'restrict' }),
+    /** Denormalised so ledger and scanner queries do not join through product.
+     *  Authorization still reads it from the row, never from a form. */
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'restrict' }),
+    /** Null for a guest purchase, which is the common case (decision 29). */
+    userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+    buyerName: text('buyer_name').notNull(),
+    buyerEmail: text('buyer_email').notNull(),
+    quantity: decimal('quantity', { precision: 6, scale: 0 }).notNull(),
+
+    unitPrice: decimal('unit_price', { precision: 12, scale: 2 }).notNull(),
+    donationPercentage: decimal('donation_percentage', { precision: 5, scale: 2 }).notNull(),
+    /**
+     * PER UNIT, not per order. Each unit is scanned separately and posts its
+     * own ledger entries, so the per-unit split has to be the stored one:
+     * dividing an order total by the quantity at posting time would reintroduce
+     * the rounding this pair exists to avoid.
+     *
+     * The invariant, exact by construction:
+     *   unitDonationAmount + unitVenueAmount === unitPrice
+     *   totalAmount                          === unitPrice * quantity
+     */
+    unitDonationAmount: decimal('unit_donation_amount', { precision: 12, scale: 2 }).notNull(),
+    unitVenueAmount: decimal('unit_venue_amount', { precision: 12, scale: 2 }).notNull(),
+    totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+
+    /**
+     * What addresses /orden/[token] — the page holding the QR.
+     *
+     * A SEPARATE COLUMN AND NOT THE ROW ID, even though the id is already a
+     * random UUID. The id turns up in operator screens, in logs and in support
+     * queries, and whoever can open this page can read the redemption codes and
+     * walk up to the bar with them. Keeping the addressable string apart from
+     * the one staff read off a screen is the whole point.
+     *
+     * Stored in the clear, unlike venue_invitation.tokenHash, and that is a
+     * deliberate difference: a buyer who loses the email has to be able to get
+     * the link again, which a hash cannot do. It is an unguessable bearer link,
+     * so it never gets rendered in an operator screen.
+     */
+    publicToken: text('public_token').notNull(),
+
+    // 'app' | 'bar' — where the money is collected, NOT where the order is made.
+    payMethod: text('pay_method').notNull(),
+    // 'pending' | 'paid' | 'expired' | 'refunded' | 'cancelled'
+    status: text('status').default('pending').notNull(),
+
+    provider: text('provider'),
+    providerReference: text('provider_reference'),
+    paidAt: timestamp('paid_at'),
+    /** 45 days out. Past this it goes to materials, refundable on request. */
+    expiresAt: timestamp('expires_at'),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('product_order_customerOrderId_lineOrdinal_key').on(
+      table.customerOrderId,
+      table.lineOrdinal
+    ),
+    index('product_order_customerOrderId_idx').on(table.customerOrderId),
+    index('product_order_venueId_idx').on(table.venueId),
+    index('product_order_productId_idx').on(table.productId),
+    index('product_order_userId_idx').on(table.userId),
+    index('product_order_status_idx').on(table.status),
+    index('product_order_createdAt_idx').on(table.createdAt),
+    /** The webhook's idempotency. Its absence is a live bug in the boilerplate
+     *  webhook this schema deliberately does not reuse. */
+    uniqueIndex('product_order_providerReference_key').on(table.providerReference),
+    uniqueIndex('product_order_publicToken_key').on(table.publicToken),
+    check(
+      'product_order_customer_order_binding_check',
+      sql`(${table.customerOrderId} is null and ${table.lineOrdinal} is null) or (${table.customerOrderId} is not null and ${table.lineOrdinal} > 0)`
+    ),
+  ]
+)
+
+/**
+ * The internal redemption. ONE ROW PER UNIT PURCHASED.
+ *
+ * Three drinks still means three immutable unit rows, so a venue cannot deliver
+ * a fourth. The buyer sees only the canonical code for the order; scanning it
+ * transitions every issued unit atomically while preserving per-unit finance
+ * and refund records.
+ *
+ * Clear codes are stored for the manual-entry fallback. Only the canonical one
+ * travels in the QR and email; the rest remain compatibility handles for orders
+ * created before the one-QR contract.
+ *
+ * Each unit transition keeps the condition inside the statement:
+ *
+ *   update order_redemption set status = 'redeemed', ...
+ *    where id = $1 and status = 'issued' returning *;
+ *
+ * Zero rows back means it was already redeemed. A select to check followed by
+ * an update lets two simultaneous scans both win, and the window between them
+ * is milliseconds: it does not reproduce by hand, it reproduces on a Saturday.
+ */
+export const orderRedemption = pgTable(
+  'order_redemption',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.orderRedemption)),
+    orderId: text('order_id')
+      .notNull()
+      .references(() => productOrder.id, { onDelete: 'cascade' }),
+    /**
+     * The 8-character code, IN THE CLEAR, and that is a corrected decision.
+     *
+     * It was hashed at first, copying venue_invitation.tokenHash. That was
+     * wrong here and the reason is operational: the buyer has to be able to
+     * READ this code off their screen and a bartender has to be able to type it
+     * when the camera will not focus — dark room, scratched screen, greasy
+     * lens, permission denied. Manual entry is the fallback the whole scanner
+     * leans on, and a hash cannot be displayed, so hashing quietly removed it.
+     *
+     * The two cases are not alike. An invitation token grants access to a
+     * venue's panel and is worth protecting at rest. This is a voucher for one
+     * drink at one bar, redeemable only through an endpoint that already
+     * demands a staff session at THAT venue — the people who could read it out
+     * of a backup are the same people who can already hand out the drink.
+     */
+    code: text('code').notNull(),
+    /**
+     * Left over from the hashed design and no longer written.
+     *
+     * Nullable rather than dropped: removing a column has to be its own deploy
+     * (`PRODUCT.md`, "Migraciones"), because the new schema is live seconds
+     * before the new code is. Drop it in a later one.
+     */
+    codeHash: text('code_hash'),
+    // 'issued' | 'redeemed' | 'void'
+    status: text('status').default('issued').notNull(),
+    redeemedAt: timestamp('redeemed_at'),
+    /** Which member of staff scanned it. */
+    redeemedByUserId: text('redeemed_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at')
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex('order_redemption_code_key').on(table.code),
+    index('order_redemption_codeHash_idx').on(table.codeHash),
+    index('order_redemption_orderId_idx').on(table.orderId),
+    index('order_redemption_status_idx').on(table.status),
+  ]
+)
+
+// ---------------------------------------------------------------------------
+// El libro: partida doble
+//
+// Two ways to pay means two directions of debt, and they cancel: a drink paid
+// here leaves us owing the venue its share, a drink paid at the counter leaves
+// the venue owing us the materials share. Only the difference ever moves.
+//
+// This is DOUBLE ENTRY, not a signed balance column. Every transaction writes
+// at least two entries that sum to zero, so `select sum(amount) from
+// ledger_entry` must always be zero. A single-entry table cannot detect an
+// entry somebody forgot to write; this can, and it says so the same day.
+//
+// Nothing here is ever edited or deleted. A refund, a dispute or a correction
+// is a NEW transaction that offsets the old one — enforced by a trigger in the
+// migration, not left to discipline.
+// ---------------------------------------------------------------------------
+
+/**
+ * The chart of accounts. Four kinds, and it does not grow.
+ *
+ *   platform_cash              asset      money we actually hold
+ *   platform_pending_delivery  liability  paid for, not yet handed over
+ *   platform_material_fund     liability  committed to materials, not yet spent
+ *   venue_current              mixed      the net with one venue
+ *
+ * `platform_pending_delivery` is not accounting ceremony. When someone pays
+ * here and has not been served yet, we are holding money that is not ours; the
+ * rule for custodial funds is to recognise the cash AND an equal liability at
+ * the same time. Without it, unearned money would look like ours.
+ *
+ * `venue_current` is signed FROM OUR SIDE: positive means the venue owes us,
+ * negative means we owe the venue. One account per venue, because netting is
+ * precisely the act of collapsing payable and receivable into one figure.
+ */
+export const ledgerAccount = pgTable(
+  'ledger_account',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.ledgerAccount)),
+    // 'platform_cash' | 'platform_pending_delivery' | 'platform_material_fund' | 'venue_current'
+    kind: text('kind').notNull(),
+    /** Set only for `venue_current`; null for the three platform accounts. */
+    venueId: text('venue_id').references(() => venue.id, { onDelete: 'restrict' }),
+    currency: text('currency').default('COP').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('ledger_account_kind_venueId_currency_key').on(
+      table.kind,
+      table.venueId,
+      table.currency
+    ),
+    index('ledger_account_venueId_idx').on(table.venueId),
+  ]
+)
+
+/**
+ * One movement of money, grouping the entries that must balance.
+ *
+ * `idempotencyKey` is what makes a retry safe, and it is a DIFFERENT problem
+ * from concurrency. The conditional update on order_redemption stops two
+ * simultaneous scans; it does nothing about the same scan sent twice because
+ * the bartender double-tapped or the network repeated the POST — that would
+ * answer "already delivered" to someone who just scanned correctly. The unique
+ * key here means the retry writes nothing and returns what already existed.
+ * The same mechanism covers payment webhook retries.
+ */
+export const ledgerTransaction = pgTable(
+  'ledger_transaction',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.ledgerTransaction)),
+    // 'order_paid' | 'redeemed' | 'settlement' | 'expired' | 'refund' | 'purchase' | 'adjustment'
+    kind: text('kind').notNull(),
+    orderId: text('order_id').references(() => productOrder.id, { onDelete: 'set null' }),
+    settlementId: text('settlement_id'),
+    purchaseId: text('purchase_id').references(() => materialPurchase.id, {
+      onDelete: 'set null',
+    }),
+    idempotencyKey: text('idempotency_key').notNull(),
+    note: text('note'),
+    createdByUserId: text('created_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('ledger_transaction_idempotencyKey_key').on(table.idempotencyKey),
+    index('ledger_transaction_orderId_idx').on(table.orderId),
+    index('ledger_transaction_settlementId_idx').on(table.settlementId),
+    index('ledger_transaction_kind_idx').on(table.kind),
+  ]
+)
+
+/**
+ * One leg. Positive is a debit, negative is a credit.
+ *
+ * Two invariants, and both are queries rather than hopes:
+ *   1. per transaction:  sum(amount) = 0
+ *   2. globally:         select sum(amount) from ledger_entry  =  0
+ *
+ * Written only inside a db.transaction() together with its siblings. There is
+ * no such thing as one leg of a movement.
+ */
+export const ledgerEntry = pgTable(
+  'ledger_entry',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.ledgerEntry)),
+    transactionId: text('transaction_id')
+      .notNull()
+      .references(() => ledgerTransaction.id, { onDelete: 'restrict' }),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => ledgerAccount.id, { onDelete: 'restrict' }),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('ledger_entry_transactionId_idx').on(table.transactionId),
+    index('ledger_entry_accountId_idx').on(table.accountId),
+  ]
+)
+
+/**
+ * The act of actually moving the net difference.
+ *
+ * Accruing and paying are separate objects on purpose: the ledger accrues
+ * continuously in `venue_current`, and settling is the distinct act that clears
+ * it. Settling writes its own transaction; it never touches entries that
+ * already exist.
+ */
+export const venueSettlement = pgTable(
+  'venue_settlement',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => createId(ID_PREFIX.venueSettlement)),
+    venueId: text('venue_id')
+      .notNull()
+      .references(() => venue.id, { onDelete: 'restrict' }),
+    amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
+    currency: text('currency').default('COP').notNull(),
+    // 'to_venue' | 'from_venue'
+    direction: text('direction').notNull(),
+    // 'transferencia' | 'efectivo' | 'otro'
+    method: text('method'),
+    reference: text('reference'),
+    evidenceUrl: text('evidence_url'),
+    storageKey: text('storage_key'),
+    note: text('note'),
+    settledByUserId: text('settled_by_user_id').references(() => user.id, {
+      onDelete: 'set null',
+    }),
+    periodStart: timestamp('period_start'),
+    periodEnd: timestamp('period_end'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    index('venue_settlement_venueId_idx').on(table.venueId),
+    index('venue_settlement_createdAt_idx').on(table.createdAt),
+  ]
+)
+
+export const venueProductRelations = relations(venueProduct, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [venueProduct.venueId],
+    references: [venue.id],
+  }),
+  orders: many(productOrder),
+}))
+
+export const customerOrderRelations = relations(customerOrder, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [customerOrder.venueId],
+    references: [venue.id],
+  }),
+  user: one(user, {
+    fields: [customerOrder.userId],
+    references: [user.id],
+  }),
+  lines: many(productOrder),
+}))
+
+export const productOrderRelations = relations(productOrder, ({ one, many }) => ({
+  customerOrder: one(customerOrder, {
+    fields: [productOrder.customerOrderId],
+    references: [customerOrder.id],
+  }),
+  product: one(venueProduct, {
+    fields: [productOrder.productId],
+    references: [venueProduct.id],
+  }),
+  venue: one(venue, {
+    fields: [productOrder.venueId],
+    references: [venue.id],
+  }),
+  redemptions: many(orderRedemption),
+}))
+
+export const orderRedemptionRelations = relations(orderRedemption, ({ one }) => ({
+  order: one(productOrder, {
+    fields: [orderRedemption.orderId],
+    references: [productOrder.id],
+  }),
+}))
+
+export const ledgerAccountRelations = relations(ledgerAccount, ({ one, many }) => ({
+  venue: one(venue, {
+    fields: [ledgerAccount.venueId],
+    references: [venue.id],
+  }),
+  entries: many(ledgerEntry),
+}))
+
+export const ledgerTransactionRelations = relations(ledgerTransaction, ({ one, many }) => ({
+  order: one(productOrder, {
+    fields: [ledgerTransaction.orderId],
+    references: [productOrder.id],
+  }),
+  entries: many(ledgerEntry),
+}))
+
+export const ledgerEntryRelations = relations(ledgerEntry, ({ one }) => ({
+  transaction: one(ledgerTransaction, {
+    fields: [ledgerEntry.transactionId],
+    references: [ledgerTransaction.id],
+  }),
+  account: one(ledgerAccount, {
+    fields: [ledgerEntry.accountId],
+    references: [ledgerAccount.id],
+  }),
+}))
+
+export const venueSettlementRelations = relations(venueSettlement, ({ one }) => ({
+  venue: one(venue, {
+    fields: [venueSettlement.venueId],
+    references: [venue.id],
   }),
 }))

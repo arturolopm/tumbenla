@@ -75,13 +75,20 @@ jobs:
       - name: Tipos
         run: bun run typecheck
 
+      - name: Comercio transaccional
+        run: bun run test:commerce
+
       - name: Lint
         run: bun run lint
 
-      # El que de verdad importa: prerenderiza las paginas de sitios contra la
-      # base, asi que atrapa lo que typecheck y lint no ven.
-      - name: Build
-        run: bun run build
+      - name: Preparar navegador
+        run: bunx playwright install --with-deps chromium
+
+      # El runner crea y siembra otra base efimera, construye una sola vez y
+      # prueba esa misma build con `next start`. No se prueba el compilador
+      # incremental de desarrollo y no se repite el build despues.
+      - name: Build y comercio en navegador
+        run: bun run test:e2e
 
   origen:
     name: Solo preview entra a main

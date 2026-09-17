@@ -1,0 +1,13 @@
+PIEZA 1 · PIDE EL TRAGO
+
+Pide el trago. Antes ves el precio y el reparto en pesos. Pagas aquí o en la barra; en los dos casos te sale un QR. Muéstralo y ya.
+
+
+PIEZA 2 · ESCANEA PRIMERO
+
+El QR se escanea antes de cobrar. La pantalla del bar dice si ya está pagado o si toca cobrar. Así cada entrega deja rastro.
+
+
+PIEZA 3 · DEL TRAGO AL RECIBO
+
+Pedido. QR. Escaneo. Material. Factura publicada. La vuelta completa, sin promesas sueltas. Si no hay recibo, no pasó.

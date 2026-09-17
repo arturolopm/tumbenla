@@ -37,14 +37,16 @@ export default async function RegistrarSitioPage({
     searchParams,
   ])
 
-  if (!session) redirect('/login?redirectAfter=/registrar-sitio')
-
+  // SIN PUERTA DE SESION (decision 35). El formulario se llena primero y la
+  // cuenta se ofrece despues, que es la decision 29 aplicada al otro lado del
+  // mercado. Lo que depende de la sesion —la solicitud viva, el historial, los
+  // sitios propios— simplemente no se consulta cuando no la hay.
   const termino = (params.q ?? '').trim()
   const [resultados, viva, historial, misSitios] = await Promise.all([
     termino.length >= 2 ? buscarSitiosParaReclamar(termino) : Promise.resolve([]),
-    getLiveApplication(session.user.id),
-    listMyApplications(session.user.id),
-    listMyVenues(session.user.id),
+    session ? getLiveApplication(session.user.id) : Promise.resolve(null),
+    session ? listMyApplications(session.user.id) : Promise.resolve([]),
+    session ? listMyVenues(session.user.id) : Promise.resolve([]),
   ])
 
   const resueltas = historial.filter((s) => s.status === 'approved' || s.status === 'rejected')
@@ -56,8 +58,7 @@ export default async function RegistrarSitioPage({
           Registra tu <span className='text-primary-text'>sitio</span>
         </h1>
         <p className='mt-4 max-w-prose text-pretty text-body-lg text-muted-foreground'>
-          Son seis datos. Después te pedimos un mensaje desde el Instagram del sitio para confirmar
-          que es tuyo, hablamos de cuánto vas a poner, y lo publicamos.
+          Cuatro datos y ya. No necesitas cuenta para mandarlo.
         </p>
       </header>
 
@@ -100,7 +101,7 @@ export default async function RegistrarSitioPage({
         <AltaDeSitio
           termino={termino}
           resultados={resultados}
-          correoDeLaCuenta={session.user.email}
+          correoDeLaCuenta={session?.user.email ?? ''}
         />
       )}
 

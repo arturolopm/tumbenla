@@ -23,7 +23,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const solicitudesAbiertas = await countOpenApplications()
 
   return (
-    <AdminShell email={session.user.email} solicitudesAbiertas={solicitudesAbiertas}>
+    <AdminShell
+      email={session.user.email}
+      pendientes={{
+        '/admin/solicitudes': solicitudesAbiertas,
+      }}
+    >
       {children}
     </AdminShell>
   )

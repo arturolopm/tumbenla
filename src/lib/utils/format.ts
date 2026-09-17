@@ -13,7 +13,19 @@ const LOCALE = 'es-CO'
  * Money, with no cents. Colombian prices are quoted in whole pesos and a
  * trailing ',00' on every figure is just noise.
  */
-export const formatCOP = (amount: number, currency = 'COP') =>
+/**
+ * The one currency this product deals in.
+ *
+ * It exists because `venue.pledge_currency` used to be read as the currency of
+ * the per-night estimate, and that column is dead (decision 34). It turned out
+ * nothing had ever written it and the one reader already fell back to this
+ * literal, so it was a default wearing a column's clothes. A venue-level
+ * currency was the wrong shape anyway: the two tables that actually hold money,
+ * `venue_contribution` and `venue_product`, each carry their own.
+ */
+export const MONEDA = 'COP'
+
+export const formatCOP = (amount: number, currency: string = MONEDA) =>
   new Intl.NumberFormat(LOCALE, {
     style: 'currency',
     currency,

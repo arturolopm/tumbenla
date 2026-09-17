@@ -1,6 +1,10 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+
+import { type NewPasswordInput, newPasswordSchema } from '@/lib/auth/schemas'
 import { ArrowRight, ChevronRight, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,40 +28,27 @@ export function SetNewPasswordForm({
   statusMessage,
   className,
 }: SetNewPasswordFormProps) {
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [validationMessage, setValidationMessage] = useState('')
+  // The "same rule as register" note below is now enforced by sharing the very
+  // schema, instead of by two copies of the rule agreeing today and drifting
+  // tomorrow.
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<NewPasswordInput>({
+    resolver: zodResolver(newPasswordSchema),
+    mode: 'onBlur',
+  })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isButtonHovered, setIsButtonHovered] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // La misma regla del registro, a proposito. Exigir aca mayuscula, digito y
-    // simbolo cuando /register solo pide 8 caracteres significa que la
-    // contraseña con la que alguien se registro no la puede volver a poner.
-    if (password.length < 8) {
-      setValidationMessage('La contraseña necesita al menos 8 caracteres')
-      return
-    }
-
-    if (password.length > 100) {
-      setValidationMessage('La contraseña no puede pasar de 100 caracteres')
-      return
-    }
-
-    if (password !== confirmPassword) {
-      setValidationMessage('Las dos contraseñas no coinciden')
-      return
-    }
-
-    setValidationMessage('')
-    onSubmit(password)
-  }
+  const submit = handleSubmit(async ({ password }) => {
+    await onSubmit(password)
+  })
 
   return (
-    <form onSubmit={handleSubmit} className={cn(`space-y-8`, className)}>
+    <form onSubmit={submit} className={cn(`space-y-8`, className)}>
       <div className='space-y-6'>
         <div className='space-y-2'>
           <div className='flex items-center justify-between'>
@@ -71,14 +62,13 @@ export function SetNewPasswordForm({
               autoComplete='new-password'
               autoCorrect='off'
               disabled={isSubmitting || !token}
-              value={password}
+              aria-invalid={Boolean(errors.password)}
+              {...register('password')}
               size='lg'
-              onChange={(e) => setPassword(e.target.value)}
-              required
               placeholder='Al menos 8 caracteres'
               className={cn(
                 'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                validationMessage &&
+                errors.password &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
@@ -104,14 +94,13 @@ export function SetNewPasswordForm({
               autoComplete='new-password'
               autoCorrect='off'
               disabled={isSubmitting || !token}
-              value={confirmPassword}
+              aria-invalid={Boolean(errors.confirmPassword)}
+              {...register('confirmPassword')}
               size='lg'
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
               placeholder='Escríbela otra vez'
               className={cn(
                 'pr-10 transition-colors focus:border-primary focus:ring-2 focus:ring-primary/30',
-                validationMessage &&
+                errors.confirmPassword &&
                   'border-destructive focus:border-destructive focus:ring-destructive/30 focus-visible:ring-destructive'
               )}
             />
@@ -126,11 +115,12 @@ export function SetNewPasswordForm({
           </div>
         </div>
 
-        {validationMessage && (
-          <div className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
-            <p>{validationMessage}</p>
+        {errors.password || errors.confirmPassword ? (
+          <div role='alert' className='mt-1 space-y-1 text-body-sm text-destructive-foreground'>
+            {errors.password ? <p>{errors.password.message}</p> : null}
+            {errors.confirmPassword ? <p>{errors.confirmPassword.message}</p> : null}
           </div>
-        )}
+        ) : null}
 
         {statusType && statusMessage && (
           <div

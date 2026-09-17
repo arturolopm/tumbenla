@@ -1,0 +1,26 @@
+{
+  "fps": 30,
+  "seams": [
+    {
+      "id": "producto→pago",
+      "cut": 2.6,
+      "technique": "cut-the-curve LEFT",
+      "exit": { "selector": "#scene-1", "axis": "x", "dir": -1 },
+      "entry": { "selector": "#scene-2", "axis": "x", "dir": -1 }
+    },
+    {
+      "id": "pago→qr",
+      "cut": 6.2,
+      "technique": "cut-the-curve LEFT",
+      "exit": { "selector": "#scene-2", "axis": "x", "dir": -1 },
+      "entry": { "selector": "#scene-3", "axis": "x", "dir": -1 }
+    },
+    {
+      "id": "qr→cierre",
+      "cut": 9.6,
+      "technique": "cut-the-curve LEFT",
+      "exit": { "selector": "#scene-3", "axis": "x", "dir": -1 },
+      "entry": { "selector": "#scene-4", "axis": "x", "dir": -1 }
+    }
+  ]
+}

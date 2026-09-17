@@ -23,4 +23,12 @@ export const ID_PREFIX = {
   photoReport: 'prp',
   venueContribution: 'vco',
   venueContributionMedia: 'vcm',
+  venueProduct: 'vpr',
+  customerOrder: 'cor',
+  productOrder: 'ord',
+  orderRedemption: 'red',
+  ledgerAccount: 'lac',
+  ledgerTransaction: 'ltx',
+  ledgerEntry: 'led',
+  venueSettlement: 'stl',
 } as const

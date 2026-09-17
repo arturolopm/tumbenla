@@ -39,8 +39,9 @@ import type {
 
 import {
   getEmailSubject,
-  renderSolicitudDecisionEmail,
+  renderApplicationDecisionEmail,
   renderSolicitudDmEmail,
+  renderCustomerOrderEmail,
   renderVenueInvitationEmail,
 } from '@/components/emails'
 import { getFromEmailAddress, getReplyToAddress } from './utils'
@@ -338,18 +339,21 @@ export async function sendApplicationDmRequestEmail(params: {
 export async function sendApplicationDecisionEmail(params: {
   to: string
   venueName: string
-  aprobada: boolean
-  nota?: string
+  approved: boolean
+  note?: string
+  ownerIsReady?: boolean
 }): Promise<void> {
-  const html = await renderSolicitudDecisionEmail({
+  const html = await renderApplicationDecisionEmail({
     venueName: params.venueName,
-    aprobada: params.aprobada,
-    nota: params.nota,
+    approved: params.approved,
+    note: params.note,
+    ownerIsReady: params.ownerIsReady,
+    contactEmail: params.to,
   })
 
   const result = await sendEmail({
     to: params.to,
-    subject: getEmailSubject(params.aprobada ? 'solicitud-aprobada' : 'solicitud-rechazada'),
+    subject: getEmailSubject(params.approved ? 'solicitud-aprobada' : 'solicitud-rechazada'),
     html,
     from: getFromEmailAddress(),
     emailType: 'transactional',
@@ -358,4 +362,39 @@ export async function sendApplicationDecisionEmail(params: {
   if (!result.success) {
     throw new Error(result.message || 'No se pudo enviar la decision')
   }
+}
+
+/**
+ * El correo con el codigo del pedido.
+ *
+ * ES EL RESPALDO DEL QR en pantalla: la pestaña se cierra, el telefono se apaga,
+ * o se compro desde el celular de un amigo. El formulario de pedido se lo
+ * promete a la persona, asi que tiene que salir.
+ *
+ * NO REVIENTA SI FALLA. Es la diferencia con la invitacion de equipo, donde el
+ * correo ES el flujo: aca la persona ya tiene su QR en pantalla y esta parada en
+ * la barra. Tumbarle el pedido porque el proveedor de correo esta caido seria
+ * cambiar un inconveniente por una venta perdida.
+ */
+export async function sendCustomerOrderEmail(params: {
+  to: string
+  buyerName: string
+  venueName: string
+  lines: readonly Readonly<{ productName: string; quantity: number }>[]
+  total: number
+  donationAmount: number
+  payAtBar: boolean
+  token: string
+  code: string
+}): Promise<void> {
+  const { to, ...emailOrder } = params
+  const html = await renderCustomerOrderEmail(emailOrder)
+
+  await sendEmail({
+    to,
+    subject: getEmailSubject('pedido'),
+    html,
+    from: getFromEmailAddress(),
+    emailType: 'transactional',
+  })
 }

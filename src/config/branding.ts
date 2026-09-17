@@ -45,8 +45,8 @@ export interface BrandConfig {
  */
 const defaultConfig: BrandConfig = {
   name: 'Tumbenla',
-  logoUrl: undefined,
-  faviconUrl: '/favicon/favicon.ico',
+  logoUrl: '/tumbenla-logo-180.png',
+  faviconUrl: '/tumbenla-favicon-32.png',
   customCssUrl: undefined,
   supportEmail: 'hola@tumbenla.com',
   documentationUrl: undefined,

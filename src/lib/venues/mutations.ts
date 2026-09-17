@@ -9,6 +9,8 @@ import { toVenueAdminRow } from './mappers'
 import type { VenueInput } from './schemas'
 import type { VenueAdminRow, VenueStatus } from './types'
 
+type VenueWriteExecutor = Pick<typeof db, 'insert' | 'select' | 'update'>
+
 /**
  * Writes. Callers must have passed requireAdmin() or assertAdmin() first;
  * nothing here checks permissions.
@@ -19,13 +21,17 @@ import type { VenueAdminRow, VenueStatus } from './types'
  * collide on a UNIQUE constraint. Suffix rather than fail, and exclude the row
  * being edited so renaming a venue to its own current name is a no-op.
  */
-export const ensureUniqueSlug = async (base: string, excludeId?: string): Promise<string> => {
+export const ensureUniqueSlug = async (
+  base: string,
+  excludeId?: string,
+  executor: VenueWriteExecutor = db
+): Promise<string> => {
   const root = slugify(base) || 'sitio'
 
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const candidate = attempt === 0 ? root : `${root}-${attempt + 1}`
 
-    const clash = await db
+    const clash = await executor
       .select({ id: venue.id })
       .from(venue)
       .where(
@@ -42,29 +48,6 @@ export const ensureUniqueSlug = async (base: string, excludeId?: string): Promis
   // surface as an opaque constraint violation.
   return `${root}-${Date.now()}`
 }
-
-/**
- * Drizzle wants decimal columns as strings on the way in, the same way it hands
- * them back. Passing a number here throws at runtime.
- */
-const toPledgeColumns = (input: VenueInput) =>
-  input.pledgeType === 'percentage'
-    ? {
-        pledgeType: 'percentage' as const,
-        pledgePercentage: input.pledgePercentage.toString(),
-        pledgeAmount: null,
-        pledgeUnit: null,
-        pledgeBasis: input.pledgeBasis ?? null,
-        pledgeNote: input.pledgeNote,
-      }
-    : {
-        pledgeType: 'fixed_per_unit' as const,
-        pledgePercentage: null,
-        pledgeAmount: input.pledgeAmount.toString(),
-        pledgeUnit: input.pledgeUnit,
-        pledgeBasis: null,
-        pledgeNote: input.pledgeNote,
-      }
 
 const toColumns = (input: VenueInput, slug: string) => ({
   slug,
@@ -97,14 +80,15 @@ const toColumns = (input: VenueInput, slug: string) => ({
 
   verifiedNote: input.verifiedNote,
   status: input.status,
-
-  ...toPledgeColumns(input),
 })
 
-export const createVenue = async (input: VenueInput): Promise<VenueAdminRow> => {
-  const slug = await ensureUniqueSlug(input.name)
+export const createVenue = async (
+  input: VenueInput,
+  executor: VenueWriteExecutor = db
+): Promise<VenueAdminRow> => {
+  const slug = await ensureUniqueSlug(input.name, undefined, executor)
 
-  const [row] = await db
+  const [row] = await executor
     .insert(venue)
     .values({
       ...toColumns(input, slug),
@@ -115,16 +99,20 @@ export const createVenue = async (input: VenueInput): Promise<VenueAdminRow> => 
   return toVenueAdminRow(row)
 }
 
-export const updateVenue = async (id: string, input: VenueInput): Promise<VenueAdminRow> => {
-  const slug = await ensureUniqueSlug(input.name, id)
+export const updateVenue = async (
+  id: string,
+  input: VenueInput,
+  executor: VenueWriteExecutor = db
+): Promise<VenueAdminRow> => {
+  const slug = await ensureUniqueSlug(input.name, id, executor)
 
-  const [current] = await db
+  const [current] = await executor
     .select({ publishedAt: venue.publishedAt })
     .from(venue)
     .where(eq(venue.id, id))
     .limit(1)
 
-  const [row] = await db
+  const [row] = await executor
     .update(venue)
     .set({
       ...toColumns(input, slug),

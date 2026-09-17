@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 import { cn } from '@/lib/utils/css'
 import type { VenueSummary } from '@/lib/venues/types'
-import { pledgeShortLabel } from './pledge-badge'
+import { aporteShortLabel } from './aporte-badge'
 
 const TYPE_LABEL: Record<string, string> = {
   bar: 'Bar',
@@ -18,11 +18,17 @@ const TYPE_LABEL: Record<string, string> = {
 /**
  * La tarjeta de Stitch: borde de 2px que se enciende al pasar por encima, la
  * foto en mix-blend-luminosity que recupera su color al hacer hover, y el
- * compromiso como etiqueta en la esquina.
+ * aporte como etiqueta en la esquina.
  *
  * En la maqueta esa etiqueta era un genero musical ("Salsa & Solidaridad").
- * Aca lleva el compromiso, que es el dato que de verdad distingue un sitio de
- * otro en este producto.
+ * Aca llevaba el compromiso —"10 % de sus ventas"—, y ahora lleva algo mas
+ * fuerte: lo que el sitio YA entrego, o lo que pone el trago mas barato de su
+ * carta (decision 34). Es la misma idea de antes, distinguir un sitio de otro
+ * por lo que pone, pero con una cifra que se puede cruzar contra una factura.
+ *
+ * PUEDE NO HABER ETIQUETA. Un sitio recien publicado, sin entregas y sin carta,
+ * no pinta ninguna: un "$0 puestos" se lee como un reproche a un bar al que
+ * todavia no le hemos comprado nada.
  */
 export function VenueCard({
   venue,
@@ -35,6 +41,8 @@ export function VenueCard({
   onHover?: (id: string | null) => void
   onSelect?: (id: string) => void
 }) {
+  const aporte = aporteShortLabel(venue.chip)
+
   return (
     <article
       // Hover is the desktop pairing between a card and its pin. Focus is the
@@ -49,11 +57,13 @@ export function VenueCard({
         active ? 'border-lime' : 'border-border hover:border-party'
       )}
     >
-      <div className="absolute top-0 right-0 z-10 p-2">
-        <span className="rounded bg-lime px-2 py-1 font-display text-background text-label-sm uppercase tracking-wider shadow-lg shadow-lime/20">
-          {pledgeShortLabel(venue.pledge)}
-        </span>
-      </div>
+      {aporte ? (
+        <div className="absolute top-0 right-0 z-10 p-2">
+          <span className="rounded bg-lime px-2 py-1 font-display text-background text-label-sm uppercase tracking-wider shadow-lg shadow-lime/20">
+            {aporte}
+          </span>
+        </div>
+      ) : null}
 
       <div className="halftone-overlay relative h-32 w-full bg-muted">
         {venue.coverImageUrl ? (

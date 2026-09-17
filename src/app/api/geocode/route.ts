@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { assertAdmin } from '@/lib/auth/admin'
+import { assertVenueAccess } from '@/lib/auth/venue-access'
 import { COLOMBIA_BOUNDS } from '@/lib/venues/schemas'
 
 /**
@@ -16,14 +17,13 @@ import { COLOMBIA_BOUNDS } from '@/lib/venues/schemas'
  *
  *   User-Agent identificable   -> se setea en el fetch de abajo
  *   Maximo 1 peticion/segundo  -> throttle a nivel de modulo
- *   Nada de consultas masivas  -> la ruta entera esta detras de assertAdmin
+ *   Nada de consultas masivas  -> only operators and verified venue owners
  *   Cachear resultados         -> next: { revalidate: 86400 }
- *   Nada de autocompletar      -> debounce de 500 ms y minimo 3 caracteres,
- *                                 del lado del cliente
+ *   Nada de autocompletar      -> boton explicito y minimo 3 caracteres
  *
  * El throttle es por proceso y Vercel corre varios, asi que no es un limite
- * duro. En la practica lo acota el gate de admin (un punado de humanos) mas el
- * cache de 24 horas.
+ * duro. En la practica lo acota el gate de acceso (un punado de humanos) mas
+ * el cache de 24 horas.
  */
 
 const CONTACT = 'https://tumbenla.com'
@@ -106,16 +106,26 @@ const callNominatim = async (url: URL) => {
   return response.json()
 }
 
-export const GET = async (request: NextRequest) => {
-  // El gate del layout no cubre los route handlers: esta ruta es un endpoint
-  // GET direccionable por su cuenta y tiene que defenderse sola.
+const canUseGeocoder = async (venueId: string | null) => {
+  if (venueId) {
+    const access = await assertVenueAccess(venueId, ['owner'])
+    return access.ok
+  }
+
   const admin = await assertAdmin()
-  if (!admin.ok) {
+  return admin.ok
+}
+
+export const GET = async (request: NextRequest) => {
+  // Layout gates do not cover route handlers. Operators may locate a new
+  // venue; verified owners may locate only a venue they already own. The
+  // endpoint remains invisible to anonymous traffic.
+  const params = request.nextUrl.searchParams
+  if (!(await canUseGeocoder(params.get('venueId')))) {
     // 404 y no 403, por la misma razon que el panel: no anunciar que existe.
     return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
   }
 
-  const params = request.nextUrl.searchParams
   const mode = params.get('mode') === 'reverse' ? 'reverse' : 'search'
 
   try {

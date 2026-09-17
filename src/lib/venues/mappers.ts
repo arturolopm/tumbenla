@@ -1,8 +1,8 @@
+import { repartir } from '@/lib/comercio/dinero'
 import type {
-  Pledge,
-  PledgeBasis,
   Venue,
   VenueAdminRow,
+  VenueChip,
   VenueRow,
   VenueStatus,
   VenueSummary,
@@ -17,32 +17,45 @@ import type {
  * and arithmetic on a string total silently concatenates. Funnelling every read
  * through here is what stops that from happening somewhere nobody is looking.
  *
- * Nothing outside this file should touch row.latitude or row.pledgePercentage.
+ * Nothing outside this file should touch row.latitude or a raw decimal.
  * Queries return DTOs, never raw rows.
  */
 
 const toNumber = (value: string | null): number | null => (value === null ? null : Number(value))
 
-export const toPledge = (row: VenueRow): Pledge => {
-  if (row.pledgeType === 'percentage') {
-    return {
-      type: 'percentage',
-      percentage: toNumber(row.pledgePercentage) ?? 0,
-      basis: (row.pledgeBasis as PledgeBasis | null) ?? null,
-      note: row.pledgeNote,
-    }
-  }
+/**
+ * Lo que se pinta cuando un sitio no ha entregado nada y no tiene carta.
+ *
+ * Existe como valor y no como `null` suelto para que `toVenue` y
+ * `toVenueAdminRow` —que no traen los agregados— sigan compilando sin
+ * inventarse cifras. Que un sitio no tenga chip es un caso legitimo, no un
+ * error de carga.
+ */
+export const CHIP_VACIO: VenueChip = { entregado: 0, materialDesde: null }
+
+/**
+ * El chip, a partir de las dos columnas agregadas que trae listPublishedVenues.
+ *
+ * EL REPARTO NO SE CALCULA ACA NI EN SQL: se le pide a `repartir()`, que es
+ * donde vive la regla de redondeo y donde dice, por escrito, que no se
+ * re-litiga. Una segunda copia de `round(precio * pct / 100)` en una consulta
+ * es exactamente como se separan dos numeros que tienen que ser el mismo.
+ */
+export const toVenueChip = (agregados: {
+  entregado: string | null
+  baratoPrecio: string | null
+  baratoPct: string | null
+}): VenueChip => {
+  const precio = toNumber(agregados.baratoPrecio)
+  const pct = toNumber(agregados.baratoPct)
 
   return {
-    type: 'fixed_per_unit',
-    amount: toNumber(row.pledgeAmount) ?? 0,
-    unit: row.pledgeUnit ?? 'unidad',
-    currency: row.pledgeCurrency,
-    note: row.pledgeNote,
+    entregado: toNumber(agregados.entregado) ?? 0,
+    materialDesde: precio === null || pct === null ? null : repartir(precio, pct).material,
   }
 }
 
-export const toVenueSummary = (row: VenueRow): VenueSummary => ({
+export const toVenueSummary = (row: VenueRow, chip: VenueChip = CHIP_VACIO): VenueSummary => ({
   id: row.id,
   slug: row.slug,
   name: row.name,
@@ -55,7 +68,7 @@ export const toVenueSummary = (row: VenueRow): VenueSummary => ({
   lat: Number(row.latitude),
   lng: Number(row.longitude),
   coverImageUrl: row.coverImageUrl,
-  pledge: toPledge(row),
+  chip,
   featured: row.featured,
   verified: row.verifiedAt !== null,
 })
@@ -74,8 +87,6 @@ export const toVenue = (row: VenueRow): Venue => ({
   estimatedPerPersonNight:
     row.estimatedPerPersonNight === null ? null : Number(row.estimatedPerPersonNight),
   verifiedNote: row.verifiedNote,
-  pledgeStartsAt: row.pledgeStartsAt,
-  pledgeEndsAt: row.pledgeEndsAt,
 })
 
 export const toVenueAdminRow = (row: VenueRow): VenueAdminRow => ({

@@ -1,0 +1,12 @@
+{
+  "duration": 12,
+  "assertions": [
+    { "kind": "appearsBy", "selector": "#s1-pide", "bySec": 0.4 },
+    { "kind": "before", "a": "#s1-pide", "b": "#s1-card" },
+    { "kind": "staysInFrame", "selector": "#s1-card" },
+    { "kind": "staysInFrame", "selector": "#s2-selector" },
+    { "kind": "staysInFrame", "selector": "#s3-phone" },
+    { "kind": "staysInFrame", "selector": "#s4-lockup" },
+    { "kind": "keepsMoving", "withinSelector": "#root", "maxStaticSec": 2 }
+  ]
+}

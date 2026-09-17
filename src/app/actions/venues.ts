@@ -3,13 +3,12 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { eq } from 'drizzle-orm'
-
-import { db } from '@/database'
-import { venueApplication, venueMember } from '@/database/schema'
 import { assertAdmin } from '@/lib/auth/admin'
 import { sendApplicationDecisionEmail } from '@/lib/messaging/email/mailer'
-import { getApplication, tieneDueno } from '@/lib/venues/claims'
+import {
+  VenueApplicationApprovalError,
+  approveVenueApplication,
+} from '@/lib/venues/approve-application'
 import { createVenue, setVenueStatus, updateVenue } from '@/lib/venues/mutations'
 import { getVenueById } from '@/lib/venues/queries'
 import { venueInputSchema, venueStatusSchema } from '@/lib/venues/schemas'
@@ -75,78 +74,48 @@ export const saveVenueAction = async (
     }
   }
 
-  // Si viene de aprobar una solicitud, guardar el sitio es TAMBIEN darle el
-  // panel a quien la mando y cerrar la solicitud. Se hace aca y no en una
-  // accion aparte para que no exista el estado intermedio "sitio creado pero
-  // sin dueno", que es el que dejaria a alguien esperando para siempre.
-  const solicitudId = formData.get('solicitudId')
-  const solicitud =
-    typeof solicitudId === 'string' && solicitudId ? await getApplication(solicitudId) : null
-
-  if (typeof solicitudId === 'string' && solicitudId && !solicitud) {
-    return { status: 'error', error: 'Esa solicitud ya no existe.' }
-  }
-
-  if (solicitud && solicitud.status === 'approved') {
-    return { status: 'error', error: 'Esa solicitud ya estaba aprobada.' }
-  }
-
-  if (solicitud && solicitud.status === 'rejected') {
-    return { status: 'error', error: 'Esa solicitud ya estaba rechazada.' }
-  }
-
-  // Entre que el operador abrio la pantalla y toco guardar pudieron pasar dias
-  // y otro operador pudo aprobar a alguien mas para el mismo sitio.
-  if (solicitud?.venueId && (await tieneDueno(solicitud.venueId))) {
-    return { status: 'error', error: 'Ese sitio ya tiene dueño.' }
-  }
-
   let row: Awaited<ReturnType<typeof createVenue>>
+  let applicationDecision: { contactEmail: string; ownerIsReady: boolean } | null = null
+
   try {
-    row =
-      typeof id === 'string' && id
-        ? await updateVenue(id, parsed.data)
-        : await createVenue(parsed.data)
-  } catch {
+    const applicationId = formData.get('solicitudId')
+
+    if (typeof applicationId === 'string' && applicationId) {
+      const approved = await approveVenueApplication({
+        applicationId,
+        adminUserId: admin.userId,
+        input: parsed.data,
+      })
+      row = approved.venue
+      applicationDecision = {
+        contactEmail: approved.contactEmail,
+        ownerIsReady: approved.ownerIsReady,
+      }
+    } else {
+      row =
+        typeof id === 'string' && id
+          ? await updateVenue(id, parsed.data)
+          : await createVenue(parsed.data)
+    }
+  } catch (error) {
+    if (error instanceof VenueApplicationApprovalError) {
+      return { status: 'error', error: error.message }
+    }
     return { status: 'error', error: 'No se pudo guardar el sitio. Intenta de nuevo.' }
   }
 
-  if (solicitud) {
-    try {
-      await db
-        .insert(venueMember)
-        .values({ venueId: row.id, userId: solicitud.userId, role: 'owner' })
-        .onConflictDoNothing()
-
-      await db
-        .update(venueApplication)
-        .set({
-          status: 'approved',
-          venueId: row.id,
-          reviewedAt: new Date(),
-          reviewedByUserId: admin.userId,
-          updatedAt: new Date(),
-        })
-        .where(eq(venueApplication.id, solicitud.id))
-    } catch {
-      // El sitio ya quedo creado. Se dice tal cual en vez de fingir que fallo
-      // todo: el operador tiene que saber que existe y que falta el dueno.
-      return {
-        status: 'error',
-        error: 'El sitio quedó creado, pero no se pudo asignar al dueño. Revísalo.',
-      }
-    }
-
-    // El correo va de ultimo y su fallo no deshace nada: la aprobacion ya es
-    // real y el operador puede avisarle por otro lado.
+  if (applicationDecision) {
+    // A decision is durable before email is attempted. Mail is only a
+    // notification; the account can still claim its approved venue at /entrar.
     try {
       await sendApplicationDecisionEmail({
-        to: solicitud.contactEmail,
+        to: applicationDecision.contactEmail,
         venueName: row.name,
-        aprobada: true,
+        approved: true,
+        ownerIsReady: applicationDecision.ownerIsReady,
       })
     } catch {
-      // Sin efecto sobre la aprobacion.
+      // The approval remains valid if the provider fails.
     }
 
     revalidatePath('/admin/solicitudes')

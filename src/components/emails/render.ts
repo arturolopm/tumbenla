@@ -1,7 +1,8 @@
+import { CustomerOrderEmail, type CustomerOrderEmailProps } from '@/components/emails/commerce'
 import { render } from '@react-email/components'
 import { OTPVerificationEmail, ResetPasswordEmail, WelcomeEmail } from '@/components/emails/auth'
 import {
-  SolicitudDecisionEmail,
+  ApplicationDecisionEmail,
   SolicitudDmEmail,
   VenueInvitationEmail,
 } from '@/components/emails/venues'
@@ -36,6 +37,10 @@ export async function renderVenueInvitationEmail(params: {
   return await render(VenueInvitationEmail(params))
 }
 
+export async function renderCustomerOrderEmail(params: CustomerOrderEmailProps): Promise<string> {
+  return await render(CustomerOrderEmail(params))
+}
+
 export async function renderSolicitudDmEmail(params: {
   venueName: string
   instagram: string
@@ -44,10 +49,12 @@ export async function renderSolicitudDmEmail(params: {
   return await render(SolicitudDmEmail(params))
 }
 
-export async function renderSolicitudDecisionEmail(params: {
+export async function renderApplicationDecisionEmail(params: {
   venueName: string
-  aprobada: boolean
-  nota?: string
+  approved: boolean
+  note?: string
+  ownerIsReady?: boolean
+  contactEmail?: string
 }): Promise<string> {
-  return await render(SolicitudDecisionEmail(params))
+  return await render(ApplicationDecisionEmail(params))
 }

@@ -1,0 +1,2 @@
+ALTER TABLE "financial_operation" ADD COLUMN "funding_classification" text;--> statement-breakpoint
+ALTER TABLE "financial_operation" ADD CONSTRAINT "financial_operation_funding_check" CHECK ("financial_operation"."funding_classification" is null or "financial_operation"."funding_classification" in ('real', 'sandbox'));

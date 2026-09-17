@@ -51,22 +51,9 @@ export type ClaimedPhoto = {
   venueSlug: string
 }
 
-/**
- * El resumen de una persona.
- *
- * `estimatedAmount` ES UN ESTIMADO y viene con `estimateIsPartial` para que la
- * interfaz pueda decir la verdad completa: si algun sitio visitado no declaro
- * su estimado por noche, el total se queda corto y hay que decirlo en vez de
- * presentar una cifra redonda que no incluye todo.
- */
+/** El resumen de noches y fotos de una persona. */
 export type HistorySummary = {
   nights: number
   venues: number
   photos: number
-  estimatedAmount: number
-  currency: string
-  /** true si al menos una noche fue en un sitio sin estimado declarado. */
-  estimateIsPartial: boolean
-  /** Cuantas noches no pudieron sumarse al estimado. */
-  nightsWithoutEstimate: number
 }

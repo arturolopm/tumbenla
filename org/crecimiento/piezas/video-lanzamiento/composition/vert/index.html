@@ -1,0 +1,1310 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Tumbenla — Si no hay recibo, no pasó</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      /* ------------------------------------------------------------------
+         Fuentes locales. Nada de red en tiempo de render (regla de
+         determinismo): los woff2 viven en assets/fonts/.
+         Anybody y Montserrat son las mismas dos del producto.
+      ------------------------------------------------------------------ */
+      @font-face {
+        font-family: "Anybody";
+        src: url("assets/fonts/anybody.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "Montserrat";
+        src: url("assets/fonts/montserrat.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+        font-display: block;
+      }
+
+      /* Tokens exactos de src/app/_styles/globals.css */
+      :root {
+        --background: oklch(0.188 0.03 265.9);
+        --foreground: oklch(0.915 0.028 274.6);
+        --card: oklch(0.241 0.03 267.3);
+        --popover: oklch(0.286 0.029 267.6);
+        --secondary: oklch(0.33 0.028 267.8);
+        --primary: oklch(0.676 0.196 41.9);
+        --primary-foreground: oklch(0.188 0.03 265.9);
+        --primary-text: oklch(0.836 0.095 42.3);
+        --party: oklch(0.776 0.165 72.6);
+        --lime: oklch(0.917 0.226 129);
+        --street-white: oklch(0.982 0.002 247.8);
+        --muted-foreground: oklch(0.831 0.044 41.4);
+        --border: oklch(0.4 0.038 40.7);
+        --sidebar: oklch(0.166 0.031 265.2);
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: var(--background);
+      }
+      body {
+        font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Guarda contra el flash blanco en los cortes: el escenario se pinta. */
+      #root {
+        position: relative;
+        background: var(--background);
+      }
+
+      /* ---------------- Capas de fondo persistentes ---------------- */
+      .bg-layer {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      #bg-gradient {
+        background: linear-gradient(
+          180deg,
+          color-mix(in oklab, var(--primary) 16%, transparent) 0%,
+          color-mix(in oklab, var(--background) 70%, transparent) 45%,
+          var(--background) 100%
+        );
+      }
+      /* .halftone-overlay del producto: puntos de 1px cada 4px al 10%. */
+      #bg-halftone {
+        color: var(--street-white);
+        opacity: 0.1;
+        background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.2px);
+        background-size: 6px 6px;
+        mix-blend-mode: overlay;
+      }
+      /* .texture-grain: el mismo grain.jpg que monta layout.tsx */
+      #bg-grain {
+        opacity: 0.07;
+        background-image: url("assets/img/grain.jpg");
+        background-size: 600px 600px;
+        mix-blend-mode: overlay;
+      }
+      /* El bloom naranja del hero (50vw, blur 100px, arriba a la derecha) */
+      #bg-bloom {
+        position: absolute;
+        top: -220px;
+        right: -200px;
+        width: 820px;
+        height: 820px;
+        border-radius: 9999px;
+        background: color-mix(in oklab, var(--primary) 22%, transparent);
+        filter: blur(160px);
+        pointer-events: none;
+      }
+      #bg-bloom-core {
+        position: absolute;
+        top: -180px;
+        right: -160px;
+        width: 760px;
+        height: 760px;
+        border-radius: 9999px;
+        background: color-mix(in oklab, var(--party) 20%, transparent);
+        filter: blur(180px);
+        opacity: 0.12;
+        pointer-events: none;
+        will-change: opacity, transform;
+      }
+      #bg-vignette {
+        background: radial-gradient(
+          ellipse at center,
+          transparent 40%,
+          color-mix(in oklab, black 55%, transparent) 100%
+        );
+      }
+
+      /* ---------------- Escenas ---------------- */
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      /* Reels y TikTok tapan ~14% abajo y ~10% arriba con su propia interfaz.
+         Todo el contenido vive dentro de esa franja segura. */
+      .scene-inner {
+        position: absolute;
+        top: 190px;
+        bottom: 300px;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 0 56px;
+      }
+
+      /* ---------------- Tipografia del sistema ---------------- */
+      .display {
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        text-transform: uppercase;
+        line-height: 1;
+        letter-spacing: -0.04em;
+        color: var(--street-white);
+        display: block;
+      }
+      .label {
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        display: block;
+      }
+      .body {
+        font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        display: block;
+      }
+      .num {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        border-radius: 9999px;
+        background: var(--lime);
+        color: var(--background);
+        padding: 14px 34px;
+        font-size: 26px;
+      }
+      .pill-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: 14px;
+        border-radius: 9999px;
+        border: 2px solid var(--secondary);
+        background: var(--popover);
+        color: var(--lime);
+        padding: 13px 30px;
+        font-size: 24px;
+      }
+      .dot-lime {
+        width: 12px;
+        height: 12px;
+        border-radius: 9999px;
+        background: var(--lime);
+        display: block;
+      }
+
+      /* ---------------- Escena 1 ---------------- */
+      #s1-inner {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      #s1-pill {
+        margin-bottom: 54px;
+      }
+      #s1-word {
+        font-size: 168px;
+      }
+      #s1-turn {
+        font-size: 92px;
+        color: var(--lime);
+        margin-top: 10px;
+      }
+      #s1-sub {
+        margin-top: 46px;
+        font-size: 30px;
+        max-width: 1080px;
+        line-height: 1.55;
+        color: var(--foreground);
+        background: color-mix(in oklab, var(--background) 82%, transparent);
+        border-radius: 12px;
+        padding: 22px 30px;
+        backdrop-filter: blur(6px);
+      }
+
+      /* ---------------- Escena 2 — el mapa ---------------- */
+      #s2-inner {
+        justify-content: flex-start;
+        padding: 40px 56px;
+      }
+      #s2-head {
+        display: flex;
+        align-items: baseline;
+        gap: 26px;
+      }
+      #s2-title {
+        font-size: 62px;
+      }
+      #s2-kicker {
+        font-size: 24px;
+        color: var(--muted-foreground);
+      }
+      #s2-stage {
+        position: relative;
+        margin-top: 44px;
+        width: 100%;
+        height: 900px;
+        border-radius: 12px;
+        border: 2px solid var(--border);
+        background: var(--sidebar);
+        overflow: hidden;
+      }
+      #s2-map {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .pin {
+        position: absolute;
+        width: 46px;
+        height: 46px;
+        margin-left: -23px;
+        margin-top: -46px;
+        display: block;
+      }
+      .pin-head {
+        width: 46px;
+        height: 46px;
+        border-radius: 9999px;
+        background: var(--primary);
+        border: 4px solid var(--background);
+        box-shadow: 0 0 18px color-mix(in oklab, var(--primary) 55%, transparent);
+        display: block;
+      }
+      .pin-sel .pin-head {
+        background: var(--lime);
+        box-shadow: 0 0 26px color-mix(in oklab, var(--lime) 60%, transparent);
+      }
+      #s2-card {
+        position: absolute;
+        left: 40px;
+        top: 560px;
+        width: 620px;
+        border-radius: 12px;
+        border: 2px solid var(--lime);
+        background: var(--card);
+        overflow: hidden;
+      }
+      #s2-card-cover {
+        position: relative;
+        height: 168px;
+        background: linear-gradient(
+          135deg,
+          color-mix(in oklab, var(--primary) 34%, var(--card)) 0%,
+          color-mix(in oklab, var(--party) 18%, var(--card)) 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #s2-card-cover::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        color: var(--street-white);
+        opacity: 0.12;
+        background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.2px);
+        background-size: 6px 6px;
+      }
+      #s2-card-initial {
+        position: relative;
+        z-index: 2;
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        font-size: 74px;
+        color: color-mix(in oklab, var(--street-white) 22%, transparent);
+        display: block;
+      }
+      #s2-chip {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 2;
+        border-radius: 6px;
+        background: var(--lime);
+        color: var(--background);
+        padding: 8px 14px;
+        font-size: 20px;
+      }
+      #s2-card-body {
+        padding: 24px 26px 28px;
+      }
+      #s2-card-name {
+        font-size: 42px;
+        color: var(--lime);
+      }
+      #s2-card-meta {
+        margin-top: 10px;
+        font-size: 24px;
+      }
+
+      /* ---------------- Escena 3 — Esa soy yo ---------------- */
+      #s3-inner {
+        justify-content: center;
+        padding: 0 56px;
+      }
+      #s3-head {
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        margin-bottom: 34px;
+      }
+      #s3-title {
+        font-size: 52px;
+      }
+      #s3-kicker {
+        font-size: 24px;
+        color: var(--muted-foreground);
+      }
+      #s3-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        width: 100%;
+      }
+      .tile {
+        border-radius: 12px;
+        border: 2px solid var(--border);
+        background: var(--card);
+        overflow: hidden;
+        display: block;
+      }
+      .tile-img {
+        position: relative;
+        height: 230px;
+        display: block;
+        overflow: hidden;
+        background: var(--muted);
+      }
+      .tile-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        /* Un punto de desaturacion y un pelo de calidez: asi se sientan en el
+           sistema de diseno en vez de parecer fotos pegadas encima. */
+        filter: saturate(0.92) contrast(1.04) brightness(0.94);
+      }
+      .tile-img::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        background: linear-gradient(
+          180deg,
+          transparent 45%,
+          color-mix(in oklab, var(--background) 55%, transparent) 100%
+        );
+      }
+      .tile-img::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        color: var(--street-white);
+        opacity: 0.09;
+        background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.2px);
+        background-size: 6px 6px;
+      }
+      .tile-bar {
+        padding: 12px;
+        display: block;
+      }
+      .tile-btn {
+        border-radius: 8px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        padding: 11px 0;
+        text-align: center;
+        font-size: 21px;
+        display: block;
+        width: 100%;
+      }
+      .tile-btn-ghost {
+        border-radius: 8px;
+        border: 2px solid var(--secondary);
+        color: var(--muted-foreground);
+        padding: 9px 0;
+        text-align: center;
+        font-size: 21px;
+        display: block;
+        width: 100%;
+        background: transparent;
+      }
+      #s3-caption {
+        margin-top: 38px;
+        font-size: 28px;
+        color: var(--muted-foreground);
+        max-width: 1200px;
+      }
+      /* El estado guardado. Lima = seleccion, y en este cuadro no hay otra. */
+      #tile-2.is-saved {
+        border-color: var(--lime);
+      }
+      #tile-2-saved {
+        border-radius: 8px;
+        border: 2px solid var(--lime);
+        color: var(--lime);
+        padding: 9px 0;
+        text-align: center;
+        font-size: 21px;
+        display: block;
+        width: 100%;
+        background: transparent;
+      }
+      #s3-btnwrap {
+        position: relative;
+        display: block;
+        width: 100%;
+      }
+      #tile-2-cta {
+        position: absolute;
+        inset: 0;
+      }
+      #cursor {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 76px;
+        height: 76px;
+        display: block;
+        z-index: 40;
+        filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.6));
+      }
+
+      /* ---------------- Escena 4 — el estimado ---------------- */
+      #s4-inner {
+        justify-content: center;
+        align-items: center;
+        padding: 0 56px;
+      }
+      .col {
+        width: 100%;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      #s4-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 26px;
+        width: 100%;
+        width: 100%;
+      }
+      .stat {
+        border-radius: 12px;
+        border: 2px solid var(--secondary);
+        background: var(--card);
+        padding: 26px 30px;
+        display: block;
+      }
+      .stat-l {
+        font-size: 22px;
+        color: var(--muted-foreground);
+      }
+      .stat-v {
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        font-size: 52px;
+        line-height: 1.05;
+        color: var(--street-white);
+        display: block;
+        margin-top: 6px;
+      }
+      #s4-frame {
+        margin-top: 26px;
+        width: 100%;
+        width: 100%;
+        border-radius: 12px;
+        border: 2px solid var(--primary);
+        background: color-mix(in oklab, var(--primary) 7%, transparent);
+        padding: 40px 44px;
+      }
+      #s4-label {
+        font-size: 24px;
+        color: var(--muted-foreground);
+      }
+      #s4-amount {
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        font-size: 76px;
+        line-height: 1;
+        color: var(--primary-text);
+        display: block;
+        margin-top: 14px;
+      }
+      #s4-honest {
+        margin-top: 24px;
+        font-size: 30px;
+        color: var(--muted-foreground);
+      }
+      #s4-honest strong {
+        color: var(--street-white);
+        font-weight: 700;
+      }
+
+      /* ---------------- Escena 5 — el recibo ---------------- */
+      #s5-col {
+        width: 100%;
+      }
+      #s5-inner {
+        justify-content: center;
+        align-items: center;
+        padding: 0 56px;
+      }
+      #s5-title {
+        margin-top: 34px;
+        font-size: 132px;
+      }
+      #s5-title2 {
+        font-size: 96px;
+        color: var(--primary-text);
+      }
+      #s5-sub {
+        margin-top: 26px;
+        font-size: 30px;
+        width: 100%;
+        line-height: 1.5;
+      }
+      #s5-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 34px;
+        width: 100%;
+      }
+      #s5-photo {
+        position: relative;
+        border-radius: 12px;
+        border: 2px solid var(--border);
+        overflow: hidden;
+        display: block;
+      }
+      #s5-photo img {
+        width: 100%;
+        height: 460px;
+        object-fit: cover;
+        display: block;
+        filter: saturate(0.94) contrast(1.03);
+      }
+      /* Misma trama de semitono del sistema, para que la foto no quede pegada
+         encima del diseno sino dentro de el. */
+      #s5-photo::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        color: var(--street-white);
+        opacity: 0.08;
+        background-image: radial-gradient(circle, currentColor 1.2px, transparent 1.2px);
+        background-size: 6px 6px;
+      }
+      #s5-chip {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        z-index: 2;
+        border-radius: 6px;
+        background: var(--primary);
+        color: var(--primary-foreground);
+        padding: 10px 16px;
+        font-size: 22px;
+      }
+      #s5-empty {
+        margin-top: 44px;
+        width: 100%;
+        width: 100%;
+        border-radius: 12px;
+        border: 2px dashed var(--border);
+        padding: 44px 48px;
+      }
+      #s5-empty-line {
+        font-size: 58px;
+        color: var(--street-white);
+      }
+
+      /* ---------------- Subtitulos ----------------
+         Estilo de video viral: bloque abajo, mayusculas, y la palabra que
+         suena en lima. El contorno negro es lo que los hace legibles encima
+         de las fotos de fiesta. */
+      #subs {
+        position: absolute;
+        left: 50%;
+        bottom: 330px;
+        transform: translateX(-50%);
+        width: 960px;
+        text-align: center;
+        z-index: 60;
+        pointer-events: none;
+      }
+      .subchunk {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        opacity: 0;
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        font-size: 52px;
+        line-height: 1.16;
+        letter-spacing: -0.01em;
+        color: var(--street-white);
+        text-shadow:
+          0 4px 0 rgba(0, 0, 0, 0.9),
+          0 0 26px rgba(0, 0, 0, 0.75);
+        -webkit-text-stroke: 2px rgba(0, 0, 0, 0.55);
+      }
+      .sw {
+        display: inline-block;
+        margin: 0 0.16em;
+        will-change: color, transform;
+      }
+
+      /* ---------------- Escena 7 — el remate parchado ---------------- */
+      #s7-inner {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      #s7-line {
+        font-size: 34px;
+        color: var(--muted-foreground);
+        max-width: 1200px;
+        line-height: 1.5;
+      }
+      #s7-punch {
+        margin-top: 26px;
+        font-size: 128px;
+        color: var(--lime);
+      }
+      #s7-mark {
+        margin-top: 70px;
+        display: block;
+      }
+      #s7-wordmark {
+        font-size: 38px;
+        letter-spacing: 0.06em;
+        color: var(--street-white);
+      }
+      #s7-url {
+        margin-top: 12px;
+        font-size: 23px;
+        letter-spacing: 0.22em;
+        color: var(--muted-foreground);
+      }
+
+      /* ---------------- Escena 6 — el cierre ---------------- */
+      #s6-inner {
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      .s6k {
+        position: absolute;
+        left: 60px;
+        right: 60px;
+        top: 50%;
+        transform: translateY(-50%);
+        text-align: center;
+        font-family: "Anybody", ui-sans-serif, system-ui, sans-serif;
+        font-weight: 900;
+        text-transform: uppercase;
+        font-size: 88px;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+        color: var(--street-white);
+        opacity: 0;
+      }
+      #s6-k3 {
+        color: var(--primary-text);
+      }
+      #s6-k4 {
+        color: var(--lime);
+      }
+      #s6-l1 {
+        font-size: 146px;
+      }
+      #s6-l2 {
+        font-size: 146px;
+        color: var(--primary-text);
+        margin-top: 6px;
+      }
+      #s6-mark {
+        margin-top: 84px;
+        display: block;
+      }
+      #s6-wordmark {
+        font-size: 40px;
+        letter-spacing: 0.06em;
+        color: var(--street-white);
+      }
+      #s6-url {
+        margin-top: 14px;
+        font-size: 24px;
+        letter-spacing: 0.22em;
+        color: var(--muted-foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="vertical"
+      data-start="0"
+      data-duration="29"
+      data-width="1080"
+      data-height="1920"
+      data-fps="30"
+    >
+      <!-- Fondo persistente. Sin data-start: se posiciona solo. -->
+      <div id="bg-gradient" class="bg-layer"></div>
+      <div id="bg-bloom" data-layout-allow-overflow="true"></div>
+      <div id="bg-bloom-core" data-layout-allow-overflow="true"></div>
+      <div id="bg-halftone" class="bg-layer"></div>
+      <div id="bg-grain" class="bg-layer"></div>
+      <div id="bg-vignette" class="bg-layer"></div>
+
+      <!-- ============ 1 · El nombre ============ -->
+      <div id="s1" class="clip" data-start="0" data-duration="2.7" data-track-index="0">
+        <div id="s1-inner" class="scene-inner">
+          <span id="s1-pill" class="pill label">El ritmo nos levanta</span>
+          <span id="s1-word" class="display">Tumbenla</span>
+          <span id="s1-turn" class="display">Y volvámosla a parar</span>
+        </div>
+      </div>
+
+      <!-- ============ 2 · El mapa del parche ============ -->
+      <div id="s2" class="clip" data-start="2.7" data-duration="4.2" data-track-index="1">
+        <div id="s2-inner" class="scene-inner">
+          <div id="s2-head">
+            <span id="s2-title" class="display">Mapa del parche</span>
+            <span id="s2-kicker" class="label">Manizales</span>
+          </div>
+
+          <div id="s2-stage">
+            <svg id="s2-map" data-layout-allow-overflow="true" viewBox="0 0 1680 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <g stroke="oklch(0.33 0.028 267.8)" stroke-width="3" fill="none">
+                <path d="M-40 180 L1720 240" />
+                <path d="M-40 400 L1720 330" />
+                <path d="M-40 590 L1720 640" />
+                <path d="M240 -20 L300 740" />
+                <path d="M620 -20 L560 740" />
+                <path d="M1020 -20 L1090 740" />
+                <path d="M1380 -20 L1330 740" />
+              </g>
+              <g stroke="oklch(0.286 0.029 267.6)" stroke-width="2" fill="none">
+                <path d="M-40 90 L1720 120" />
+                <path d="M-40 500 L1720 470" />
+                <path d="M420 -20 L450 740" />
+                <path d="M820 -20 L800 740" />
+                <path d="M1200 -20 L1230 740" />
+              </g>
+              <path
+                d="M-40 660 C 300 600, 520 700, 820 610 S 1400 520, 1720 570"
+                stroke="oklch(0.241 0.03 267.3)"
+                stroke-width="26"
+                fill="none"
+                stroke-linecap="round"
+              />
+            </svg>
+
+            <span id="pin-1" class="pin"><span class="pin-head"></span></span>
+            <span id="pin-2" class="pin"><span class="pin-head"></span></span>
+            <span id="pin-3" class="pin"><span class="pin-head"></span></span>
+            <span id="pin-4" class="pin"><span class="pin-head"></span></span>
+
+            <div id="s2-card">
+              <span id="s2-chip" class="label">10% de la noche</span>
+              <div id="s2-card-cover">
+                <span id="s2-card-initial">L</span>
+              </div>
+              <div id="s2-card-body">
+                <span id="s2-card-name" class="display">La Terraza</span>
+                <span id="s2-card-meta" class="body">Discoteca · Chipre</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 3 · Esa soy yo ============ -->
+      <div id="s3" class="clip" data-start="6.9" data-duration="4.8" data-track-index="2">
+        <div id="s3-inner" class="scene-inner">
+          <div id="s3-head">
+            <span id="s3-title" class="display">La noche del sábado</span>
+            <span id="s3-kicker" class="label">La Terraza</span>
+          </div>
+
+          <div id="s3-grid">
+            <span id="tile-1" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-1.jpg" alt="" /></span>
+              <span class="tile-bar"><span class="tile-btn label">Esa soy yo</span></span>
+            </span>
+
+            <span id="tile-2" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-2.jpg" alt="" /></span>
+              <span class="tile-bar">
+                <span id="s3-btnwrap">
+                  <span id="tile-2-saved" class="label">✓ Guardada</span>
+                  <span id="tile-2-cta" class="tile-btn label">Esa soy yo</span>
+                </span>
+              </span>
+            </span>
+
+            <span id="tile-3" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-3.jpg" alt="" /></span>
+              <span class="tile-bar"><span class="tile-btn label">Esa soy yo</span></span>
+            </span>
+
+            <span id="tile-4" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-4.jpg" alt="" /></span>
+              <span class="tile-bar"><span class="tile-btn label">Esa soy yo</span></span>
+            </span>
+
+            <span id="tile-5" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-5.jpg" alt="" /></span>
+              <span class="tile-bar"><span class="tile-btn label">Esa soy yo</span></span>
+            </span>
+
+            <span id="tile-6" class="tile">
+              <span class="tile-img"><img src="assets/img/fiesta-6.jpg" alt="" /></span>
+              <span class="tile-bar"><span class="tile-btn label">Esa soy yo</span></span>
+            </span>
+          </div>
+
+          <span id="s3-caption" class="body">
+            Las fotos de esa noche le quedan de recuerdo.
+          </span>
+        </div>
+
+        <svg id="cursor" viewBox="0 0 32 32" aria-hidden="true">
+          <path
+            d="M6 2 L6 25 L12.2 19.4 L16.1 28.6 L20.4 26.8 L16.6 17.9 L25 17.2 Z"
+            fill="#ffffff"
+            stroke="oklch(0.188 0.03 265.9)"
+            stroke-width="1.8"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </div>
+
+      <!-- ============ 4 · El estimado ============ -->
+      <div id="s4" class="clip" data-start="11.7" data-duration="2.4" data-track-index="3">
+        <div id="s4-inner" class="scene-inner">
+          <div class="col">
+          <div id="s4-stats">
+            <span id="stat-1" class="stat">
+              <span class="stat-l label">Noches</span>
+              <span class="stat-v num">6</span>
+            </span>
+            <span id="stat-2" class="stat">
+              <span class="stat-l label">Sitios</span>
+              <span class="stat-v num">3</span>
+            </span>
+            <span id="stat-3" class="stat">
+              <span class="stat-l label">Fotos guardadas</span>
+              <span class="stat-v num">11</span>
+            </span>
+          </div>
+
+          <div id="s4-frame">
+            <span id="s4-label" class="label">Aporte estimado</span>
+            <span id="s4-amount" class="num">$ 0</span>
+            <span id="s4-honest" class="body">
+              Lo que han puesto sus noches.
+            </span>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 5 · El recibo ============ -->
+      <div id="s5" class="clip" data-start="14.1" data-duration="2.7" data-track-index="4">
+        <div id="s5-inner" class="scene-inner">
+          <div id="s5-grid">
+          <div class="col" id="s5-col">
+          <span id="s5-pill" class="pill-ghost label">
+            <span class="dot-lime"></span>
+            Cuentas claras
+          </span>
+          <span id="s5-title" class="display">A dónde va</span>
+          <span id="s5-title2" class="display">la plata</span>
+          <span id="s5-sub" class="body">
+            Compramos el material nosotros y publicamos el recibo.
+          </span>
+          </div>
+          <div id="s5-photo">
+            <img src="assets/img/material.jpg" alt="" />
+            <span id="s5-chip" class="label">Cemento gris · 50 kg</span>
+          </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 6 · Si no hay recibo, no pasó ============ -->
+      <div id="s6" class="clip" data-start="16.8" data-duration="6.8" data-track-index="5">
+        <div id="s6-inner" class="scene-inner">
+          <span class="s6k" id="s6-k1">Cuando se le pase el guayabo</span>
+          <span class="s6k" id="s6-k2">Entre a la página y verifique</span>
+          <span class="s6k" id="s6-k3">Con factura y todo</span>
+          <span class="s6k" id="s6-k4">Que su parte sí llegó</span>
+        </div>
+      </div>
+
+      <!-- ============ 7 · Que chimba, no ============ -->
+      <div id="s7" class="clip" data-start="23.6" data-duration="5.4" data-track-index="6">
+        <div id="s7-inner" class="scene-inner">
+          <span id="s7-line" class="body">
+            Así usted sale, se parcha, rumbea, y de paso ayuda.
+          </span>
+          <span id="s7-punch" class="display">¿Qué chimba cierto?</span>
+          <span id="s7-mark">
+            <span id="s7-wordmark" class="display">Tumbenla</span>
+            <span id="s7-url" class="label">tumbenla.com</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Subtitulos: capa fija, fuera de las escenas, para que sobreviva
+           a los cortes. Cubre vo1-vo5; la escena 7 ya muestra su frase. -->
+      <div id="subs" data-layout-allow-overflow="true">
+        <div class="subchunk" id="sub-0"><span class="sw" id="sw-0-0">VEA,</span><span class="sw" id="sw-0-1">LA</span><span class="sw" id="sw-0-2">VUELTA</span><span class="sw" id="sw-0-3">ES</span></div>
+        <div class="subchunk" id="sub-1"><span class="sw" id="sw-1-0">SIMPLE.</span></div>
+        <div class="subchunk" id="sub-2"><span class="sw" id="sw-2-0">ENTRE</span><span class="sw" id="sw-2-1">A</span><span class="sw" id="sw-2-2">LA</span><span class="sw" id="sw-2-3">PÁGINA,</span></div>
+        <div class="subchunk" id="sub-3"><span class="sw" id="sw-3-0">MIRE</span><span class="sw" id="sw-3-1">CUÁLES</span><span class="sw" id="sw-3-2">BARES</span><span class="sw" id="sw-3-3">LE</span></div>
+        <div class="subchunk" id="sub-4"><span class="sw" id="sw-4-0">ENTRARON</span><span class="sw" id="sw-4-1">A</span><span class="sw" id="sw-4-2">ESTA</span><span class="sw" id="sw-4-3">VUELTA,</span></div>
+        <div class="subchunk" id="sub-5"><span class="sw" id="sw-5-0">Y</span><span class="sw" id="sw-5-1">ESCOJA</span><span class="sw" id="sw-5-2">UNO.</span></div>
+        <div class="subchunk" id="sub-6"><span class="sw" id="sw-6-0">PÁRCHESE</span><span class="sw" id="sw-6-1">COMO</span><span class="sw" id="sw-6-2">SIEMPRE.</span></div>
+        <div class="subchunk" id="sub-7"><span class="sw" id="sw-7-0">CONSUMIENDO</span><span class="sw" id="sw-7-1">AHÍ</span><span class="sw" id="sw-7-2">YA</span><span class="sw" id="sw-7-3">ESTÁ</span></div>
+        <div class="subchunk" id="sub-8"><span class="sw" id="sw-8-0">PONIENDO,</span><span class="sw" id="sw-8-1">Y</span><span class="sw" id="sw-8-2">LAS</span><span class="sw" id="sw-8-3">FOTOS</span></div>
+        <div class="subchunk" id="sub-9"><span class="sw" id="sw-9-0">LE</span><span class="sw" id="sw-9-1">QUEDAN</span><span class="sw" id="sw-9-2">DE</span><span class="sw" id="sw-9-3">RECUERDO.</span></div>
+        <div class="subchunk" id="sub-10"><span class="sw" id="sw-10-0">DESPUÉS</span><span class="sw" id="sw-10-1">VUELVA</span><span class="sw" id="sw-10-2">Y</span><span class="sw" id="sw-10-3">MIRE</span></div>
+        <div class="subchunk" id="sub-11"><span class="sw" id="sw-11-0">CUÁNTO</span><span class="sw" id="sw-11-1">PUSO</span><span class="sw" id="sw-11-2">USTED.</span></div>
+        <div class="subchunk" id="sub-12"><span class="sw" id="sw-12-0">NOSOTROS</span><span class="sw" id="sw-12-1">COMPRAMOS</span><span class="sw" id="sw-12-2">EL</span><span class="sw" id="sw-12-3">MATERIAL,</span></div>
+        <div class="subchunk" id="sub-13"><span class="sw" id="sw-13-0">Y</span><span class="sw" id="sw-13-1">PUBLICAMOS</span><span class="sw" id="sw-13-2">LA</span><span class="sw" id="sw-13-3">FACTURA.</span></div>
+      </div>
+
+      <!-- ============ Audio ============ -->
+      <!-- Cama musical. data-media-start=16.47 pone el cue fuerte de 17.02s
+           del preset justo debajo del golpe del logotipo (t=0.55). -->
+      <audio
+        id="a-music"
+        data-start="0"
+        data-duration="29"
+        data-media-start="27.6845"
+        data-track-index="20"
+        data-volume="1"
+        src="assets/music/perreo-melodico.mp3"
+      ></audio>
+
+      <audio id="a-slam" data-start="0.55" data-duration="0.2" data-track-index="21" data-volume="0.34"
+             src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio></audio>
+
+      <audio id="a-pin-1" data-start="3.422" data-duration="0.2" data-track-index="22" data-volume="0.22"
+             src="assets/sfx/interface/drop_002.ogg"></audio></audio>
+      <audio id="a-pin-2" data-start="3.997" data-duration="0.2" data-track-index="22" data-volume="0.22"
+             src="assets/sfx/interface/drop_002.ogg"></audio></audio>
+      <audio id="a-pin-3" data-start="4.571" data-duration="0.2" data-track-index="22" data-volume="0.22"
+             src="assets/sfx/interface/drop_002.ogg"></audio></audio>
+      <audio id="a-pin-4" data-start="5.146" data-duration="0.2" data-track-index="22" data-volume="0.22"
+             src="assets/sfx/interface/drop_002.ogg"></audio></audio>
+
+      <audio id="a-select" data-start="5.72" data-duration="0.62" data-track-index="23" data-volume="0.2"
+             src="assets/sfx/interface/switch_007.ogg"></audio></audio>
+      <audio id="a-saved" data-start="10.261" data-duration="0.62" data-track-index="23" data-volume="0.26"
+             src="assets/sfx/interface/switch_007.ogg"></audio></audio>
+
+      <audio id="a-click" data-start="9.741" data-duration="0.01" data-track-index="24" data-volume="0.45"
+             src="assets/sfx/interface/click_003.ogg"></audio></audio>
+
+      <audio id="a-receipt" data-start="14.911" data-duration="0.62" data-track-index="25" data-volume="0.24"
+             src="assets/sfx/casino/card-slide-1.ogg"></audio></audio>
+
+      <!-- Locucion (Kokoro, voz ef_dora, es, 0.95x). Una pista por
+           linea: asi cada escena se puede re-cronometrar sola. -->
+      <audio id="a-vo1" data-start="0.8" data-track-index="30" data-volume="1"
+             src="assets/vo/vo1.wav"></audio>
+      <audio id="a-vo2" data-start="2.536" data-track-index="31" data-volume="1"
+             src="assets/vo/vo2.wav"></audio>
+      <audio id="a-vo3" data-start="6.648" data-track-index="32" data-volume="1"
+             src="assets/vo/vo3.wav"></audio>
+      <audio id="a-vo4" data-start="11.24" data-track-index="33" data-volume="1"
+             src="assets/vo/vo4.wav"></audio>
+      <audio id="a-vo7" data-start="17.0" data-track-index="36" data-volume="1"
+             src="assets/vo/vo7.wav"></audio>
+      <audio id="a-vo6" data-start="23.65" data-track-index="35" data-volume="1"
+             src="assets/vo/vo6.wav"></audio>
+      <audio id="a-vo5" data-start="13.587" data-track-index="34" data-volume="1"
+             src="assets/vo/vo5.wav"></audio>
+    </div>
+
+    <script>
+      // ==================================================================
+      // Tumbenla — brag film. Un solo timeline pausado.
+      //
+      // LA VOZ MANDA EL PASO. Las escenas se re-cronometraron contra la
+      // duracion real de cada linea (macOS Paulina, es_MX, -r 186):
+      //   vo1 3.46s · vo2 2.29s · vo3 3.90s · vo4 2.02s · vo5 4.24s
+      //
+      // La cama NO es una pista de libreria: es percusion armada a mano con
+      // los SFX CC0 (bombo bajado de tono, clave de madera, campana de
+      // hojalata) sobre la misma rejilla de 120.19 BPM a la que ya estaban
+      // amarrados los momentos visuales. Tresillo en el bombo (1, 2-y, 4),
+      // contragolpe en 2 y 4. Se arma y se desarma por escena, y PARA en
+      // 20.75s para que la ultima escena vaya en silencio.
+      // ==================================================================
+      const BEAT = 0.574438;
+      const B0 = 0.55;
+      const beat = (k) => +(B0 + BEAT * k).toFixed(3);
+
+      const S = { s1: 0, s2: 2.7, s3: 6.9, s4: 11.7, s5: 14.1, s6: 16.8, s7: 23.6, end: 29.0 };
+
+      // La corriente del film es HACIA LA IZQUIERDA. Solo el ultimo corte
+      // sube, porque subir es concluir.
+      const TRAVEL = 150; // viaje parcial: el corte cae con el plano en vuelo
+      const EXIT = 0.45;
+      const ENTER = 0.57;
+
+      const tl = gsap.timeline({ paused: true });
+
+      const enterFromRight = (sel, at) =>
+        tl.fromTo(sel, { x: TRAVEL, autoAlpha: 0.15 },
+          { x: 0, autoAlpha: 1, duration: ENTER, ease: "power4.out" }, at);
+      const exitLeft = (sel, at) => {
+        tl.to(sel, { x: -TRAVEL, autoAlpha: 0, duration: EXIT, ease: "power4.in" }, at);
+        tl.set(sel, { autoAlpha: 0 }, at + EXIT);
+      };
+
+      /* ---------------- Fondo ---------------- */
+      tl.fromTo("#bg-bloom", { scale: 0.82, opacity: 0.5 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.4);
+      tl.to("#bg-bloom", { scale: 1.06, opacity: 0.9, duration: 6.5, ease: "none" }, 1.0);
+      tl.to("#bg-bloom", { opacity: 0.35, scale: 0.9, duration: 2.5, ease: "power2.inOut" }, S.s5);
+      tl.to("#bg-bloom", { opacity: 0.12, duration: 1.2, ease: "power2.out" }, S.s6);
+      tl.to("#bg-grain", { opacity: 0.04, duration: 1.2, ease: "power2.out" }, S.s6);
+
+      // ===================== 1 · El nombre =====================
+      tl.fromTo("#s1-pill", { y: 26, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.45, ease: "power3.out" }, 0.15);
+      // beat-locked: 0.55s — el bombo y la campana caen aqui.
+      tl.fromTo("#s1-word", { scale: 1.14, autoAlpha: 0, y: 20 },
+        { scale: 1, autoAlpha: 1, y: 0, duration: 0.42, ease: "power4.out" }, beat(0));
+      // beat-grid: 1.049s
+      tl.fromTo("#s1-turn", { y: 46, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.44, ease: "back.out(1.5)" }, beat(1));
+      exitLeft("#s1-inner", S.s2 - EXIT);
+
+      // ===================== 2 · El mapa =====================
+      enterFromRight("#s2-inner", S.s2 - 0.12);
+      const PINS = [
+        ["#pin-1", 170, 300], ["#pin-2", 420, 180],
+        ["#pin-3", 300, 470], ["#pin-4", 560, 380],
+      ];
+      PINS.forEach(([sel, left, top], i) => {
+        gsap.set(sel, { left: left, top: top });
+        // beat-grid: 5.044, 5.543, 6.043, 6.542 — cada pin sobre un pulso.
+        tl.fromTo(sel, { y: -70, autoAlpha: 0, scale: 0.7 },
+          { y: 0, autoAlpha: 1, scale: 1, duration: 0.42, ease: "back.out(1.6)" }, beat(5 + i));
+      });
+      tl.set("#pin-4", { attr: { class: "pin pin-sel" } }, beat(9));
+      tl.fromTo("#pin-4", { scale: 1 },
+        { scale: 1.22, duration: 0.22, ease: "power3.out" }, beat(9));
+      tl.to("#pin-4", { scale: 1.1, duration: 0.3, ease: "power2.out" }, beat(9) + 0.22);
+      tl.fromTo("#s2-card", { y: 40, autoAlpha: 0, scale: 0.96 },
+        { y: 0, autoAlpha: 1, scale: 1, duration: 0.46, ease: "power4.out" }, beat(9) + 0.05);
+      exitLeft("#s2-inner", S.s3 - EXIT);
+
+      // ===================== 3 · Esa soy yo =====================
+      enterFromRight("#s3-inner", S.s3 - 0.12);
+      tl.fromTo("#s3-grid .tile", { y: 30, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.4, ease: "power3.out", stagger: 0.055 }, 7.1);
+      tl.fromTo("#s3-caption", { y: 18, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.45, ease: "power3.out" }, 7.6);
+
+      // El cursor es el portador, y el clic cae sobre "guardás tu foto".
+      gsap.set("#cursor", { x: 980, y: 1500 });
+      tl.fromTo("#cursor", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 }, 7.4);
+      tl.to("#cursor", { x: 560, y: 700, duration: 2.15, ease: "power2.inOut" }, 7.6);
+      // beat-locked: 10.537s
+      tl.to("#cursor", { scale: 0.88, duration: 0.07, ease: "power2.in" }, beat(16) - 0.07);
+      tl.to("#cursor", { scale: 1, duration: 0.16, ease: "back.out(2)" }, beat(16));
+      tl.fromTo("#tile-2-cta", { scale: 1 },
+        { scale: 0.95, duration: 0.08, ease: "power2.in" }, beat(16));
+      tl.to("#tile-2-cta", { scale: 1, duration: 0.12, ease: "power2.out" }, beat(16) + 0.08);
+      // Quietud antes del resultado (0.40s): la coma dramatica.
+      tl.to("#tile-2-cta", { autoAlpha: 0, duration: 0.12, ease: "power2.in" }, 10.141);
+      tl.set("#tile-2-cta", { autoAlpha: 0 }, 10.261);
+      tl.fromTo("#tile-2-saved", { autoAlpha: 0, scale: 0.94 },
+        { autoAlpha: 1, scale: 1, duration: 0.3, ease: "back.out(1.6)" }, 10.261);
+      tl.to("#tile-2", { borderColor: "oklch(0.917 0.226 129)", duration: 0.3, ease: "power2.out" }, 10.141);
+      tl.to("#cursor", { x: 700, y: 900, autoAlpha: 0, duration: 0.5, ease: "power2.in" }, 10.8);
+      tl.set("#cursor", { autoAlpha: 0 }, 11.7);
+      exitLeft("#s3-inner", S.s4 - EXIT);
+
+      // ===================== 4 · El estimado =====================
+      enterFromRight("#s4-inner", S.s4 - 0.12);
+      // beat-grid: 13.533, 14.032, 14.531. El trio se queda 1.6s en pantalla.
+      ["#stat-1", "#stat-2", "#stat-3"].forEach((sel, i) => {
+        tl.fromTo(sel, { y: 34, autoAlpha: 0 },
+          { y: 0, autoAlpha: 1, duration: 0.38, ease: "power3.out" }, beat(19 + i));
+      });
+      tl.fromTo("#s4-frame", { y: 30, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.42, ease: "power3.out" }, beat(20));
+      // Conteo determinista. Cifra PERSONAL, no metrica de plataforma.
+      const money = { v: 0 };
+      const amountEl = document.getElementById("s4-amount");
+      const paint = () => {
+        const n = Math.round(money.v / 500) * 500;
+        amountEl.textContent = "$ " + n.toLocaleString("es-CO");
+      };
+      tl.to(money, { v: 96000, duration: 1.0, ease: "power2.out", onUpdate: paint }, 12.1);
+      // La advertencia se ve antes de que la voz la diga, y aguanta 1.55s.
+      tl.fromTo("#s4-honest", { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.4, ease: "power2.out" }, 12.4);
+      exitLeft("#s4-inner", S.s5 - EXIT);
+
+      // ===================== 5 · El recibo =====================
+      enterFromRight("#s5-inner", S.s5 - 0.12);
+      tl.fromTo("#s5-pill", { y: 20, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.4, ease: "power3.out" }, 14.4);
+      // beat-grid: 17.028
+      tl.fromTo(["#s5-title", "#s5-title2"], { y: 34, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.46, ease: "power4.out", stagger: 0.08 }, beat(23));
+      tl.fromTo("#s5-sub", { y: 20, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.42, ease: "power3.out" }, beat(23) + 0.24);
+      // beat-grid: 18.026 — se asienta sobre "publicamos la factura".
+      tl.fromTo("#s5-photo", { x: 60, autoAlpha: 0, scale: 0.97 },
+        { x: 0, autoAlpha: 1, scale: 1, duration: 0.55, ease: "power4.out" }, beat(24));
+      tl.fromTo("#s5-chip", { y: 16, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.35, ease: "back.out(1.5)" }, beat(25));
+      // Vector reservado: ARRIBA.
+      tl.to("#s5-inner", { y: -190, autoAlpha: 0, duration: EXIT, ease: "power4.in" }, S.s6 - EXIT);
+      tl.set("#s5-inner", { autoAlpha: 0 }, S.s6);
+
+      // ===================== 6 · El guayabo =====================
+      // Tipografia cinetica en cuatro tiempos, cada uno amarrado a la palabra
+      // que lo dispara en vo7 (17.85 + el tiempo de la palabra). Aca NO van
+      // subtitulos: este texto ES el subtitulo.
+      tl.fromTo("#s6-inner", { y: 150, autoAlpha: 0.15 },
+        { y: 0, autoAlpha: 1, duration: ENTER, ease: "power4.out" }, S.s6 - 0.12);
+      [["#s6-k1", 16.97, 18.36],
+       ["#s6-k2", 18.49, 20.03],
+       ["#s6-k3", 20.16, 21.24],
+       ["#s6-k4", 21.37, 23.15]].forEach(([sel, ini, fin]) => {
+        tl.fromTo(sel, { y: 34, autoAlpha: 0 },
+          { y: 0, autoAlpha: 1, duration: 0.32, ease: "power4.out" }, ini);
+        tl.to(sel, { y: -26, autoAlpha: 0, duration: 0.26, ease: "power3.in" }, fin);
+        tl.set(sel, { autoAlpha: 0 }, fin + 0.26);
+      });
+      tl.to("#s6-inner", { y: -170, autoAlpha: 0, duration: EXIT, ease: "power4.in" }, S.s7 - EXIT);
+      tl.set("#s6-inner", { autoAlpha: 0 }, S.s7);
+
+      // ===================== 7 · Que chimba, no =====================
+      // El remate parchado. Aca SI vuelve la musica: el silencio ya hizo su
+      // trabajo en la 6, y esta escena es la alegria, no la cuenta.
+      tl.fromTo("#s7-inner", { y: 170, autoAlpha: 0.15 },
+        { y: 0, autoAlpha: 1, duration: ENTER, ease: "power4.out" }, S.s7 - 0.12);
+      tl.fromTo("#s7-line", { y: 20, autoAlpha: 0 },
+        { y: 0, autoAlpha: 1, duration: 0.45, ease: "power3.out" }, 23.8);
+      tl.fromTo("#s7-punch", { y: 40, autoAlpha: 0, scale: 0.94 },
+        { y: 0, autoAlpha: 1, scale: 1, duration: 0.5, ease: "back.out(1.5)" }, 27.55);
+      tl.fromTo("#s7-mark", { autoAlpha: 0 },
+        { autoAlpha: 1, duration: 0.5, ease: "power2.out" }, 28.45);
+
+      // ===================== Mezcla =====================
+      // La percusion entra entera y se lleva sola el golpe del logotipo; se
+      // agacha a 0.40 en cuanto entra la voz. El silencio del final ya viene
+      // horneado en el propio archivo (para en 20.75s).
+      tl.fromTo("#a-music", { volume: 0 },
+        { volume: 0.28, duration: 0.35, ease: "power2.out" }, 0);
+      // La voz ahora va casi seguida, con respiros de ~0.4s. La cama se queda
+      // agachada y solo sube en el hueco real entre el estimado y el recibo.
+      tl.to("#a-music", { volume: 0.15, duration: 0.35, ease: "power2.inOut" }, 0.70);
+      
+      
+      // Silencio total para la escena 6: esa linea no la acompana nadie.
+      tl.to("#a-music", { volume: 0.06, duration: 0.5, ease: "power2.in" }, 16.5);
+      // Y vuelve el perreo para el remate.
+      tl.to("#a-music", { volume: 0.24, duration: 0.45, ease: "power2.out" }, 23.35);
+      tl.to("#a-music", { volume: 0, duration: 0.8, ease: "power2.in" }, 28.05);
+
+      /* ------------------------------------------------------------------
+         Reactivo al audio: RMS y graves por cuadro extraidos de la PROPIA
+         cama de percusion (extract-audio-data.py, hyperframes-creative).
+         Ahora el nucleo del bloom late con el bombo, porque los dos salen
+         de la misma rejilla. Va EN LINEA: la regla de determinismo prohibe
+         pedir nada por red en tiempo de render.
+      ------------------------------------------------------------------ */
+      const AUDIO = [[0.419,0.374],[0.453,0.395],[0.468,0.286],[0.293,0.136],[0.662,0.072],[0.382,0.029],[0.337,0.013],[0.334,0.017],[0.655,0.287],[0.696,0.45],[0.578,0.507],[0.541,0.389],[0.667,0.469],[0.583,0.466],[0.559,0.355],[0.481,0.102],[0.521,0.034],[0.546,0.029],[0.205,0.016],[0.138,0.007],[0.128,0.032],[0.77,0.28],[0.71,0.626],[0.45,0.399],[0.393,0.39],[0.475,0.452],[0.582,0.58],[0.587,0.425],[0.631,0.237],[0.479,0.129],[0.53,0.042],[0.616,0.015],[0.697,0.013],[0.658,0.011],[0.626,0.011],[0.496,0.006],[0.472,0.004],[0.521,0.011],[0.739,0.231],[0.648,0.456],[0.516,0.443],[0.667,0.433],[0.754,0.586],[0.795,0.573],[0.579,0.506],[0.281,0.355],[0.415,0.408],[0.465,0.382],[0.557,0.251],[0.48,0.074],[0.465,0.009],[0.242,0.006],[0.045,0.002],[0.045,0.002],[0.036,0.003],[0.534,0.013],[0.41,0.008],[0.341,0.004],[0.345,0.004],[0.293,0.004],[0.194,0.002],[0.135,0.003],[0.121,0.005],[0.463,0.044],[0.856,0.365],[0.741,0.519],[0.554,0.349],[0.625,0.375],[0.504,0.315],[0.414,0.294],[0.427,0.387],[0.28,0.169],[0.562,0.051],[0.465,0.035],[0.354,0.022],[0.362,0.013],[0.448,0.097],[0.827,0.389],[0.534,0.416],[0.542,0.377],[0.584,0.415],[0.699,0.474],[0.718,0.437],[0.583,0.232],[0.387,0.045],[0.531,0.018],[0.289,0.018],[0.263,0.009],[0.325,0.011],[0.54,0.139],[0.793,0.357],[0.556,0.537],[0.64,0.378],[0.627,0.401],[0.817,0.555],[0.84,0.682],[0.608,0.335],[0.572,0.122],[0.589,0.042],[0.568,0.004],[0.605,0.003],[0.585,0.003],[0.562,0.004],[0.488,0.004],[0.47,0.003],[0.52,0.004],[0.591,0.084],[0.816,0.299],[0.798,0.657],[0.649,0.45],[0.654,0.46],[0.851,0.546],[0.939,0.557],[0.768,0.355],[0.645,0.295],[0.676,0.343],[0.653,0.235],[0.419,0.059],[0.417,0.021],[0.32,0.018],[0.263,0.009],[0.248,0.011],[0.225,0.019],[0.262,0.025],[0.595,0.038],[0.133,0.009],[0.06,0.005],[0.044,0.003],[0.137,0.004],[0.091,0.003],[0.356,0.006],[0.567,0.007],[0.588,0.275],[0.914,0.62],[0.751,0.861],[0.459,0.458],[0.531,0.489],[0.519,0.543],[0.433,0.493],[0.38,0.254],[0.346,0.05],[0.688,0.052],[0.364,0.021],[0.288,0.008],[0.363,0.006],[0.669,0.274],[0.758,0.475],[0.667,0.712],[0.559,0.422],[0.613,0.515],[0.676,0.588],[0.594,0.331],[0.432,0.048],[0.351,0.009],[0.502,0.013],[0.283,0.008],[0.193,0.006],[0.263,0.022],[0.782,0.315],[0.662,0.585],[0.497,0.646],[0.367,0.402],[0.577,0.48],[0.795,0.651],[0.661,0.67],[0.512,0.1],[0.53,0.017],[0.535,0.01],[0.321,0.004],[0.582,0.003],[0.542,0.004],[0.651,0.007],[0.798,0.004],[0.549,0.005],[0.621,0.018],[0.745,0.288],[0.747,0.625],[0.755,0.691],[0.664,0.466],[0.656,0.391],[0.962,0.538],[0.67,0.554],[0.479,0.26],[0.663,0.29],[0.54,0.371],[0.638,0.417],[0.473,0.099],[0.323,0.018],[0.314,0.014],[0.281,0.007],[0.225,0.003],[0.29,0.005],[0.588,0.026],[0.504,0.022],[0.294,0.009],[0.219,0.005],[0.214,0.005],[0.216,0.004],[0.037,0.002],[0.021,0.002],[0.133,0.041],[0.773,0.377],[0.724,0.596],[0.466,0.446],[0.403,0.411],[0.5,0.534],[0.443,0.46],[0.377,0.226],[0.363,0.076],[0.527,0.039],[0.604,0.023],[0.4,0.021],[0.392,0.017],[0.457,0.072],[0.826,0.348],[0.549,0.401],[0.504,0.389],[0.517,0.49],[0.544,0.533],[0.493,0.561],[0.395,0.389],[0.181,0.107],[0.414,0.038],[0.372,0.013],[0.27,0.02],[0.168,0.011],[0.343,0.091],[0.672,0.372],[0.604,0.681],[0.51,0.614],[0.385,0.435],[0.83,0.42],[0.772,0.625],[0.507,0.389],[0.587,0.223],[0.774,0.396],[0.597,0.309],[0.555,0.287],[0.507,0.23],[0.549,0.203],[0.669,0.21],[0.481,0.199],[0.638,0.133],[0.679,0.118],[0.957,0.325],[0.834,0.641],[0.566,0.418],[0.365,0.393],[0.662,0.462],[0.602,0.613],[0.317,0.403],[0.335,0.279],[0.241,0.171],[0.136,0.033],[0.252,0.005],[0.49,0.004],[0.402,0.002],[0.22,0.002],[0.034,0.002],[0.027,0.001],[0.023,0.001],[0.045,0.001],[0.108,0.001],[0.116,0.001],[0.218,0.001],[0.147,0.001],[0.146,0.002],[0.247,0.003],[0.405,0.004],[0.55,0.137],[0.783,0.456],[0.722,0.648],[0.577,0.423],[0.683,0.435],[0.479,0.422],[0.499,0.434],[0.475,0.364],[0.252,0.168],[0.683,0.059],[0.438,0.014],[0.283,0.009],[0.267,0.007],[0.478,0.16],[0.756,0.453],[0.659,0.524],[0.584,0.404],[0.533,0.447],[0.557,0.421],[0.487,0.372],[0.422,0.117],[0.406,0.025],[0.54,0.025],[0.181,0.016],[0.151,0.007],[0.06,0.015],[0.687,0.204],[0.682,0.564],[0.557,0.458],[0.448,0.41],[0.353,0.421],[0.629,0.516],[0.626,0.622],[0.574,0.306],[0.511,0.165],[0.499,0.047],[0.593,0.012],[0.658,0.009],[0.633,0.008],[0.654,0.017],[0.481,0.008],[0.468,0.003],[0.558,0.005],[0.73,0.185],[0.702,0.44],[0.624,0.472],[0.663,0.44],[0.756,0.478],[0.869,0.596],[0.63,0.481],[0.289,0.331],[0.302,0.313],[0.461,0.369],[0.55,0.313],[0.426,0.147],[0.468,0.021],[0.311,0.005],[0.085,0.002],[0.041,0.001],[0.037,0.001],[0.408,0.007],[0.467,0.007],[0.312,0.005],[0.314,0.003],[0.302,0.005],[0.224,0.004],[0.15,0.003],[0.129,0.004],[0.224,0.021],[0.781,0.267],[0.815,0.508],[0.547,0.394],[0.554,0.344],[0.575,0.361],[0.384,0.288],[0.435,0.366],[0.262,0.233],[0.487,0.077],[0.56,0.038],[0.364,0.032],[0.381,0.021],[0.426,0.048],[0.839,0.326],[0.637,0.373],[0.615,0.445],[0.625,0.344],[0.722,0.438],[0.755,0.46],[0.614,0.336],[0.404,0.099],[0.431,0.024],[0.398,0.019],[0.238,0.009],[0.285,0.007],[0.349,0.044],[0.853,0.311],[0.522,0.454],[0.605,0.429],[0.634,0.407],[0.775,0.558],[0.832,0.61],[0.665,0.461],[0.557,0.183],[0.578,0.059],[0.497,0.004],[0.625,0.002],[0.649,0.003],[0.536,0.005],[0.503,0.004],[0.485,0.004],[0.509,0.002],[0.519,0.022],[0.852,0.228],[0.695,0.555],[0.567,0.403],[0.613,0.423],[0.747,0.524],[0.925,0.557],[0.838,0.422],[0.618,0.275],[0.643,0.407],[0.686,0.361],[0.428,0.162],[0.394,0.044],[0.301,0.023],[0.269,0.017],[0.263,0.013],[0.234,0.015],[0.223,0.014],[0.635,0.03],[0.215,0.012],[0.072,0.006],[0.049,0.002],[0.139,0.004],[0.064,0.004],[0.312,0.004],[0.619,0.005],[0.586,0.132],[0.96,0.501],[0.763,0.791],[0.553,0.567],[0.534,0.45],[0.551,0.579],[0.496,0.544],[0.429,0.362],[0.331,0.065],[0.589,0.041],[0.345,0.024],[0.289,0.01],[0.368,0.005],[0.488,0.176],[0.913,0.458],[0.767,0.786],[0.529,0.427],[0.543,0.439],[0.665,0.57],[0.675,0.419],[0.489,0.104],[0.372,0.015],[0.517,0.01],[0.285,0.007],[0.161,0.008],[0.272,0.012],[0.591,0.243],[0.731,0.518],[0.59,0.733],[0.373,0.402],[0.523,0.452],[0.77,0.637],[0.784,0.833],[0.467,0.209],[0.483,0.028],[0.478,0.009],[0.379,0.002],[0.472,0.003],[0.548,0.003],[0.653,0.006],[0.73,0.004],[0.776,0.004],[0.608,0.005],[0.699,0.171],[0.761,0.525],[0.74,0.701],[0.751,0.505],[0.586,0.382],[0.9,0.421],[0.668,0.538],[0.494,0.25],[0.575,0.257],[0.535,0.336],[0.722,0.562],[0.482,0.24],[0.374,0.041],[0.367,0.013],[0.294,0.008],[0.252,0.005],[0.274,0.005],[0.435,0.018],[0.629,0.014],[0.263,0.011],[0.218,0.009],[0.211,0.005],[0.279,0.008],[0.078,0.005],[0.03,0.003],[0.071,0.013],[0.68,0.316],[0.815,0.592],[0.61,0.571],[0.419,0.358],[0.493,0.481],[0.461,0.498],[0.365,0.309],[0.37,0.104],[0.336,0.041],[0.683,0.027],[0.4,0.02],[0.394,0.013],[0.43,0.024],[0.789,0.33],[0.625,0.397],[0.507,0.371],[0.463,0.408],[0.478,0.443],[0.421,0.463],[0.377,0.391],[0.176,0.128],[0.294,0.042],[0.47,0.015],[0.288,0.021],[0.208,0.017],[0.14,0.031],[0.696,0.293],[0.668,0.69],[0.574,0.676],[0.399,0.49],[0.624,0.337],[0.845,0.549],[0.611,0.473],[0.49,0.149],[0.743,0.35],[0.671,0.317],[0.623,0.299],[0.549,0.271],[0.432,0.234],[0.812,0.249],[0.489,0.236],[0.582,0.198],[0.683,0.134],[0.944,0.262],[0.912,0.59],[0.639,0.447],[0.469,0.421],[0.478,0.473],[0.809,0.54],[0.643,0.585],[0.42,0.207],[0.548,0.331],[0.636,0.527],[0.472,0.534],[0.562,0.589],[0.597,0.634],[0.543,0.503],[0.527,0.171],[0.513,0.018],[0.39,0.005],[0.31,0.004],[0.548,0.003],[0.606,0.003],[0.565,0.003],[0.495,0.004],[0.416,0.002],[0.326,0.002],[0.419,0.004],[0.541,0.059],[0.844,0.376],[0.759,0.643],[0.565,0.375],[0.544,0.42],[0.536,0.388],[0.435,0.379],[0.378,0.356],[0.353,0.208],[0.566,0.093],[0.559,0.036],[0.38,0.013],[0.296,0.007],[0.414,0.092],[0.744,0.355],[0.587,0.458],[0.566,0.402],[0.588,0.442],[0.623,0.457],[0.634,0.456],[0.498,0.234],[0.456,0.04],[0.603,0.027],[0.336,0.024],[0.19,0.011],[0.112,0.006],[0.414,0.12],[0.768,0.41],[0.606,0.523],[0.39,0.352],[0.396,0.415],[0.593,0.487],[0.633,0.689],[0.533,0.335],[0.526,0.182],[0.454,0.073],[0.569,0.007],[0.721,0.002],[0.751,0.004],[0.758,0.005],[0.558,0.004],[0.475,0.005],[0.527,0.004],[0.649,0.116],[0.817,0.358],[0.6,0.492],[0.563,0.424],[0.647,0.412],[0.84,0.569],[0.63,0.47],[0.35,0.324],[0.35,0.359],[0.459,0.459],[0.583,0.358],[0.484,0.166],[0.452,0.025],[0.424,0.006],[0.142,0.004],[0.043,0.002],[0.037,0.001],[0.204,0.004],[0.572,0.01],[0.339,0.01],[0.315,0.008],[0.312,0.004],[0.277,0.004],[0.152,0.003],[0.143,0.003],[0.148,0.008],[0.666,0.172],[0.863,0.436],[0.622,0.534],[0.59,0.399],[0.632,0.462],[0.447,0.301],[0.365,0.387],[0.363,0.34],[0.249,0.102],[0.654,0.04],[0.39,0.023],[0.372,0.022],[0.38,0.015],[0.675,0.265],[0.822,0.457],[0.635,0.57],[0.631,0.393],[0.772,0.502],[0.747,0.469],[0.658,0.417],[0.458,0.175],[0.312,0.043],[0.539,0.029],[0.276,0.022],[0.294,0.012],[0.292,0.011],[0.717,0.221],[0.652,0.373],[0.574,0.487],[0.606,0.366],[0.75,0.495],[0.811,0.525],[0.751,0.55],[0.589,0.206],[0.592,0.094],[0.515,0.022],[0.615,0.004],[0.58,0.003],[0.443,0.003],[0.506,0.004],[0.467,0.002],[0.485,0.003],[0.482,0.007],[0.774,0.177],[0.728,0.437],[0.643,0.384],[0.621,0.352],[0.653,0.397],[0.852,0.488],[0.869,0.473],[0.677,0.25],[0.589,0.339],[0.696,0.387],[0.578,0.246],[0.408,0.052],[0.358,0.022],[0.304,0.013],[0.281,0.019],[0.212,0.015],[0.236,0.013],[0.51,0.029],[0.318,0.021],[0.071,0.007],[0.046,0.003],[0.08,0.002],[0.116,0.003],[0.219,0.003],[0.55,0.005],[0.512,0.039],[0.899,0.451],[0.789,0.699],[0.626,0.73],[0.511,0.457],[0.527,0.561],[0.504,0.558],[0.462,0.434],[0.311,0.168],[0.541,0.035],[0.549,0.024],[0.296,0.008],[0.341,0.006],[0.381,0.06],[0.8,0.364],[0.705,0.669],[0.613,0.493],[0.509,0.395],[0.684,0.541],[0.643,0.455],[0.544,0.147],[0.371,0.016],[0.458,0.007],[0.427,0.006],[0.23,0.004],[0.217,0.005],[0.491,0.14],[0.821,0.469],[0.626,0.741],[0.36,0.439],[0.401,0.396],[0.79,0.595],[0.868,0.814],[0.483,0.415],[0.529,0.039],[0.545,0.017],[0.451,0.005],[0.467,0.002],[0.523,0.002],[0.616,0.005],[0.668,0.008],[0.77,0.006],[0.672,0.005],[0.544,0.075],[0.759,0.444],[0.719,0.696],[0.769,0.557],[0.627,0.469],[0.888,0.423],[0.804,0.598],[0.532,0.351],[0.557,0.225],[0.572,0.294],[0.647,0.506],[0.53,0.335],[0.389,0.049],[0.336,0.02],[0.293,0.007],[0.248,0.004],[0.191,0.004],[0.321,0.019],[0.645,0.027],[0.303,0.01],[0.214,0.006],[0.207,0.005],[0.219,0.006],[0.124,0.003],[0.032,0.003],[0.045,0.005],[0.467,0.183],[0.871,0.522],[0.701,0.687],[0.419,0.393],[0.532,0.485],[0.464,0.516],[0.425,0.401],[0.367,0.163],[0.332,0.041],[0.651,0.037],[0.436,0.029],[0.39,0.026],[0.394,0.021],[0.599,0.224],[0.789,0.368],[0.564,0.463],[0.502,0.417],[0.534,0.471],[0.501,0.521],[0.442,0.529],[0.245,0.255],[0.171,0.075],[0.51,0.03],[0.291,0.017],[0.231,0.014],[0.118,0.012],[0.6,0.161],[0.641,0.566],[0.566,0.665],[0.47,0.551],[0.512,0.275],[0.791,0.487],[0.672,0.573],[0.463,0.219],[0.663,0.269],[0.638,0.313],[0.627,0.266],[0.566,0.247],[0.464,0.234],[0.725,0.221],[0.456,0.224],[0.519,0.179],[0.671,0.12],[0.818,0.196],[0.918,0.444],[0.789,0.559],[0.533,0.377],[0.436,0.409],[0.735,0.521],[0.707,0.679],[0.387,0.265],[0.5,0.297],[0.603,0.426],[0.518,0.51],[0.544,0.545],[0.571,0.588],[0.561,0.559],[0.398,0.179],[0.571,0.012],[0.453,0.003],[0.418,0.003],[0.526,0.003],[0.655,0.004],[0.52,0.003],[0.543,0.003],[0.434,0.002],[0.359,0.002],[0.318,0.004],[0.465,0.007],[0.538,0.082],[0.578,0.279],[0.574,0.367],[0.587,0.357],[0.619,0.369],[0.484,0.405],[0.47,0.399],[0.362,0.269],[0.365,0.095],[0.723,0.036],[0.376,0.017],[0.217,0.016],[0.227,0.015],[0.354,0.191],[0.493,0.285],[0.538,0.311],[0.561,0.371],[0.547,0.411],[0.49,0.431],[0.424,0.291],[0.315,0.047],[0.412,0.018],[0.408,0.022],[0.185,0.018],[0.104,0.012],[0.115,0.036],[0.72,0.225],[0.562,0.379],[0.416,0.378],[0.314,0.37],[0.369,0.41],[0.486,0.438],[0.594,0.349],[0.453,0.191],[0.333,0.069],[0.398,0.028],[0.473,0.009],[0.486,0.007],[0.431,0.006],[0.459,0.008],[0.338,0.002],[0.416,0.002],[0.497,0.015],[0.745,0.242],[0.508,0.409]];
+      const coreEl = document.getElementById("bg-bloom-core");
+      const drive = { t: 0 };
+      tl.to(drive, {
+        t: S.end, duration: S.end, ease: "none",
+        onUpdate: () => {
+          const i = Math.min(AUDIO.length - 1, Math.max(0, Math.round(drive.t * 30)));
+          const rms = AUDIO[i][0];
+          const bass = AUDIO[i][1];
+          const t = drive.t;
+          let env = 1;
+          if (t > 16.5 && t <= 17.0) env = 1 - 0.7 * ((t - 16.5) / 0.5);
+          else if (t > 17.0 && t <= 23.35) env = 0.3;
+          else if (t > 23.35 && t <= 23.8) env = 0.3 + 0.7 * ((t - 23.35) / 0.45);
+          else if (t > 28.05) env = Math.max(0, 1 - (t - 28.05) / 0.8);
+          const e = env * env;
+          coreEl.style.opacity = (0.06 + (bass * 0.30 + rms * 0.10) * e).toFixed(3);
+          coreEl.style.transform = "scale(" + (0.90 + bass * 0.14 * e).toFixed(3) + ")";
+        },
+      }, 0);
+
+      /* ------------------------------------------------------------------
+         Subtitulos, estilo video viral. Un solo driver determinista: no hay
+         un tween por palabra, se pinta segun el tiempo. La palabra que suena
+         va en lima y un pelo mas grande; el resto en blanco.
+         Los tiempos salen de la alineacion POR CARACTER que devuelve
+         ElevenLabs, asi que la sincronia es medida, no estimada.
+      ------------------------------------------------------------------ */
+      const SUBS = [{"s": 0.7, "e": 1.679, "w": [[0.8, 1.359, "VEA,"], [1.359, 1.434, "LA"], [1.467, 1.703, "VUELTA"], [1.724, 1.768, "ES"]]}, {"s": 1.689, "e": 2.426, "w": [[1.789, 2.348, "SIMPLE."]]}, {"s": 2.436, "e": 3.544, "w": [[2.536, 2.741, "ENTRE"], [2.762, 2.783, "A"], [2.816, 2.858, "LA"], [2.902, 3.6, "PÁGINA,"]]}, {"s": 3.554, "e": 4.221, "w": [[3.654, 3.793, "MIRE"], [3.826, 4.019, "CUÁLES"], [4.063, 4.245, "BARES"], [4.267, 4.31, "LE"]]}, {"s": 4.231, "e": 5.425, "w": [[4.331, 4.579, "ENTRARON"], [4.632, 4.654, "A"], [4.697, 4.868, "ESTA"], [4.901, 5.535, "VUELTA,"]]}, {"s": 5.435, "e": 6.492, "w": [[5.535, 5.6, "Y"], [5.665, 6.03, "ESCOJA"], [6.116, 6.621, "UNO."]]}, {"s": 6.502, "e": 7.502, "w": [[6.602, 6.978, "PÁRCHESE"], [7.01, 7.171, "COMO"], [7.193, 7.58, "SIEMPRE."]]}, {"s": 7.512, "e": 8.609, "w": [[7.612, 8.225, "CONSUMIENDO"], [8.29, 8.429, "AHÍ"], [8.462, 8.526, "YA"], [8.547, 8.677, "ESTÁ"]]}, {"s": 8.619, "e": 9.878, "w": [[8.719, 9.451, "PONIENDO,"], [9.451, 9.515, "Y"], [9.591, 9.698, "LAS"], [9.741, 9.967, "FOTOS"]]}, {"s": 9.888, "e": 11.13, "w": [[9.988, 10.042, "LE"], [10.085, 10.256, "QUEDAN"], [10.289, 10.332, "DE"], [10.386, 11.117, "RECUERDO."]]}, {"s": 11.14, "e": 12.27, "w": [[11.24, 11.573, "DESPUÉS"], [11.595, 11.982, "VUELVA"], [12.068, 12.143, "Y"], [12.196, 12.336, "MIRE"]]}, {"s": 12.28, "e": 13.449, "w": [[12.38, 12.627, "CUÁNTO"], [12.67, 12.852, "PUSO"], [12.874, 13.433, "USTED."]]}, {"s": 13.459, "e": 15.03, "w": [[13.559, 13.904, "NOSOTROS"], [13.946, 14.268, "COMPRAMOS"], [14.312, 14.355, "EL"], [14.387, 15.14, "MATERIAL,"]]}, {"s": 15.04, "e": 16.75, "w": [[15.14, 15.204, "Y"], [15.268, 15.698, "PUBLICAMOS"], [15.72, 15.763, "LA"], [15.795, 16.483, "FACTURA."]]}];
+      const subEls = SUBS.map((c, k) => ({
+        box: document.getElementById("sub-" + k),
+        words: c.w.map((_, j) => document.getElementById("sw-" + k + "-" + j)),
+      }));
+      const subDrive = { t: 0 };
+      tl.to(subDrive, {
+        t: S.end, duration: S.end, ease: "none",
+        onUpdate: () => {
+          const t = subDrive.t;
+          for (let k = 0; k < SUBS.length; k++) {
+            const c = SUBS[k], el = subEls[k];
+            const activo = t >= c.s && t < c.e;
+            // entrada y salida cortas, para que no parpadee en los cortes
+            let op = 0;
+            if (activo) op = Math.min(1, (t - c.s) / 0.12, (c.e - t) / 0.12);
+            el.box.style.opacity = op.toFixed(3);
+            if (op <= 0) continue;
+            for (let j = 0; j < c.w.length; j++) {
+              const w = c.w[j];
+              const on = t >= w[0] - 0.04 && t < w[1] + 0.06;
+              const s = el.words[j].style;
+              s.color = on ? "oklch(0.917 0.226 129)" : "oklch(0.982 0.002 247.8)";
+              s.transform = on ? "scale(1.06)" : "scale(1)";
+            }
+          }
+        },
+      }, 0);
+
+      window.__timelines["vertical"] = tl;
+    </script>
+  </body>
+</html>

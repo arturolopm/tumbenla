@@ -1,20 +1,38 @@
 # Tumbenla — producto
 
-Directorio de bares y discotecas que ponen una parte de sus ventas en material
-de construccion. La gente sale como sale siempre; el sitio pone su parte y nos
-manda el recibo; nosotros lo verificamos, compramos el material y publicamos la
-factura. Son dos eslabones, no uno, y los dos se ven: lo que el sitio dice que
-entrego (verificado por nosotros) y en que lo gastamos.
+Bares y discotecas que ponen un trago en su carta con una parte del precio
+destinada a material de construccion. La gente sale como sale siempre; nosotros
+compramos el material y publicamos la factura. Se ven los dos eslabones: lo que
+entro por cada sitio y en que lo gastamos.
 
-**La plata no pasa por la app.** No cobramos, no procesamos pagos, no guardamos
-tarjetas. Lo unico que tenemos es la confianza, y por eso casi todas las
-decisiones de abajo se resuelven a favor de no afirmar mas de lo que sabemos.
+El camino, y es uno solo, es **vender un trago**: el sitio arma un producto (un coctel
+nuevo, o una cerveza, un combo o una botella que ya tenia en su carta) y dice en
+la descripcion como se reparte cada peso. La persona lo pide, lo paga —en la app
+o en la barra— y le sale un QR; el mesero lo escanea para entregarlo. Ese
+escaneo es el hecho que mueve todo lo demas.
+
+**Por la app pasa plata, y solo para eso.** Se cobra un producto concreto de un
+sitio concreto, con su reparto declarado antes de pagar. No hay planes, no hay
+suscripcion, y no guardamos tarjetas: eso lo hace la pasarela. Lo unico que
+tenemos sigue siendo la confianza, y por eso casi todas las decisiones de abajo
+se resuelven a favor de no afirmar mas de lo que sabemos.
+
+El **compromiso por porcentaje de ventas** —el modelo viejo, en el que el sitio
+prometia una parte de "sus ventas", reportaba lo que entrego y nos mandaba el
+recibo— **se retiro** (decision 34). No quedo como camino alterno: un porcentaje
+sobre una caja que no auditamos habia que creerlo, y un trago con su reparto
+escrito deja rastro. Lo que un sitio puso es, desde ahora, lo que vendio su
+carta.
 
 Prueba de concepto: **Manizales**. Mas ciudades despues.
 
 > Este archivo es el mapa vivo del producto. El plan de construccion original
 > esta en `~/.claude/plans/partitioned-crunching-hartmanis.md` y ya quedo
 > parcialmente desactualizado; cuando los dos se contradigan, manda este.
+>
+> Producto es uno de tres departamentos. La carta organizacional esta en
+> `org/ORG.md`; crecimiento y retencion viven en `org/`. Este archivo guarda las
+> conclusiones; los intentos viven en `org/crecimiento/EXPERIMENTOS.md`.
 
 ---
 
@@ -26,31 +44,58 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Sistema de diseno Stitch "Calor de Barrio" | Construido |
 | Mapa MapLibre con pines, tooltip y leyenda | Construido |
 | Panel de admin: sitios, estados, selector de pin, geocoding | Construido |
-| `/quiero-poner` con correo pre-redactado | Construido |
+| `/quiero-poner` con correo pre-redactado | **Retirado** (decision 36) |
 | Seccion "Le entro" con las dos entradas | Construido |
-| `/mi-historia`: resumen, estimado, galeria | Construido |
+| `/mi-historia`: resumen de pedidos pagados, galeria | Construido |
 | Esquema de fiestas: `party_night`, `party_photo`, `photo_claim` | Construido |
 | Reclamar fotos, punta a punta | Construido |
 | Entrar y salir, y volver a donde estabas | Construido |
 | Roles de sitio: `venue_member`, `venue_invitation`, panel `/panel` | Construido |
 | Alta de sitio: solicitud corta verificada por DM | Construido |
 | Menu de cuenta (cambiar de sombrero) en las tres barras | Construido |
-| Aportes del sitio: reporte, recibo y verificacion | Construido |
+| Liquidación del sitio y transparencia | Construida y probada localmente: deducciones revisadas, asignación exacta, transferencias manuales con evidencia y vistas V2. Falta ejecutar la operación real en preview/live. |
+| Alta en 4 campos, aprobación sin cuenta y reclamo por correo verificado | Construido (decisión 35) |
+| Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
-| Gate de ciudad (Manizales si, resto no) | **A medias** |
+| Gate de ciudad (Manizales si, resto no) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
+| **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido y probado en local. El adaptador ePayco Hosted Smart Checkout v2, la verificación autoritativa, la reconciliación y la recuperación están implementados; faltan aprobación comercial/legal, evidencia de cuenta y prueba en preview. |
+| Compras de material y trazabilidad de la fundación | Administración, evidencia privada/pública, atribución limitada por monto y vistas V2 construidas y probadas localmente; falta validar R2 real. |
+| Harness local por roles: plataforma, dueño, personal y rumbero | Automatizado con 91 pruebas Bun/PostgreSQL y Playwright sobre un build de producción aislado; ver `docs/validation-harness.md` |
 
 ---
+
+### Gate de ciudad implementado (2026-09-05)
+
+`src/components/sitios/city-gate.tsx` envuelve `/sitios`: Manizales o ciudad
+sin reconocer muestran el contenido; una ciudad conocida en camino muestra el
+aviso, las ciudades en camino y el enlace a la activa mas cercana. La prioridad
+es `?ciudad=` → eleccion manual en localStorage → cookie de `proxy.ts`. Un override
+vacio o desconocido abre el contenido y persiste como sin detectar; borrar
+`tumbenla:ciudad` de localStorage permite volver a la deteccion por IP.
+El almacenamiento bloqueado o la cookie malformada no impiden abrir el contenido.
+
+La suscripcion cliente a la URL queda dentro de `Suspense`; la pagina conserva
+`revalidate = 300` y no lee cabeceras ni searchParams en el servidor. El HTML
+inicial/fallback muestra el contenido hasta resolver la ciudad en el cliente.
+Pruebas sin dependencias: `bun scripts/test-city-gate.ts`; TypeScript y Biome
+focalizado pasan. `bun run build` completo pasó con PostgreSQL local y confirma
+`/sitios` como ruta estática/ISR a 300 s. Recorrido de navegador local verificado:
+Pereira muestra el gate y CTA; Manizales muestra el explorador; el CTA conserva
+`vista=mapa` y cambia a Manizales. Falta validar en preview la geolocalización
+por IP y la cookie `tumbenla-geo` que `proxy.ts` escribe con las cabeceras de
+Vercel.
 
 ## Los tres actores
 
 | Actor | Como se decide | Donde vive | Que puede |
 |---|---|---|---|
-| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios y aportes, moderar cualquier foto de la red, comprar material |
-| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | noches y fotos, aprobar lo que sube la gente, reportar lo que entrego. Solo el dueno maneja el equipo |
+| **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios, consultar la carta, liquidar saldos, moderar cualquier foto de la red, comprar material |
+| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | armar la carta y **escanear** cada entrega, noches y fotos, aprobar lo que sube la gente. Solo el dueno maneja el equipo y ve la cuenta |
 | **Rumbero** | cualquier sesion | publico + `/mi-historia` | reclamar sus fotos, subir las suyas, reportar una en la que sale |
 
-Nadie publica su propio sitio y nadie verifica su propio aporte. Esas dos son de
-la plataforma y son lo unico que respalda lo que el mapa afirma.
+Nadie publica su propio sitio. Esa verificacion es de la plataforma y es lo que
+respalda lo que el mapa afirma. Un sitio ya aprobado publica directamente sus
+productos, siempre que cada uno destine al menos 40% para reconstruir.
 
 ---
 
@@ -58,7 +103,20 @@ la plataforma y son lo unico que respalda lo que el mapa afirma.
 
 Estan aca para no volver a discutirlas cada dos semanas.
 
-1. **Solo directorio.** La plata no pasa por la app.
+1. **Se vende un trago, y la plata pasa por la app.** *(Reemplaza a "Solo
+   directorio. La plata no pasa por la app", que fue la decision fundacional del
+   producto.)* Se cobra un producto concreto de un sitio concreto, con su
+   reparto escrito antes de pagar, y se entrega contra un QR de un solo uso. Lo
+   que se cobra no es un servicio nuestro: es el trago del bar, y por eso el
+   reparto va en la descripcion y no en una letra chiquita.
+   **Por que se reabrio:** el modelo viejo pedia que el sitio decidiera poner,
+   calculara cuanto, y despues nos mandara el recibo — tres actos de voluntad
+   despues de la venta, todos opcionales, todos manuales. Este pide uno solo y
+   ocurre durante la venta. *(El viejo primero se corrio a un lado y despues se
+   retiro del todo; ver decision 34.)*
+   **Lo que NO cambia:** no hay planes ni suscripcion, no guardamos tarjetas, y
+   ninguna cifra se afirma sin respaldo. Cobrar no nos da licencia para decir
+   mas de lo que sabemos; nos da mas cosas que tenemos que poder probar.
 2. **Los recibos son publicos.** Iniciar sesion AGREGA una capa personal; nunca
    restringe. Cerrar `/transparencia` detras del login le quitaria el argumento
    justo a quien todavia no confia lo suficiente como para crear una cuenta.
@@ -112,27 +170,42 @@ Estan aca para no volver a discutirlas cada dos semanas.
     tiene facturacion, ni sub-equipos, ni cambio de contexto. `auth.ts:200` ya
     explicaba por que se habia quitado; se queda quitado. El costo aceptado fue
     escribir nosotros el flujo de invitacion.
-19. **El sitio reporta, nosotros verificamos, nosotros compramos.** Un aporte
-    `submitted` no existe para el publico. Publicar una cifra que nos dieron sin
-    comprobarla seria afirmar bajo nuestro nombre algo que no comprobamos.
+19. **Nosotros verificamos, nosotros compramos.** *(Antes empezaba con "El sitio
+    reporta". Ese primer acto se murio con la decision 34: el sitio ya no
+    reporta nada, porque lo que puso sale del libro, no de un formulario que
+    llena el.)* Un aporte que no hayamos verificado no existe para el publico.
+    Publicar una cifra que nos dieron sin comprobarla seria afirmar bajo nuestro
+    nombre algo que no comprobamos. Lo que se verifica hoy es **la compra del
+    material** —la factura contra la que se publica en `/transparencia`—, no el
+    reporte de un bar.
 20. **Una solicitud de alta NO crea el sitio.** *(Reemplaza a la version
     anterior de esta decision, que daba la propiedad en el acto al registrar.)*
-    El formulario ya no pide ni el compromiso ni las coordenadas, y
-    `venue.pledge_type`, `latitude` y `longitude` son `NOT NULL`: no hay fila
-    que insertar. El sitio nace cuando un operador aprueba y completa lo que
-    falta. De paso tapa un hueco real: con propiedad inmediata, cualquiera
-    apartaba el nombre de un bar ajeno y el buscador le decia al dueno de
-    verdad "ya tiene dueno".
-20b. **El DM verifica la CUENTA; el correo citado verifica a la PERSONA.**
+    El formulario no pide las coordenadas, y `latitude` y `longitude` son
+    `NOT NULL`: no hay fila que insertar. El sitio nace cuando un operador
+    aprueba y completa lo que falta. De paso tapa un hueco real: con propiedad
+    inmediata, cualquiera apartaba el nombre de un bar ajeno y el buscador le
+    decia al dueno de verdad "ya tiene dueno".
+    *(El guardarrail eran tres columnas `NOT NULL`, no dos: `pledge_type` era la
+    tercera y se fue con la decision 34. Lat/lng bastan, pero conviene saber que
+    el margen se angosto.)* La aprobacion escribe sitio, solicitud y —solo si
+    ya existe una cuenta confiable— su membresia de dueno en una transaccion.
+    Una solicitud aprobada sin dueno es valida: no publica el sitio por si sola
+    y espera el reclamo automatico por correo verificado.
+20b. **El DM verifica el control de Instagram; el correo citado identifica a la
+    persona.**
     Que el mensaje llegue desde el Instagram del bar prueba que quien escribe
     controla esa cuenta, no que sea quien lleno el formulario. Por eso el DM
     tiene que citar el `contactEmail` de la solicitud. Hacen falta las dos, o no
     se aprueba: sin la segunda, quien maneja las redes de un bar podria quedarse
-    con el sitio de otro.
+    con el sitio de otro. **No hace falta una cuenta antes de aprobar:** esa
+    comprobacion humana ya cubre la autorizacion operativa; la cuenta solo
+    entrega el panel despues de que su correo exacto este verificado.
 20c. **El formulario largo de un sitio no se le muestra a nadie de la calle.**
     Estuvo colgado en `/registrar-sitio/nuevo` y era la peor pantalla del
-    producto. Ademas su buscador de direcciones llama a `/api/geocode`, que
-    exige ser operador y le respondia 404. Vive solo en los dos paneles.
+    producto. Vive solo en los dos paneles. Su buscador de direcciones llama a
+    `/api/geocode`: entra el operador al crear un sitio y el dueno verificado
+    solo al editar uno que ya le pertenece. El alta publica sigue teniendo
+    cuatro campos y ninguna direccion.
 21. **Una foto que sube un rumbero solo es reclamable cuando el sitio la
     aprueba.** Es lo que impide subir fotos de un bar donde uno nunca estuvo y
     reclamarlas para inflarse las noches. El portero es el sitio.
@@ -152,8 +225,179 @@ Estan aca para no volver a discutirlas cada dos semanas.
     lee lleva su acento y su enye. Los comentarios, los nombres de variable y
     los valores de enum guardados en la base (`coctel`, `terminos`) se quedan en
     ASCII, y cuando un enum se muestra se traduce con un mapa de etiquetas
-    (`UNIT_LABEL` en `src/components/sitios/pledge-badge.tsx`). Asi un acento
-    nunca llega a una URL, a una consulta ni a una migracion.
+    (`KIND_LABEL` en `src/lib/comercio/types.ts`). Asi un acento nunca llega a
+    una URL, a una consulta ni a una migracion.
+    *(El ejemplo canonico era `UNIT_LABEL` en `pledge-badge.tsx`, que se borro
+    con la decision 34. `KIND_LABEL` es ademas mejor ejemplo: cubre sus seis
+    valores, mientras que `UNIT_LABEL` tenia una sola entrada.)*
+26. **Toda orden lleva un solo QR visible, y el mesero no sabe cual esta pagada hasta despues de
+    escanear.** Es el mecanismo entero, no un detalle de implementacion. Un
+    mesero que cobra en la barra y nos dice que nunca entrego se queda con todo;
+    la defensa no es pedirle al cliente que verifique nada, es que no escanear
+    una orden de barra le borra una deuda pero no escanear una de app le hace
+    perder su propia parte, y como no distingue cual tiene enfrente, la unica
+    politica segura es escanear todas. **La incertidumbre hace el trabajo que
+    haria una auditoria.** De aqui salen las dos siguientes, que no se pueden
+    quitar sin tumbar esta.
+27. **Se escanea UNA VEZ por orden, ANTES de cobrar, y sin escaneo no hay credito.** La pantalla
+    del escaneo confirma todas las unidades de esa orden y le dice al mesero si cobra el total
+    ("YA PAGADO, entrega" o "COBRAR $60.000"); si cobrara primero ya sabria cual es y la decision
+    26 se cae. Y la parte del sitio en una orden pagada en la app se le abona **al redimir**, no al
+    pagar: es lo que vuelve caro no escanear.
+28. **Al comprador solo se le pide mostrar un QR por orden.** Nada de confirmar, calificar
+    ni marcar recibido. La confirmacion en vivo —la pantalla pasa a "Listo" en el
+    momento del escaneo— lo vuelve un sensor sin pedirle trabajo: si no cambio,
+    dice "no me salio" ahi mismo. Todo lo demas lo hacemos nosotros, lo hace el
+    sitio, o se resuelve por disputa.
+29. **Se compra sin cuenta, pero la cuenta se OFRECE con su razon.** Nombre y
+    correo. Es la decision 2 aplicada al pago: iniciar sesion AGREGA, nunca
+    restringe, y un registro con verificacion por correo entre la persona y el
+    trago —parada en una barra, con mala senal— es donde se pierde la venta.
+    En el pedido se muestra la eleccion de frente, "con cuenta" o "como
+    invitado", y **con cuenta viene marcado**: la cuenta es lo que junta las
+    fotos de la noche, los tragos pedidos y a donde fue la plata en un solo
+    lugar. Pero **no bloquea**: la orden se crea igual y la cuenta se termina en
+    la pantalla del QR, mientras la persona espera el trago.
+29b. **Un pedido de invitado se amarra despues, por el correo VERIFICADO.**
+    *(Sin esto, "seguir como invitado" seria un callejon sin salida y la
+    decision 29 estaria prometiendo una historia que nace incompleta: nadie va a
+    volver a pedir el trago de hace tres semanas.)* Al entrar, todo pedido con
+    ese correo y sin dueno queda amarrado a la cuenta. **Exige `emailVerified`, y
+    eso es lo que lo hace seguro:** el correo de un pedido lo escribe cualquiera
+    en un formulario publico, asi que sin esa condicion alguien se registra con
+    el correo ajeno y se queda con el historial de otro —que dice donde estuvo,
+    cuando y con quien—. Vive en `src/lib/comercio/vincular.ts` y corre en
+    `/entrar`, que es por donde pasa todo el que inicia sesion.
+30. **El precio y el porcentaje de reparto se congelan en la orden.** Los
+    campos comerciales que la persona vio se copian al comprar. Si el sitio
+    cambia el precio o el porcentaje manana, la orden vieja conserva esa promesa.
+    El porcentaje se conoce desde la compra; el valor exacto en pesos queda
+    pendiente hasta reconciliar las deducciones itemizadas y retenciones del
+    proveedor. Un reparto que se puede reescribir despues del hecho no es una
+    promesa, es un adorno.
+31. **La plataforma aprueba el sitio, no cada producto.** El dueno guarda sus
+    productos en borrador y los publica directamente cuando estan listos. La
+    regla que no se negocia es **minimo 40% para reconstruir**: la valida el
+    servidor y la base antes de que un producto pueda quedar publicado. Desde
+    50%, el producto aparece primero y destacado en la carta publica; si el
+    sitio puede, dejar 100% para reconstruir recibe la mayor visibilidad. Esto
+    conserva la verificacion que importa —quien es el bar— sin volver la carta
+    una cola de operacion.
+32. **Sin reclamar, el QR caduca a los 45 dias y no se asigna automaticamente.**
+    La orden conserva una obligacion de devolver el precio bruto completo a quien
+    lo pida; el sitio no cobra lo que no entrego. La asignacion exacta de impacto
+    permanece pendiente hasta reconciliar el bruto, las deducciones itemizadas y
+    las retenciones aplicables. El apartado de devolucion existe y esta a la
+    vista, y los costos no recuperables salen inicialmente de fondos operativos.
+33. **Quien trabaja en un sitio entra por el sitio, no por el sitio publico.**
+    La sesion tiene dos sombreros sobre la MISMA cuenta —salir de rumba cuelga
+    de `photo_claim`, trabajar cuelga de `venue_member`— y el que manda por
+    defecto es el de trabajo. En concreto: la barra publica pinta "Mi bar" con
+    enlace directo a `/panel/{slug}`, el control de cuenta muestra el NOMBRE
+    DEL SITIO en vez del de la persona, y ver el producto como rumbero pasa a
+    ser el acto secundario ("Verlo como rumbero"), no el primario.
+    **Y un mesero no ve el resumen del panel: `/panel/{slug}` lo redirige a
+    `/escanear`.** El resumen habla del perfil del sitio, su estado en el mapa
+    y su equipo —trabajo de dueno, sentado y de dia—; a quien atiende la barra
+    le aterrizaba en "Nombre, direccion, contacto" sin una sola mencion de
+    escanear, con la unica pantalla que necesita escondida detras de una barra
+    lateral colapsada en el telefono. Al dueno se le conserva el resumen, pero
+    encabezado por la tarjeta de escanear, porque tambien cubre la barra en una
+    noche movida.
+    **Por que importa:** escanear es la unica pantalla del producto que se abre
+    de pie, de noche y con alguien esperando. Cualquier paso entre la sesion y
+    esa pantalla se paga en la barra, y la decision 26 depende de que escanear
+    sea lo comodo: si no escanear es mas facil que escanear, el mecanismo del QR
+    indistinguible se cae solo.
+34. **Un bar no promete un porcentaje de sus ventas: pone un trago con su
+    reparto escrito.** *(Retira el compromiso general, que era el modelo
+    fundacional. Enmienda las decisiones 1, 19 y 20.)* Se van las columnas
+    `venue.pledge_*` y todo lo que las pintaba.
+    **Por que:** un porcentaje sobre "las ventas" no lo puede verificar nadie.
+    No auditamos la caja de ningun bar —`/terminos` ya lo admitia por escrito— y
+    el numero que salia en la tarjeta habia que creerlo. Un trago no: tiene
+    precio, tiene reparto declarado antes de pagar, tiene una orden y tiene un
+    escaneo. Se cambio una promesa que se cree por una que deja rastro, y eso es
+    lo unico coherente con la decision 5.
+    **Consecuencia que no es obvia:** lo que un sitio "ha puesto" deja de ser
+    algo que el sitio nos dice y pasa a ser algo que el libro calcula. Por eso
+    tambien se borra el auto-reporte de aportes: no habia como reportar sin
+    contradecir esto.
+35. **El formulario de alta solo pregunta lo que prueba que quien escribe es el
+    dueno, y la cuenta llega despues de aprobar.** Cuatro campos: nombre,
+    Instagram, correo y WhatsApp. Ni tipo, ni ciudad, ni direccion, ni los ocho
+    opcionales. Todo eso lo pone operacion al aprobar, o el bar despues en su
+    panel, cuando ya tiene algo que ganar llenandolo.
+    **Y no se pide cuenta para verlo.** Antes habia que registrarse Y verificar
+    el correo antes de ver el formulario: el paso mas caro iba de primero. Es la
+    decision 29 aplicada al otro lado del mercado —iniciar sesion AGREGA, nunca
+    restringe— y se amarra igual, por correo verificado, con el mismo mecanismo
+    de la decision 29b. Cuando operacion aprueba tras comprobar el DM y el
+    correo, crea el sitio aunque todavia no haya cuenta. Si ya hay una con ese
+    correo exacto y verificado, recibe `owner` en la aprobacion; si no, la
+    primera que lo verifique lo reclama al entrar. No hay invitacion que aceptar.
+    **El DM no desaparece, se corre de lugar.** La decision 20b sigue mandando:
+    sin el DM no se aprueba. Pero se cuenta DESPUES de enviar, no como una lista
+    de pasos futuros encima de un formulario vacio.
+36. **Una sola puerta para el dueno de un bar.** `/quiero-poner` se retira. Era
+    la puerta principal desde la portada y era un `mailto:` que no escribia nada
+    en la base, mientras el formulario de verdad no aparecia ni en la portada ni
+    en la barra de navegacion. O sea que el camino principal para registrar un
+    bar era redactar un correo a mano y esperar. Ahora la puerta es
+    `/registrar-sitio` y esta en la barra.
+37. **ePayco Hosted Smart Checkout v2 es el proveedor de cobro elegido para el
+    MVP colombiano; la salida de fondos será una transferencia bancaria manual
+    revisada.** El plan de implementación está autorizado. El checkout alojado
+    cobra la orden y deja las credenciales de tarjeta en ePayco. Tumbenla
+    reconcilia el bruto, cada deduccion itemizada y la retencion aplicable antes
+    de calcular el neto y cualquier asignacion. No hay split automatico en
+    checkout: la investigacion de Pagos Divididos se conserva como historial,
+    pero queda supersedida para este release. Musica para la Paz es solo una
+    candidata pendiente de verificacion como receptor de impacto; su recibo y la
+    compra de material verificada son hechos distintos. Abrir la cuenta comercial,
+    contratar, ejecutar transferencias reales y desplegar siguen bloqueados por
+    compuertas externas. El detalle vive en `docs/payment-provider-decision-brief.md`.
+    **Tumbenla no impone un tope monetario al pedido.** Un limite que ePayco aplique
+    por estado o configuracion de la cuenta es una compuerta del proveedor, no una
+    regla de la carta: se muestra como tal y se resuelve con ePayco, no rechazando
+    botellas de COP 700.000 en nuestro dominio. Si ePayco rechaza antes de crear la
+    sesion, el siguiente intento usa una idempotencia nueva. Si la sesion ya existe,
+    se vuelve a abrir esa misma sesion en vez de crear dos cobros que sigan pagables.
+38. **Cada sitio publicado arranca con COP 500.000 de cupo para cobrar en la
+    barra; Operación lo puede bajar hasta cero.** El cupo cubre la obligación
+    congelada del aporte, no el bruto completo de la venta. La primera orden de
+    barra materializa una política v1 auditada si el sitio nunca tuvo una; una
+    política manual existente —incluido un límite de cero o una suspensión—
+    siempre gana y el sistema no la reemplaza. La deuda vencida sigue bloqueando
+    pedidos nuevos y no deshabilita el pago por ePayco.
+39. **La transparencia pública resume el ciclo en tres cifras que sí se pueden comparar.**
+    `Total donado` suma exclusivamente la asignación final para reconstruir de unidades reales
+    entregadas y con cobro aprobado; nunca suma el ingreso completo, pruebas, legado sin verificar
+    ni cobros en disputa. `Ya entregado` es la parte de ese total atribuida, sin excederla, a compras
+    de material verificadas con recibo público. `Pendiente por entregar` es exactamente la
+    diferencia entre las dos. En `/mi-historia`, `Total gastado` muestra las unidades reales pagadas
+    y no devueltas de esa persona, mientras `Total donado` usa la misma asignación final. Los pedidos
+    `sandbox` y `legacy_unverified` siguen visibles para soporte y pruebas, pero rotulados y separados
+    de cualquier total real.
+    **Por qué:** las cuatro etapas contables siguen siendo necesarias internamente, pero juntas en la
+    pantalla hacían parecer que eran bolsas distintas o cifras para sumar. Las tres públicas contestan
+    cuánto entró para reconstruir, cuánto ya tiene factura y cuánto sigue esperando esa factura, sin
+    ocultar el intervalo operativo ni confundirlo con ingreso de Tumbenla.
+40. **Cada paso tiene que ganarse su friccion.** Antes de exigir un clic, un
+    campo, una pantalla o una espera, se escribe que riesgo irreductible evita y
+    por que una comprobacion anterior no lo cubre. Si una verificacion humana o
+    tecnica ya cubre ese riesgo, el paso se quita o se mueve al momento en que
+    si entrega valor. La revision vive en `docs/ux-friction-review.md`: es una
+    puerta de implementacion y validacion, no una sugerencia de copy.
+41. **Un pedido explícito puede mezclar productos, pero nunca bares ni cobros.** El carrito
+    pertenece a un solo sitio, admite máximo 20 unidades y termina en un medio de pago, un cobro o
+    reserva, una URL, un QR visible y un escaneo atómico. El camino de un solo producto no gana una
+    pantalla: **Pedirlo** abre el checkout con ese producto ya agregado y allí mismo aparece
+    **Agregar algo más**. Cada bar conserva su carrito en el navegador, pero precio, publicación,
+    moneda, porcentaje, beneficiario y total se vuelven a decidir en el servidor antes de crear el
+    pedido. **Por qué:** obligar a pagar dos veces por dos bebidas del mismo bar aumenta pasos,
+    comisiones y errores sin reducir ningún riesgo; mezclar bares sí rompería entrega, crédito y
+    liquidación.
 
 ---
 
@@ -161,25 +405,32 @@ Estan aca para no volver a discutirlas cada dos semanas.
 
 **Obligatorio.** Es el minimo para poder verificar y despues publicar.
 
+Son **cuatro**, y la prueba de que son el minimo es que cada uno hace falta para
+verificar o para responder (decision 35). No hay campos opcionales: un campo
+opcional en esta pantalla es una pregunta que alguien lee y sopesa antes de
+poder seguir.
+
 | Campo | Por que es el minimo |
 |---|---|
 | Nombre del sitio | Es lo que buscamos en Instagram para confirmar que existe |
-| Tipo | Un toque, y sin el no se puede pintar la tarjeta del mapa |
-| Ciudad | Solo estamos en Manizales; es la primera pregunta que hay que resolver |
-| Direccion (texto) | Distingue un bar real de un nombre, y de ahi sale el pin despues |
 | **Instagram del sitio** | **Es el instrumento de verificacion.** Sin cuenta oficial no hay DM que comprobar |
-| **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar. Se rellena con el correo de la cuenta |
+| **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar |
+| WhatsApp | Como se persigue una solicitud que se quedo quieta. Es el canal por el que de verdad contesta un bar en Manizales |
 
-Quien queda de dueno sale de la SESION, no del correo escrito: hay que entrar
-antes de aplicar. El correo de contacto es el del SITIO y tiene su propia razon
-de ser obligatorio (ver decision 20b), que no es la de identificar al dueno.
+**Quien queda de dueno sale del CORREO VERIFICADO, no de la sesion.** Ya no hay
+que entrar antes de aplicar (decision 35): operacion puede aprobar la solicitud
+sin dueno tras validar DM+correo. Una cuenta solo recibe `owner` si su correo es
+exactamente ese y ya esta verificado; si no existia, la primera que lo verifique
+lo reclama al entrar, sin invitacion ni aceptacion adicional.
 
-**Opcional:** TikTok, WhatsApp, telefono, barrio, sitio web, horario,
-descripcion, y "que tienes en mente para poner" —texto libre, rotulado como
-idea y que no toca ninguna columna `pledge_*`.
+**Ya no se piden** —y esta es la lista de lo que se quito, no de lo que falta—:
+tipo, ciudad, direccion, TikTok, telefono, barrio, sitio web, horario,
+descripcion, y "que tienes en mente para poner", que era el compromiso general
+disfrazado de idea y murio con la decision 34.
 
-**No se pide, lo llena un operador al aprobar:** coordenadas, el compromiso,
-`estimatedPerPersonNight`, `verifiedNote`, portada y logo.
+**Lo llena un operador al aprobar, o el bar despues en su panel:** tipo,
+direccion, coordenadas, `estimatedPerPersonNight`, `verifiedNote`, portada y
+logo.
 
 ### Casos de borde
 
@@ -189,8 +440,9 @@ idea y que no toca ninguna columna `pledge_*`.
 | Solo tiene TikTok | TikTok es opcional y no reemplaza a Instagram en el formulario, pero el operador **si** puede aprobar contra un DM de TikTok y dejarlo en `reviewNote` |
 | El DM lo manda alguien distinto de quien aplico | Por eso el DM cita el correo de la solicitud. Si no coincide, no se aprueba |
 | Dos personas piden el mismo bar | Indice unico PARCIAL sobre `lower(instagram)` con `status in ('pending','verifying')`: una sola solicitud viva a la vez, y aun asi se puede volver a aplicar tras un rechazo |
-| El bar ya esta en el directorio | El buscador lo encuentra y la solicitud llega con `venueId`; aprobar solo asigna dueno |
-| El sitio ya tiene dueno | El buscador lo marca y no ofrece pedirlo |
+| El bar ya esta en el directorio | Lo cruza OPERACION al revisar, no un buscador antes del formulario: el buscador "¿Ya lo tenemos cargado?" se quito porque cobraba una decision antes de la primera letra |
+| El sitio ya tiene dueno | Lo ve el operador en la cola y rechaza con nota |
+| Aplica y nunca crea la cuenta | Operacion puede aprobar tras validar DM+correo. El sitio queda aprobado sin dueno y no se publica salvo que el operador elija `published`; cuando alguien verifique ese correo, recibe `owner` automaticamente |
 | El DM nunca llega | Se queda en `verifying`. Sin caducidad: la cola es corta y una solicitud vieja es alguien esperando |
 | Se equivoco en los datos | Vuelve a mandar el formulario y se actualiza mientras siga viva |
 | La ciudad no es Manizales | Se acepta y se guarda; es la lista de espera para abrir ciudad |
@@ -202,26 +454,55 @@ idea y que no toca ninguna columna `pledge_*`.
 |---|---|---|
 | Verificacion manual por DM | Pasadas ~10 solicitudes por semana, o al abrir la segunda ciudad | Login de Instagram/Meta Business, o un codigo pegado en la bio |
 | La identidad se amarra con el correo citado en el DM | Cuando un sitio tenga varias personas manejando redes | Verificacion de dominio del correo, o registro mercantil (NIT) |
-| Un solo dueno al aprobar | Cuando haya dos socios de igual a igual | Ya resuelto: el dueno puede nombrar mas duenos en su panel |
+| Un solo dueno por correo verificado | Cuando haya dos socios de igual a igual | Ya resuelto: el dueno puede nombrar mas duenos en su panel |
 | El operador escribe pin y compromiso a mano | Con muchos sitios por semana | Que el sitio proponga y el operador solo apruebe |
 | Sin caducidad de solicitudes | Cuando la cola no quepa en una pantalla | Caducar `verifying` a los 30 dias con aviso |
 | Sin auditoria mas alla de `reviewedBy` | Con mas operadores | Bitacora aparte |
+| El carrito no mezcla bares y tiene máximo 20 unidades | Cuando una mesa necesite una compra conjunta mayor o productos de sitios distintos | Pedidos separados; el límite protege operación y el sitio conserva liquidación y entrega claras |
 
 ---
 
 ## Roadmap
 
+### Vender el trago
+
+Es el camino principal nuevo (decision 1). Va en siete pasos y en ese orden; el
+detalle de cada uno vive en el plan, `~/.claude/plans/check-our-product-guidelines-synthetic-pillow.md`.
+
+- [x] **Doctrina.** Reescribir la decision 1, agregar las 26-32 y los riesgos
+      7-9. Va primero para que no haya codigo que contradiga el archivo.
+- [x] **Esquema.** `venue_product`, `product_order`, `order_redemption`,
+      `ledger_account`, `ledger_transaction`, `ledger_entry`, `venue_settlement`,
+      y `venue_contribution.source`. Partida doble: los asientos de una
+      transaccion suman cero y `select sum(amount) from ledger_entry` da cero
+      siempre. Trigger que rechaza `UPDATE`/`DELETE` sobre `ledger_entry`.
+- [x] **Carta y revision.** `/panel/[slug]/carta` y la cola en
+      `/admin/productos`. Nada se vende sin pasar por ahi (decision 31).
+- [x] **Pedido y pago.** La carta publica en `/sitios/[slug]`, el checkout, un
+      adaptador agnostico con ePayco Hosted Smart Checkout v2 y un proveedor falso
+      restringido al arnes local, y `/orden/[token]` con el QR y su confirmacion en vivo.
+      **En ESE paso, y no antes, hay que reescribir
+      `src/app/(publico)/como-funciona/page.tsx:160`**, que hoy dice "La plata
+      no pasa por esta pagina. No cobramos, no procesamos pagos". Hoy es
+      verdad y tiene que seguir estando hasta que el cobro exista de verdad:
+      cambiarlo antes seria la misma mentira al reves.
+- [x] **Escaneo y redencion.** `/panel/[slug]/escanear`, el `UPDATE` atomico y
+      los asientos.
+- [x] **Saldo y liquidacion.** `/panel/[slug]/cuenta` y `/admin/cuentas` derivan
+      saldos V2; la reconciliación exige deducciones/retenciones con evidencia y las
+      transferencias manuales pasan por reserva, resultado incierto y confirmación bancaria.
+- [x] **Caducidad y devolucion.** La unidad no reclamada vence a 45 días sin
+      asignarse; conserva el pasivo bruto y el reembolso comparte bloqueo con la redención,
+      exige evidencia y protege la cobertura de costos no recuperables.
+
+**La pasarela ya fue decidida: ePayco Hosted Smart Checkout v2 (decision 37).**
+El adaptador se mantiene contra una interfaz propia hasta que ePayco confirme por
+escrito la cuenta, PSE, recibos, reportes de deducciones, devoluciones y
+responsabilidades. Los pagos elegibles se liquidan mediante transferencias
+bancarias manuales revisadas, no mediante split automatico.
+
 ### Ahora
 
-- [ ] **Gate de ciudad.** `src/config/ciudades.ts` y la cookie de `proxy.ts` ya
-      existen; falta el componente que decide que mostrar en `/sitios`.
-      Manizales o sin detectar → el explorador. Otra ciudad conocida → "aun no
-      estamos en X" + ciudades en camino + CTA a la activa mas cercana.
-      **Tiene que fallar hacia el lado bueno:** si la deteccion falla, se muestra
-      el contenido, nunca un muro.
-- [ ] **Override `?ciudad=`.** Es a la vez el cambio manual y la unica forma de
-      probar las ramas en local: las cabeceras `x-vercel-ip-*` no existen fuera
-      de Vercel.
 - [ ] **"Arrancamos en Manizales"** cerca del CTA del inicio, para que el panel
       de "aun no estamos aqui" no sea una sorpresa despues del clic.
 
@@ -234,8 +515,6 @@ idea y que no toca ninguna columna `pledge_*`.
       falla en el navegador con un error que no menciona CORS por ninguna parte.
       Hasta entonces, firmar una subida responde "El almacenamiento de fotos no
       esta configurado" y el resto del sitio sigue funcionando.
-- [ ] **Compras en el admin.** `material_purchase` solo se llena por seed, y
-      ahora ademas es el destino al que un operador amarra un aporte verificado.
 - [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
       que tiene fotos por revisar o un reporte de privacidad abierto: hay que
       entrar al panel a mirar.
@@ -244,15 +523,12 @@ idea y que no toca ninguna columna `pledge_*`.
 
 ### Despues
 
-- [ ] Estimado real por recibos de mesa, en vez de promedio por noche.
 - [ ] Perfil publico opcional (las fotos con `showPublicly = true`).
 - [ ] Segunda ciudad. Ver "el filtro de ciudad es de cliente" mas abajo: ese es
       el trabajo que se destapa al abrirla.
 
 ### Algun dia
 
-- [ ] Verificacion automatica de cuanto entrego cada sitio. Hoy se verifica el
-      compromiso, no cada peso, y el sitio lo dice explicitamente.
 - [ ] Extracto `.pmtiles` de Colombia en R2 si los terminos de CARTO incomodan.
 
 ---
@@ -272,6 +548,79 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   capa con clustering y consulta acotada por viewport contra `venue_lat_lng_idx`,
   no seguir apilando nodos.
 
+### Lo que queda abierto de "vender el trago"
+
+- **El personal puede administrar la carta.** Probado localmente con
+  `mesero@prueba.local`: `/panel/bar-la-nona/carta` muestra agregar, pausar,
+  editar y archivar. `CartaPage` y las acciones de `src/app/actions/carta.ts`
+  llaman `requireVenueAccess` / `assertVenueAccess` sin restringir a `owner`.
+  Contradice el rol que necesita la experiencia simple: el personal solo entrega
+  en `/escanear`; precio y reparto son decisión del dueño. Muerde durante una
+  barra llena, cuando quien debe escanear ve y puede cambiar la oferta.
+- **La portada todavía cuenta el modelo retirado.** `src/components/layout/le-entro.tsx:59`
+  y `src/app/(publico)/como-funciona/page.tsx:182` ofrecen porcentaje de la noche
+  o plata fija por trago; `src/app/(publico)/page.tsx:34` sigue diciendo "parte de
+  lo que te tomas". Contradicen las decisiones 1, 34, 35 y 36: el único camino
+  es un producto con reparto declarado y la puerta de alta es
+  `/registrar-sitio`. Muerde en la primera visita de un dueño o rumbero: promete
+  un producto que ya no existe antes de que puedan llegar al flujo correcto.
+- **La integración ePayco no tiene evidencia de cuenta.** El adaptador Hosted Smart Checkout v2,
+  la firma, la consulta autoritativa y los estados pendientes están implementados con fixtures,
+  pero tarjeta crédito, débito, PSE, factura duplicada, reportes de deducciones y reembolsos aún
+  deben probarse con la cuenta aprobada en sandbox y preview antes de producción.
+- **`code_hash` en `order_redemption` esta muerta.** Quedo del diseno hasheado,
+  ya es nullable y nadie la escribe. Borrarla en un deploy aparte.
+- **El cron necesita aceptación en Vercel.** La ruta diaria autenticada, los leases, cursores,
+  backlog y controles manuales están implementados y probados localmente; falta observar una
+  invocación real y su recuperación en preview.
+- **El pie de los correos esta en INGLES.** "Questions?", "Privacy Policy",
+  "Terms of Service", "Unsubscribe" en `EmailLayout`. Es anterior a esto —le
+  pasa igual a la invitacion de equipo, que ya se despacho— pero es texto que le
+  llega a un usuario en un producto que es solo en espanol (decision 7).
+- **El crédito de barra abre exposición antes de observar comportamiento.** Cada sitio publicado
+  arranca con COP 500.000 sobre la obligación del aporte; la política queda auditada al primer uso
+  y Operación puede reducirla o llevarla a cero. Sigue pendiente observar deuda, cortes manuales y
+  compensación contra ingresos electrónicos conciliados antes de ampliar ese cupo.
+- **La asignacion exacta queda pendiente hasta reconciliar.** El porcentaje se
+  congela en la orden, pero el valor en pesos se calcula sobre el neto real
+  despues de deducciones itemizadas y retenciones; no se muestra una cifra
+  inventada antes de esa conciliacion. El recibo del receptor de impacto no es
+  una compra de material verificada: `/transparencia` debe mostrar ambos hechos
+  por separado y no sumar sus etapas como si fueran dos asignaciones.
+
+### El codigo esta a medias en español
+
+`CLAUDE.md` fija la regla: **identificadores y comentarios en ingles, español
+solo para lo que el usuario lee.** El repo todavia no cumple.
+
+**Cuanto:** 51 archivos con comentarios en español y **78 exports con nombre en
+español** (iban en 57 y 81). Se pagaron al tocarlos por la decision 33: los seis
+archivos de la barra publica, el menu de cuenta, el panel y `/api/mi-acceso`, y
+los tres exports `MenuCuenta` → `AccountMenu`, `PanelSitioLayout` →
+`PanelVenueLayout` y `PanelResumenPage` → `PanelSummaryPage`. Los mas cargados:
+
+| Archivo | Exports |
+|---|---|
+| `src/lib/comercio/queries.ts` | 13 |
+| `src/lib/comercio/types.ts` | 9 |
+| `src/lib/comercio/libro.ts` | 8 |
+| `src/app/actions/carta.ts` | 7 |
+| `src/lib/comercio/dinero.ts` | 5 |
+| `src/lib/venues/invitations.ts` | 4 |
+
+Casi todo `src/lib/comercio/` y las acciones de "vender el trago" nacieron asi
+en esta tanda; `venues/invitations.ts`, `venues/claims.ts` y `config/ciudades.ts`
+son anteriores.
+
+**Como se paga: EN EL CAMINO.** El archivo que se toque para otra cosa se pasa a
+ingles en ese mismo PR. **No se abre un PR de puro renombrar** —81 exports
+cruzan medio arbol de importaciones y un diff asi no lo revisa nadie—, salvo que
+se dedique una sesion entera a eso a proposito.
+
+**Cuando muerde:** cuando entre alguien nuevo al repo, o cuando un `venueId`
+quede al lado de un `saldoDeSitio` en la misma funcion y haya que traducir
+mentalmente en cada linea. Hoy no rompe nada; solo cuesta leerlo.
+
 ### Sin verificar
 
 - **`revalidatePath` nunca se probo contra un deploy real.** Es el primero del
@@ -289,12 +638,10 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   migracion reventara, lo que con migraciones en el build habria dejado pasar un
   deploy con la base sin migrar. Verificado en ambos sentidos: falla -> 1,
   exito -> 0. Si alguien toca ese script, esa es la prueba que hay que repetir.
-- **No hay framework de pruebas.** Todo lo que se ha verificado fue a mano o con
-  Playwright contra `localhost`. Los cinco PRs de la multi-tenencia se probaron
-  con tres cuentas y curl contra el servidor local, apuntando sobre todo a lo que
-  NO debe poder hacerse; nada de eso quedo automatizado, asi que **una regresion
-  de permisos hoy no la detecta nada**. Es el mejor candidato para las primeras
-  pruebas que se escriban.
+- **La cobertura automatizada aún es deliberadamente acotada.** El arnés ya ejecuta 91 pruebas
+  Bun/PostgreSQL y un recorrido Playwright con operador, dos dueños, personal y rumbero sobre un
+  build de producción. Cubre aislamiento mínimo y el circuito pago → QR → redención → confirmación,
+  pero no reemplaza la matriz manual de cámara, móvil, correo real ni aceptación en preview.
 
 - **El viaje real a R2 nunca se ejecuto.** Firmar, subir, registrar y borrar
   estan escritos y todo lo que los rodea esta probado, pero sin cuenta ni buckets
@@ -331,6 +678,37 @@ Y una tercera: **el estado de una foto no se recibe, se decide en el servidor
 segun quien la suba.** Si el cliente pudiera mandar `status`, cualquiera subiria
 fotos ya habilitadas a un bar donde nunca estuvo y se las reclamaria.
 
+### Redimir un QR reclama la orden y cambia cada unidad condicionalmente
+
+```sql
+UPDATE order_redemption
+   SET status = 'redeemed', redeemed_at = now(), redeemed_by_user_id = $1
+ WHERE id = $2 AND status = 'issued'
+RETURNING *;
+```
+
+Primero se bloquea la orden; luego cada unidad aun emitida cambia con el
+`AND status = 'issued'` dentro de la misma transaccion. Cero filas significa que
+otra operacion gano y se revierte todo. Asi un pedido de tres tragos necesita un
+solo escaneo, pero conserva tres unidades contables, tres repartos y tres
+posibles decisiones de reembolso. Dos codigos viejos de la misma orden tampoco
+pueden competir ni bloquearse entre si: el bloqueo de orden los serializa.
+
+Va acompanada de dos cosas que **no** son la misma y hacen falta igual:
+
+- **Una fila interna de redencion por unidad comprada, pero un solo codigo visible por orden.**
+  Cantidad 3 conserva 3 unidades y 3 transiciones contables; la pantalla y el correo exponen solo
+  el codigo canonico y su escaneo reclama las 3. Asi el limite no es una validacion que alguien
+  pueda olvidar: no existe una cuarta unidad que redimir.
+- **Idempotencia, que es otro problema.** El `UPDATE` resuelve *dos escaneos a
+  la vez*. No resuelve *el mismo escaneo reintentado* —el mesero toca dos veces,
+  la red repite el POST—, que con solo el `UPDATE` le responde "ya se entrego" a
+  quien acaba de escanear bien. Eso lo resuelve la clave de idempotencia unica
+  de `ledger_transaction`.
+
+Y la redencion y sus asientos van en la MISMA transaccion: no puede existir un
+trago entregado sin su movimiento en el libro.
+
 ### El correo sale de un SUBDOMINIO, y responde a otro sitio
 
 `send.tumbenla.com` esta verificado en Resend (DKIM + SPF + MX de retorno) y es
@@ -350,16 +728,20 @@ salir.** Resend solo firma dominios verificados. Y si se borra
 Los registros DNS viven en Vercel, que es el nameserver de `tumbenla.com`:
 `vercel dns ls tumbenla.com`.
 
-### `/api/geocode` esta cerrado A PROPOSITO
+### `/api/geocode` esta cerrado al publico A PROPOSITO
 
-Exige `assertAdmin()` y responde 404 a cualquier otro. No es un descuido y no
-hay que "arreglarlo": Nominatim tiene terminos de uso de bajo volumen (riesgo 5)
-y abrirlo lo expondria a trafico anonimo.
+Responde 404 al trafico anonimo. Entra el operador, o un dueno verificado cuando
+manda el `venueId` de un sitio que ya le pertenece. No es un autocompletado:
+solo consulta cuando la persona pulsa el boton, toma la primera coincidencia y
+deja las demas para corregir. Nominatim tiene terminos de uso de bajo volumen
+(riesgo 5), asi que abrirlo a la calle lo expondria a trafico incompatible con
+el proveedor.
 
-**Por eso el alta de un sitio pide la direccion en TEXTO** y el pin lo pone un
-operador. Si algun dia una pantalla publica necesita autocompletar direcciones,
-la respuesta no es quitarle el gate a esa ruta: es un proxy propio con su
-limite, o los tiles/geocoder que ya se contemplan mover a R2.
+**Por eso el alta publica de un sitio no geocodifica nada:** pide solo los
+cuatro datos de la solicitud. La direccion y el pin los pone un operador al
+aprobar; despues, el dueno puede corregirlos desde su panel. Si una pantalla
+publica necesita buscar direcciones, la respuesta no es quitarle el gate a esta
+ruta: es otro proveedor o un proxy propio con limite.
 
 ### Trampas que ya mordieron (para no repetirlas)
 
@@ -448,6 +830,9 @@ limite, o los tiles/geocoder que ya se contemplan mover a R2.
   es un hijo que si puede escalar.
 - **Los tiles `@2x` de CARTO son de 256 unidades, no de 512.** Declarar
   `tileSize: 512` corre el mapa un nivel de zoom entero.
+- **El basemap raster publico de CARTO que usa el mapa no lleva API key.** No
+  agregar `NEXT_PUBLIC_CARTO_BASEMAP_KEY` a los ejemplos de entorno: el runtime
+  no la lee y pedirla en local o preview inventa una dependencia que no existe.
 - **`postgres()` sin opciones no suelta conexiones.** No trae `idle_timeout`.
   Con 7 workers de build mas el HMR de dev se llegaron a 82 conexiones ociosas
   contra un `max_connections` de 100, y el build se caia con
@@ -693,9 +1078,29 @@ base desde ahi.
    No publicar magnitud ni damnificados sin fuente oficial (SGC o UNGRD).
 5. **Terminos del proveedor de tiles.** Los basemaps gratuitos de CARTO apuntan a
    uso de bajo volumen. La salida esta descrita arriba.
-6. **El estimado de aporte puede leerse como un recibo.** Hoy el copy lo aclara y
-   avisa cuando esta incompleto. Cualquier rediseno de `/mi-historia` tiene que
-   conservar eso; es la diferencia entre un estimado y una mentira.
+6. **El aporte exacto no es una factura individual.** `/mi-historia` separa el gasto bruto real de
+   la asignación final para reconstruir; no presenta el reparto previo a deducciones como una cifra
+   final. Aun así no podemos atribuir una compra concreta de reconstrucción a un trago: las
+   liquidaciones se gastan en bloque. La transparencia conserva esa distinción mostrando la compra
+   verificada a nivel agregado, no inventando una factura por pedido.
+7. **Intermediacion de pagos.** Al cobrar en la app recaudamos plata que en
+   parte es del sitio, y al cobrar en la barra el sitio recauda plata que en
+   parte es nuestra. Son dos figuras distintas: en la primera somos custodios de
+   plata ajena, en la segunda somos acreedores. La compensacion entre las dos
+   es un acuerdo entre partes y **tiene que estar escrito con cada sitio antes
+   de venderle el primer trago a nadie**, no despues de la primera discusion.
+   Este riesgo hace crecer al 1, no lo reemplaza.
+8. **Un sitio que acumula saldo en contra y cierra.** Con el pago en barra, un
+   sitio nos va debiendo hasta que se liquida. El limite aprobado por operador es
+   cero por defecto; cada reserva dura 15 minutos y una entrega redimida vence a
+   siete dias. El limite, la deuda vencida y las reservas activas bloquean nuevas
+   reservas de barra sin desactivar los pagos por app.
+9. **Pasivo de devoluciones.** Una orden que caduca a los 45 dias no se asigna
+   automaticamente: conserva una obligacion de devolver el precio bruto completo.
+   Si hay costos no recuperables, salen inicialmente de fondos operativos. La
+   conciliacion debe conservar la asignacion exacta pendiente hasta reconciliar
+   deducciones y retenciones; el recibo del receptor y la compra verificada son
+   hechos distintos.
 
 ---
 
@@ -703,6 +1108,9 @@ base desde ahi.
 
 - Una decision que ya se tomo va a "Decisiones tomadas", con el porque en una
   linea. Ese porque es lo que evita rediscutirla.
+- Una conclusion que salga de un experimento cerrado en
+  `org/crecimiento/EXPERIMENTOS.md` sube aca. La bitacora guarda el intento;
+  este archivo guarda lo que quedo.
 - Un hallazgo va a "Deuda y hallazgos" con la ruta del archivo y **cuando**
   muerde, no solo que existe.
 - Cuando algo del roadmap se construya, se mueve a "Estado" y se borra de la
