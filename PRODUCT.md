@@ -855,15 +855,12 @@ ruta: es otro proveedor o un proxy propio con limite.
 - **`showToast` en `src/lib/utils/toast.ts` es un stub que solo hace
   `console.log`.** Nadie debe usarlo: el real es `toastManager` de
   `src/components/ui/toast.tsx`. Borrar el stub antes de que alguien se lo crea.
-- **Sentry esta muerto y las variables de entorno no lo reviven.** El DSN esta
-  CODIFICADO A MANO como `'use_your_own_bro'` en los tres archivos de arranque
-  (`sentry.server.config.ts`, `sentry.edge.config.ts`, `instrumentation-client.ts`),
-  y `NEXT_PUBLIC_SENTRY_DSN` no se lee en ninguna parte. Ponerla en Vercel no
-  activa nada. `SENTRY_ORG` / `SENTRY_PROJECT` tambien estan vacias, asi que
-  `withSentryConfig` ni intenta subir sourcemaps y `SENTRY_AUTH_TOKEN` sobra.
-  Cuando se conecte de verdad, revisar antes dos ajustes heredados que hoy no
-  hacen dano solo porque nada se envia: `sendDefaultPii: true` manda datos
-  personales, y `tracesSampleRate: 1` muestrea el 100% del trafico.
+- **Sentry esta cableado, pero falta activarlo y probarlo en Vercel.** Los tres
+  runtimes leen su DSN del entorno, los sourcemaps leen organizacion, proyecto y
+  token durante el build, `sendDefaultPii` esta apagado y produccion muestrea 10%
+  de las trazas (preview y desarrollo, 100%). Faltan las cinco variables de
+  `.env.vercel.example`, un redespliegue y comprobar en Preview un error de
+  navegador y uno de servidor con stack TypeScript antes de promover.
 - **No hay hosts remotos en `next.config.ts`**, por eso todas las imagenes usan
   `<img>` plano en vez de `next/image`. Cuando R2 sirva imagenes de verdad, hay
   que configurarlo y migrar.

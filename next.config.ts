@@ -50,11 +50,14 @@ export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 
-  // Inherited from the boilerplate and pointing at someone else's Sentry project.
-  // Set SENTRY_ORG / SENTRY_PROJECT before enabling error reporting.
+  // Build metadata identifies the Sentry project that receives source maps.
+  // Keep these unset locally unless a production-style upload is intentional.
   org: process.env.SENTRY_ORG,
 
   project: process.env.SENTRY_PROJECT,
+
+  // Build-only secret used to upload source maps. It is never included in the app bundle.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
 
   // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
