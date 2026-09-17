@@ -3,9 +3,10 @@ import { slugify } from '@/lib/utils/slug'
 /**
  * Donde estamos y donde vamos.
  *
- * Prueba de concepto: Manizales y nada mas. Este archivo es el unico lugar
- * donde eso esta escrito, para que abrir una ciudad nueva sea cambiar un
- * `estado` y no perseguir el nombre por media docena de componentes.
+ * La ciudad activa es configuración de despliegue, no una promesa de marca.
+ * Este archivo es el único lugar donde se decide la disponibilidad, para que
+ * abrir una ciudad nueva sea cambiar un `estado` y no perseguir el nombre por
+ * media docena de componentes.
  *
  * Las coordenadas son del centro de cada ciudad y solo se usan para calcular
  * cual es la mas cercana a quien esta mirando. No pretenden ser precisas mas
@@ -104,25 +105,21 @@ const rad = (grados: number) => (grados * Math.PI) / 180
  * del ecuador, y comparar Cali con Bogota por diferencia de grados ya empieza a
  * mentir.
  */
-export const distanciaKm = (
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
-) => {
+export const distanciaKm = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
   const R = 6371
   const dLat = rad(b.lat - a.lat)
   const dLng = rad(b.lng - a.lng)
   const s =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
   return 2 * R * Math.asin(Math.sqrt(s))
 }
 
 /**
  * La ciudad activa mas cercana a un punto. Sin punto, la primera activa.
  *
- * Hoy siempre devuelve Manizales porque es la unica activa. Se escribe general
- * igual, porque el dia que se abra la segunda ciudad este es exactamente el
- * lugar donde habria un bug si estuviera escrito a la medida de una sola.
+ * Sin punto devuelve la primera ciudad activa configurada. Se escribe general
+ * porque el día que se abra otra ciudad este es exactamente el lugar donde
+ * habría un bug si estuviera hecho a la medida de una sola.
  */
 export const ciudadActivaMasCercana = (punto?: { lat: number; lng: number } | null) => {
   const activas = ciudadesActivas()

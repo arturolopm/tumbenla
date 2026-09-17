@@ -6,10 +6,7 @@ import { QueryProvider } from '@/app/_providers/query-provider'
 import { ToastProvider } from '@/components/ui/toast'
 import { generateMetadata } from '@/lib/seo'
 
-/**
- * El par de Stitch. Anybody carga solo los pesos gordos porque es cara de
- * titular y nunca corre texto; Montserrat carga el rango de cuerpo.
- */
+/** Stitch font pair: Anybody carries heavy display weights and Montserrat carries body text. */
 const anybody = Anybody({
   variable: '--font-anybody',
   subsets: ['latin'],
@@ -31,7 +28,7 @@ export const metadata: Metadata = {
   ...generateMetadata({
     title: 'Tumbenla',
     description:
-      'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Mira cuáles son, dónde quedan, y en qué se fue la plata.',
+      'Sitios con un producto de Tumbenla en su carta. Mira dónde salir y qué compras de material ya tienen factura.',
     isRootLayout: true,
   }),
   icons: {
@@ -45,11 +42,7 @@ export const metadata: Metadata = {
   },
 }
 
-/**
- * Dark-only, so the theme is declared rather than negotiated. This is what
- * turns native form controls, scrollbars and the mobile browser chrome dark;
- * the class alone only styles our own elements.
- */
+/** Dark-only theme: this also styles native controls, scrollbars and mobile browser chrome. */
 export const viewport: Viewport = {
   colorScheme: 'dark',
   themeColor: '#0d1321',

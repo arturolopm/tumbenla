@@ -4,23 +4,9 @@ import { join } from 'node:path'
 import { ImageResponse } from 'next/og'
 
 /**
- * La imagen que se ve cuando alguien pega el enlace en WhatsApp.
- *
- * SE DIBUJA, NO SE GUARDA. Antes habia un PNG suelto en `public/`, y era el que
- * traia el boilerplate: "Launch SaaS in days, not months". Nadie lo cambio
- * porque un archivo binario no se lee en una revision, no rompe el build y no
- * sale en ningun typecheck. Se ve una sola vez: cuando alguien comparte el
- * sitio. Dibujarla desde los tokens de la marca la vuelve codigo, que si se
- * revisa y si se puede equivocar de forma visible.
- *
- * Los hex estan escritos a mano a proposito: Satori no entiende `oklch()` ni
- * las variables CSS del stylesheet, asi que no hay forma de leerlas de ahi.
- * Son los mismos de `src/config/branding.ts`, que ya carga con esa
- * sincronizacion manual y explica por que.
- *
- * Se prerenderiza en el build (`force-static` en las rutas que la usan). Eso no
- * es un detalle: si se generara por peticion, cada vez que un rastreador mire
- * el enlace gastaria CU, y el presupuesto de Neon/Vercel esta contado.
+ * Social image rendered as code so the public brand message is reviewable and build-time static.
+ * Satori cannot read CSS variables or oklch colors, so the hand-written hex values mirror the
+ * branding config. Rendering during the build avoids compute on every crawler request.
  */
 
 const FONDO = '#0d1321'
@@ -32,7 +18,7 @@ const TENUE = '#e2bfb2'
 export const TAMANO = { width: 1200, height: 630 }
 export const TIPO_DE_CONTENIDO = 'image/png'
 export const TEXTO_ALTERNATIVO =
-  'Tumbenla — bares y discotecas que ponen una parte de sus ventas en material de construccion'
+  'Tumbenla — sitios con un producto de la carta y compras de material con factura'
 
 const fuente = (archivo: string) => readFile(join(process.cwd(), 'src/app/_og', archivo))
 
@@ -51,9 +37,8 @@ export async function dibujarImagenSocial() {
         flexDirection: 'column',
         justifyContent: 'center',
         backgroundColor: FONDO,
-        // El mismo tratamiento del hero: el naranja entra por arriba y se
-        // apaga contra el navy. Sin la trama ni el grano, que a 1200x630 y
-        // despues de que WhatsApp recomprime la imagen solo ensucian.
+        // Match the hero gradient. Halftone and grain are omitted because WhatsApp recompression
+        // makes them noisy at this size.
         backgroundImage: `radial-gradient(1000px 620px at 78% -12%, ${NARANJA}59 0%, ${FONDO}00 62%)`,
         padding: '76px 84px',
       }}
@@ -75,12 +60,8 @@ export async function dibujarImagenSocial() {
         </div>
       </div>
 
-      {/* Las dos lineas van con `whiteSpace: nowrap` a proposito. Satori no
-          avisa cuando un texto se desborda: lo parte en cuantas lineas haga
-          falta y empuja el resto del bloque fuera del lienzo, en silencio. Con
-          nowrap, un cuerpo demasiado grande se ve como texto cortado —evidente
-          en cuanto uno mira el PNG— en vez de como una tarjeta que perdio el
-          parrafo y se le encimo el pie. */}
+      {/* Keep the two display lines nowrap: Satori silently wraps overflow and can push the footer
+          off-canvas. A clipped line is visible and fixable, unlike a missing paragraph. */}
       <div
         style={{
           display: 'flex',
@@ -101,14 +82,8 @@ export async function dibujarImagenSocial() {
         >
           TUMBENLA
         </div>
-        {/* Kerning optico a mano. En una cadena normal, "VOLVÁMOSLA A PARAR"
-            se ve con un espacio de mas antes de la A suelta, y parece un error
-            de dedo. No lo es, y no es cosa de Satori: la L y las dos A son
-            diagonales, y entre "LA" y "A" queda un hueco blanco que mide igual
-            que los demas pero se ve el doble. Es justo lo que el kerning de una
-            fuente corrige, y Anybody Black no lo trae para este par. Por eso
-            las palabras van sueltas: solo asi se puede cerrar ESE hueco sin
-            tocar los otros. */}
+        {/* Manual optical kerning: Anybody Black leaves a visibly wide gap between "LA" and the
+            following "A", so the words are separate flex items to close only that gap. */}
         <div
           style={{
             display: 'flex',
@@ -138,7 +113,8 @@ export async function dibujarImagenSocial() {
           color: TENUE,
         }}
       >
-        Bares y discotecas que ponen una parte de sus ventas en material de construcción.
+        Salir sigue siendo salir. Una parte del trago se vuelve material para volver a levantar, con
+        la factura a la vista.
       </div>
 
       <div

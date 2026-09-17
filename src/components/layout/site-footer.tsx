@@ -4,17 +4,14 @@ import Link from 'next/link'
 import { getReplyToAddress } from '@/lib/messaging/email/utils'
 
 /**
- * El footer de Stitch: cuatro columnas, borde superior grueso, y la barra de
- * abajo con los tres iconos sobre trama de puntos.
- *
- * Los enlaces sociales de la maqueta apuntaban a "#". Aca solo se renderiza lo
- * que existe de verdad; un enlace a un Instagram que no esta abierto es una
- * promesa rota en el primer clic.
+ * Stitch footer: four columns, a thick top border and a bottom icon strip over halftone texture.
+ * Only real destinations are rendered; a placeholder social link is a broken promise.
  */
 
 const NOSOTROS = [
-  { href: '/como-funciona', label: 'Sobre la causa' },
+  { href: '/como-funciona', label: 'Cómo funciona' },
   { href: '/transparencia', label: 'A dónde va la plata' },
+  { href: '/registrar-sitio', label: 'Tengo un sitio' },
   { href: '/terminos', label: 'Términos' },
   { href: '/privacidad', label: 'Privacidad' },
 ]
@@ -30,8 +27,8 @@ export function SiteFooter() {
             TUMBENLA
           </p>
           <p className='max-w-md text-body-md text-muted-foreground'>
-            Nos reímos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista pone
-            material de construcción donde hace falta.
+            Salir sigue siendo salir. En los sitios de Tumbenla, una parte del trago se vuelve
+            material para volver a levantar, con la factura a la vista.
           </p>
         </div>
 
@@ -63,13 +60,10 @@ export function SiteFooter() {
         </div>
       </div>
 
-      {/* El remate de la marca. Sale del video de lanzamiento y se queda fijo:
-          es lo que el producto es en paisa — usted sale, se parcha, rumbea, y
-          de paso ayuda. Va en lima porque es el punto mas brillante del
-          sistema y aca no compite con ninguna seleccion. */}
+      {/* Brand sign-off from the launch concept, aligned with the current product model. */}
       <div className='relative z-10 mt-16 w-full px-margin-mobile lg:px-margin-desktop'>
         <p className='max-w-3xl text-pretty text-body-lg text-muted-foreground'>
-          Así usted sale, se parcha, rumbea, y de paso ayuda.
+          Así usted sale, se parcha, rumbea, y deja algo que se puede comprobar.
         </p>
         <p className='mt-3 font-display font-black text-4xl text-lime uppercase leading-none tracking-tighter sm:text-6xl'>
           ¿Qué chimba cierto?

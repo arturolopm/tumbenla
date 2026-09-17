@@ -10,7 +10,7 @@ import { listPublishedVenues, listVenueCities } from '@/lib/venues/queries'
 export const metadata: Metadata = buildMetadata({
   title: 'Mapa del parche',
   description:
-    'Bares y discotecas que ponen una parte de sus ventas en material de construcción. Busca por nombre o ciudad.',
+    'Sitios con un producto de Tumbenla en su carta. Mira dónde salir y cuánto va a material.',
   canonical: '/sitios',
 })
 
@@ -39,9 +39,8 @@ export default async function SitiosPage() {
         </h1>
 
         <p className='relative z-10 max-w-2xl text-pretty rounded-xl border border-secondary bg-background/50 p-4 text-body-lg text-muted-foreground backdrop-blur-sm'>
-          Una red de bares y discotecas donde la rumba levanta paredes.{' '}
-          <strong className='font-bold text-party'>Donde cada trago es un ladrillo,</strong> y cada
-          noche compra material.
+          Una red de bares y discotecas con un producto de Tumbenla en su carta. Antes de pedirlo,
+          ves cuánto queda en el sitio y cuánto va a material.
         </p>
       </section>
 
@@ -52,7 +51,7 @@ export default async function SitiosPage() {
               Todavía no hay sitios publicados.
             </p>
             <p className='mt-1 text-body-md text-muted-foreground'>
-              Estamos hablando con varios. Vuelve en unos dias.
+              Estamos hablando con varios. Vuelve en unos días.
             </p>
           </div>
         </div>

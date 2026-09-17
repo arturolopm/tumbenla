@@ -94,8 +94,8 @@ const solicitudSchema = z.object({
   // Los cuatro, y nada mas. Cada uno se gana el puesto: el nombre para buscar
   // el sitio, el Instagram porque es el instrumento de verificacion, el correo
   // porque es lo que el DM tiene que citar Y por donde la solicitud se amarra a
-  // una cuenta, y el WhatsApp porque es por donde de verdad contesta un bar en
-  // Manizales cuando la solicitud se queda quieta.
+  // una cuenta, y el WhatsApp porque es por donde de verdad contesta un bar
+  // cuando la solicitud se queda quieta.
   name: z.string().trim().min(2, 'El nombre del sitio es obligatorio').max(120),
   instagram: handleSchema('El Instagram'),
   contactEmail: z.email('Ese correo no parece válido').transform((v) => v.trim().toLowerCase()),

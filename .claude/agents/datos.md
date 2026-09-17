@@ -50,10 +50,10 @@ medir, falta X"**. Eso es un resultado, no una falla.
 4. **Cierras los experimentos.** Escribes el resultado con la cifra real, o "no
    concluyente" si el volumen no da. Con el trafico de hoy, "no concluyente" va a
    ser la respuesta frecuente y esta bien.
-5. **Distingues numerador de denominador.** Hoy hay `photoClaim` pero no hay
-   evento de vista del mapa: se puede contar quien reclamo, no quien vio y no
-   reclamo. Cuando falte el denominador, lo dices en la misma frase que el
-   numero.
+5. **Distingues numerador de denominador.** Hoy no hay evento de vista del mapa
+   ni forma de marcar qué noche llevó letrero: se puede contar quien pidió o
+   reclamó, pero no quien vio y se fue ni comparar noches con señal. Cuando falte
+   el denominador, lo dices en la misma frase que el número.
 
 ## Metricas de la casa
 
@@ -62,11 +62,12 @@ no se te pueden olvidar:
 
 - **La del lazo:** `photo_claim` por `party_night` — fotos reclamadas por noche
   publicada. Si solo se mira una, es esa.
-- **Activacion sitio:** primer `venue_contribution` con `status = 'verified'`.
-- **Activacion rumbero:** primer `photo_claim`.
-- **Retencion rumbero:** reclamos en dos `party_night` distintas.
-- **Retencion sitio (la nuestra):** `venue_contribution.verified_at - created_at`.
+- **Activacion sitio:** primer `order_redemption` en estado `redeemed`.
+- **Activacion rumbero:** primer pedido entregado (`order_redemption`).
+- **Retencion rumbero:** pedidos entregados en dos noches distintas.
+- **Retencion sitio:** entregas posteriores de productos publicados.
 
-Lo unico que hoy **no** se puede medir es el origen de una solicitud de sitio y
-la vista del mapa. Todo lo demas ya esta en el esquema; si alguien dice que falta
-construir algo para medirlo, revisa `METRICAS.md` antes de darle la razon.
+Lo que hoy **no** se puede medir es el origen de una solicitud de sitio, la vista
+del mapa y la presencia de un letrero en una noche. Todo lo demás ya está en el
+esquema; si alguien dice que falta construir algo, revisa `METRICAS.md` antes de
+darle la razón.

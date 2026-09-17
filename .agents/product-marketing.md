@@ -1,5 +1,8 @@
 # Contexto de producto — Tumbenla
 
+**Versión:** v2
+**Última actualización:** 2026-09-17
+
 > Este archivo lo leen TODAS las skills de marketing antes de trabajar.
 > Es el filtro entre una libreria generica de SaaS y este producto.
 > La fuente de verdad del producto sigue siendo `PRODUCT.md`; la del
@@ -7,8 +10,8 @@
 
 ## Que es
 
-Bares y discotecas de **Manizales, Colombia** que ponen un trago en la carta con
-una parte de su precio destinada a material de construccion, despues del sismo.
+Bares y discotecas de las ciudades donde Tumbenla esté activa que ponen un trago
+en la carta con una parte de su precio destinada a material de construcción.
 Nosotros compramos el material y publicamos la factura.
 
 El camino principal es **vender un trago**: el sitio arma un producto (un coctel
@@ -35,7 +38,7 @@ una factura publicada.
 
 | | **Sitio** (oferta) | **Rumbero** (demanda) |
 |---|---|---|
-| Quien | dueno o administrador de un bar o discoteca en Manizales | alguien que sale de rumba en Manizales |
+| Quien | dueño o administrador de un bar o discoteca en una ciudad activa | alguien que sale de rumba en una ciudad activa |
 | Que gana | aparecer en el mapa, vender un trago que la gente busca, prueba publica de que cumplio | pedir un trago que ya viene con su parte adentro, sus fotos, su historia en `/mi-historia` |
 | Que le pedimos | armar un producto y **escanear el QR de cada orden** | pedir el trago y mostrar el QR |
 | Donde esta | la calle, WhatsApp, el gremio, Instagram del bar | Instagram, TikTok, el grupo de la parcha, el bar mismo |
@@ -48,6 +51,23 @@ El aporte por porcentaje de ventas **ya no es un camino**: pedirle a un bar que
 calcule y reporte eran tres actos de voluntad despues de la venta, todos
 opcionales y ninguno verificable. Armar un producto es uno solo, ocurre durante
 la venta, y deja una orden y un escaneo detras.
+
+## Qué podrá ganar un sitio cuando la red madure
+
+Además de aparecer en el mapa, vender su producto y dejar prueba pública, un
+sitio podrá usar Tumbenla como una relación continua con quienes ya lo
+visitaron:
+
+- campañas para visitantes anteriores que hayan autorizado recibir mensajes;
+- invitaciones a noches especiales, eventos, productos nuevos u ofertas limitadas;
+- datos agregados para entender qué productos, campañas y noches generan interés;
+- señales de retorno y alcance dentro de la red activa, sin recibir una lista de
+  contactos como derecho automático.
+
+Estas capacidades están en desarrollo. Requieren consentimiento granular,
+privacidad, límites de frecuencia, una configuración final y un acuerdo con cada
+sitio. El teléfono del cliente no se recoge hoy en el pedido; cualquier canal
+adicional tendrá que incorporarse explícitamente y con autorización.
 
 ## Voz
 
@@ -75,8 +95,9 @@ recomendacion de una skill importada**:
    restringe. Ni `/transparencia`, ni el mapa, ni los recibos. *(Decision 2)*
 6. **El verso de la cancion no se usa.** El nombre si, el guino si, el verso no.
    Exposicion de licenciamiento real. *(Decision 3)*
-7. **Solo Manizales.** Nada de campanas ni pSEO por ciudad hasta que la segunda
-   ciudad exista de verdad en el producto. *(Roadmap)*
+7. **No fijar una ciudad en la propuesta de valor.** La disponibilidad depende
+   de la configuración activa; no se anuncia una ciudad como “la primera” hasta
+   que Producto lo decida. *(Roadmap)*
 8. **El estimado es un estimado.** Cualquier pieza que muestre el aporte de una
    persona conserva el rotulo. Es la diferencia entre un estimado y una mentira.
    *(Riesgo 6)*
@@ -93,9 +114,21 @@ recomendacion de una skill importada**:
    El porcentaje suelto es abstracto; los pesos se verifican despues contra la
    factura. Y no se promete a donde va mas alla de "material": el destino
    concreto solo se afirma cuando la compra existe y esta publicada.
-10. **No se anuncia un producto que no este aprobado y publicado.** Ninguna
-    pieza sale antes de que el operador lo apruebe (decision 31), porque hasta
-    ese momento el reparto todavia puede cambiar.
+10. **No se anuncia un producto que no este publicado.** Un sitio aprobado
+    publica sus propios productos cuando cumplen las reglas del servidor; no
+    prometemos una revisión manual de cada producto (decision 31).
+
+## Changelog
+
+### v2 — 2026-09-17
+
+- Se elimina una ciudad fija como lanzamiento del contexto y se añade el valor futuro de campañas consentidas, eventos e insights agregados sin prometerlo como función activa.
+
+### v1 — 2026-09-17
+
+- Se fija la propuesta de valor: propósito antes del mecanismo, portada para rumberos y alta de sitios en `/registrar-sitio`.
+- Se incorporan las frases canónicas y los nombres públicos de las tres etapas contables.
+- Se aclara que no hay promesas de fidelización, datos de clientes, promociones, eventos ni atribución de una compra a un trago individual.
 
 ## Skills importadas que NO aplican aca
 

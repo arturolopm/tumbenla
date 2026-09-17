@@ -64,12 +64,12 @@ test.beforeAll(async () => {
   authStates = { operator, ownerA, ownerB, staff }
 })
 
-test('public transparency shows one donation total and its delivered split', async ({ page }) => {
+test('public transparency shows the reconstruction total and material split', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/transparencia')
-  await expect(page.getByText('Total donado', { exact: true })).toBeVisible()
-  await expect(page.getByText('Ya entregado', { exact: true })).toBeVisible()
-  await expect(page.getByText('Pendiente por entregar', { exact: true })).toBeVisible()
+  await expect(page.getByText('Para reconstruir', { exact: true })).toBeVisible()
+  await expect(page.getByText('Ya en material', { exact: true })).toBeVisible()
+  await expect(page.getByText('Pendiente de convertir en material', { exact: true })).toBeVisible()
   await expect(page.getByText('no es una comisión ni plata que Tumbenla se quede')).toBeVisible()
   await expect(page.getByText('Asignado', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Con respaldo', { exact: true })).toHaveCount(0)
@@ -231,7 +231,7 @@ test('owner chooses between a draft and immediate publication when saving a drin
   }
 })
 
-test('personal history separates sandbox orders from real spend and donations', async ({
+test('personal history separates sandbox orders from real spend and reconstruction allocation', async ({
   browser,
 }) => {
   const context = await authenticatedContext(browser, 'ownerA')
@@ -246,7 +246,7 @@ test('personal history separates sandbox orders from real spend and donations', 
 
     const realTotals = page.getByText('Tus pedidos reales').locator('..')
     await expect(realTotals.getByText('Total gastado', { exact: true })).toBeVisible()
-    await expect(realTotals.getByText('Total donado', { exact: true })).toBeVisible()
+    await expect(realTotals.getByText('Para reconstruir', { exact: true })).toBeVisible()
     await expect(realTotals.getByText('$ 0', { exact: true })).toHaveCount(2)
 
     const nonRealTotals = page
@@ -321,9 +321,7 @@ test('one mixed app order uses one URL, QR, charge, and staff scan', async ({
     ).toBeVisible()
     await expect(guest.getByText('Mojito Reconstrucción')).toBeVisible()
     await expect(guest.getByText('Cerveza de la casa')).toBeVisible()
-    await expect(
-      guest.locator('section[aria-label="Código único del pedido"] svg'),
-    ).toHaveCount(1)
+    await expect(guest.locator('section[aria-label="Código único del pedido"] svg')).toHaveCount(1)
     await expect(guest.getByRole('link', { name: 'Volver a Bar La Nona' })).toHaveAttribute(
       'href',
       '/sitios/bar-la-nona'
@@ -408,9 +406,7 @@ test('one QR fulfills a mixed bar order and tells staff the full amount and line
     await guest.getByRole('button', { name: /^Pedir todo/ }).click()
     await expect(guest).toHaveURL(/\/orden\/[A-Za-z0-9_-]+/)
     await expect(guest.getByText('Muestra esto antes de pagar')).toBeVisible()
-    await expect(
-      guest.locator('section[aria-label="Código único del pedido"] svg'),
-    ).toHaveCount(1)
+    await expect(guest.locator('section[aria-label="Código único del pedido"] svg')).toHaveCount(1)
     await expect(guest.locator('footer')).toContainText(
       'Del total de $ 68.000: $ 52.000 se van en material. $ 16.000 se quedan en el sitio.'
     )

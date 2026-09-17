@@ -1,75 +1,36 @@
-import { BeerIcon, StoreIcon } from 'lucide-react'
+import { StoreIcon } from 'lucide-react'
 import Link from 'next/link'
 
-/**
- * La bifurcacion del producto.
- *
- * Hasta aca todo el sitio le habla a una sola persona. Este bloque es donde se
- * separan las dos que existen de verdad: quien sale de rumba y quiere ver que
- * su plata llego a algun lado, y quien tiene un bar y quiere entrar a la red.
- * Antes las dos compartian un unico CTA "Quiero poner", que en la practica solo
- * le servia a la segunda.
- *
- * Las dos tarjetas tienen el mismo peso visual a proposito. La red no existe
- * sin ninguno de los dos lados.
- */
+/** Owner entry kept separate from the rumbero journey on the public landing page. */
 export function LeEntro() {
   return (
     <section
-      id="le-entro"
-      className="relative w-full scroll-mt-24 border-secondary border-y bg-surface-container-lowest px-margin-mobile py-section-gap lg:px-margin-desktop"
+      id='le-entro'
+      className='relative w-full scroll-mt-24 border-secondary border-y bg-surface-container-lowest px-margin-mobile py-section-gap lg:px-margin-desktop'
     >
-      <div className="mx-auto max-w-5xl">
-        <div className="max-w-2xl">
-          <h2 className="font-display font-black text-4xl uppercase leading-none tracking-tighter sm:text-headline-lg">
-            Le <span className="text-lime">entro</span>
-          </h2>
-          <p className="mt-4 text-body-lg text-muted-foreground">
-            Hay dos maneras de estar en esto. Escoge la tuya.
-          </p>
-        </div>
+      <div className='mx-auto max-w-5xl'>
+        <article className='grid gap-8 rounded-xl border-2 border-primary bg-card p-8 md:grid-cols-[auto_1fr_auto] md:items-center lg:p-10'>
+          <div className='flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <StoreIcon className='size-7' />
+          </div>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2">
-          <article className="group flex flex-col rounded-xl border-2 border-secondary bg-card p-8 transition-colors hover:border-lime">
-            <div className="mb-6 flex size-14 items-center justify-center rounded-full bg-lime text-background">
-              <BeerIcon className="size-7" />
-            </div>
-
-            <h3 className="font-display font-bold text-headline-md uppercase">Salgo de rumba</h3>
-            <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
-              Escoges un trago de la carta y ves, en pesos, cuánto va a material y cuánto se
-              queda en el sitio antes de pedirlo. Muestras el QR en la barra y el personal
-              lo escanea para entregártelo.
+          <div>
+            <h2 className='font-display font-black text-3xl uppercase leading-none tracking-tighter sm:text-headline-lg'>
+              ¿Tienes un sitio? <span className='text-primary-text'>Mira qué ganas</span>
+            </h2>
+            <p className='mt-4 max-w-2xl text-pretty text-body-md text-muted-foreground'>
+              Aparece en el mapa, pon un producto propio en la carta y deja prueba pública de cada
+              entrega y de las compras de material. Empiezas con cuatro datos.
             </p>
+          </div>
 
-            <Link
-              href="/sitios"
-              className="mt-8 inline-block self-start rounded-xl bg-lime px-5 py-3 font-display text-background text-label-lg uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-street-white"
-            >
-              Ver dónde salir
-            </Link>
-          </article>
-
-          <article className="group flex flex-col rounded-xl border-2 border-secondary bg-card p-8 transition-colors hover:border-primary">
-            <div className="mb-6 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <StoreIcon className="size-7" />
-            </div>
-
-            <h3 className="font-display font-bold text-headline-md uppercase">Tengo un sitio</h3>
-            <p className="mt-3 flex-1 text-pretty text-body-md text-muted-foreground">
-              Armas un producto con su precio y su reparto: cuántos pesos van a material y
-              cuántos se quedan en tu sitio. Lo revisamos antes de publicarlo. Tu personal
-              escanea cada entrega; nosotros compramos material y publicamos la factura.
-            </p>
-
-            <Link
-              href="/registrar-sitio"
-              className="mt-8 inline-block self-start rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime"
-            >
-              Quiero poner
-            </Link>
-          </article>
-        </div>
+          <Link
+            href='/registrar-sitio'
+            className='inline-block justify-self-start rounded-xl bg-primary px-5 py-3 font-display text-label-lg text-primary-foreground uppercase transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime md:justify-self-end'
+          >
+            Ver cómo entrar
+          </Link>
+        </article>
       </div>
     </section>
   )

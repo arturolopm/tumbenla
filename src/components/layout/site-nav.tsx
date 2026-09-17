@@ -11,29 +11,21 @@ import { cn } from '@/lib/utils/css'
 import { AccountMenu } from './account-menu'
 
 /**
- * The Stitch bar: fixed, translucent with grain, and with a thick bottom border
- * in the brand orange. The active item is marked in lime with an underline,
- * which is the only place on the site where lime shows up outside the map.
- *
- * The Stitch screen had a fourth item, "Eventos", and a profile avatar.
- * "Eventos" still does not exist: there is no events table. The fourth slot is
- * taken by Transparencia, which does have data behind it. The account control
- * does already exist, in AccountMenu, because the product has three kinds of
- * person with a session.
+ * Fixed translucent Stitch navigation with grain and an orange bottom border. The active item is
+ * marked in lime. The mockup's events item is omitted because the product has no events table.
  */
 
 const LINKS = [
   { href: '/sitios', label: 'Mapa del parche' },
   { href: '/transparencia', label: 'A dónde va la plata' },
-  { href: '/como-funciona', label: 'Nuestra Causa' },
+  { href: '/como-funciona', label: 'Cómo funciona' },
 ]
 
 export function SiteNav() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  // "Mi historia" only exists if there is someone to have a history with.
-  // Rendering the link for everybody would send anonymous visitors to /login
-  // without explaining why.
+  // "Mi historia" only exists for someone with a history. Rendering it for everyone would send
+  // anonymous visitors to /login without explaining why.
   const { data: session } = useSession()
   const { data: access } = useMyAccess(Boolean(session))
   const mainVenue = access?.venues[0] ?? null
@@ -60,11 +52,8 @@ export function SiteNav() {
               active={isActive(link.href)}
             />
           ))}
-          {/* For someone who works at a venue the main link is THEIR BAR, not
-              "Mi historia". Their panel used to live inside the account menu,
-              which meant: open it, wait for the request, and find it in a list.
-              Three steps to get back to what they were doing, while the tourist
-              link sat in plain sight. */}
+          {/* For venue staff the main link is their bar, not "Mi historia". Keeping it in the main
+              navigation avoids opening the account menu and searching a list. */}
           {mainVenue ? (
             <NavLink
               href={`/panel/${mainVenue.slug}`}

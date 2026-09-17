@@ -67,27 +67,27 @@ export default async function TransparencyPage() {
       <section className='mx-auto mt-12 max-w-4xl'>
         <div className='grid gap-3 md:grid-cols-3'>
           <Stage
-            label='Total donado'
+            label='Para reconstruir'
             amount={Number(stages.totalDonatedMinor) / 100}
             description='La suma del reparto final para reconstruir, sin incluir la parte de los sitios.'
             emphasized
           />
           <Stage
-            label='Ya entregado'
+            label='Ya en material'
             amount={Number(stages.deliveredMinor) / 100}
             description='La parte que ya tiene una compra de material verificada y su recibo publicado.'
           />
           <Stage
-            label='Pendiente por entregar'
+            label='Pendiente de convertir en material'
             amount={Number(stages.pendingDeliveryMinor) / 100}
             description='Lo contabilizado para reconstruir que todavía no aparece en una compra publicada.'
           />
         </div>
         <p className='mt-4 max-w-3xl text-pretty text-body-md text-muted-foreground'>
-          Pendiente por entregar no es una comisión ni plata que Tumbenla se quede. Los aportes
-          llegan antes de que podamos comprar el material en bloque y publicar la factura; durante
-          ese intervalo pueden seguir conciliándose, venir en camino desde el sitio o esperar la
-          siguiente compra.
+          Pendiente de convertir en material no es una comisión ni plata que Tumbenla se quede. La
+          asignación se registra antes de que podamos comprar el material en bloque y publicar la
+          factura; durante ese intervalo puede seguir conciliándose, venir en camino desde el sitio
+          o esperar la siguiente compra.
         </p>
       </section>
 

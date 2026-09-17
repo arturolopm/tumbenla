@@ -1,5 +1,7 @@
 # Tumbenla — producto
 
+**Estado de comunicación:** propósito primero, producto real siempre (2026-09-17).
+
 Bares y discotecas que ponen un trago en su carta con una parte del precio
 destinada a material de construccion. La gente sale como sale siempre; nosotros
 compramos el material y publicamos la factura. Se ven los dos eslabones: lo que
@@ -24,7 +26,8 @@ sobre una caja que no auditamos habia que creerlo, y un trago con su reparto
 escrito deja rastro. Lo que un sitio puso es, desde ahora, lo que vendio su
 carta.
 
-Prueba de concepto: **Manizales**. Mas ciudades despues.
+La ciudad activa se define por configuración; la propuesta de valor no fija una
+primera ciudad. Tumbenla puede abrir nuevas ciudades cuando Producto lo decida.
 
 > Este archivo es el mapa vivo del producto. El plan de construccion original
 > esta en `~/.claude/plans/partitioned-crunching-hartmanis.md` y ya quedo
@@ -45,7 +48,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Mapa MapLibre con pines, tooltip y leyenda | Construido |
 | Panel de admin: sitios, estados, selector de pin, geocoding | Construido |
 | `/quiero-poner` con correo pre-redactado | **Retirado** (decision 36) |
-| Seccion "Le entro" con las dos entradas | Construido |
+| Portada para rumberos; alta de sitios en `/registrar-sitio` | Construido (2026-09-17) |
 | `/mi-historia`: resumen de pedidos pagados, galeria | Construido |
 | Esquema de fiestas: `party_night`, `party_photo`, `photo_claim` | Construido |
 | Reclamar fotos, punta a punta | Construido |
@@ -57,7 +60,7 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 | Alta en 4 campos, aprobación sin cuenta y reclamo por correo verificado | Construido (decisión 35) |
 | Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
 | Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
-| Gate de ciudad (Manizales si, resto no) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
+| Gate de ciudad (ciudades activas, resto en camino) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
 | **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido y probado en local. El adaptador ePayco Hosted Smart Checkout v2, la verificación autoritativa, la reconciliación y la recuperación están implementados; faltan aprobación comercial/legal, evidencia de cuenta y prueba en preview. |
 | Compras de material y trazabilidad de la fundación | Administración, evidencia privada/pública, atribución limitada por monto y vistas V2 construidas y probadas localmente; falta validar R2 real. |
 | Harness local por roles: plataforma, dueño, personal y rumbero | Automatizado con 91 pruebas Bun/PostgreSQL y Playwright sobre un build de producción aislado; ver `docs/validation-harness.md` |
@@ -66,8 +69,8 @@ Prueba de concepto: **Manizales**. Mas ciudades despues.
 
 ### Gate de ciudad implementado (2026-09-05)
 
-`src/components/sitios/city-gate.tsx` envuelve `/sitios`: Manizales o ciudad
-sin reconocer muestran el contenido; una ciudad conocida en camino muestra el
+`src/components/sitios/city-gate.tsx` envuelve `/sitios`: una ciudad activa o una
+ciudad sin reconocer muestran el contenido; una ciudad conocida en camino muestra el
 aviso, las ciudades en camino y el enlace a la activa mas cercana. La prioridad
 es `?ciudad=` → eleccion manual en localStorage → cookie de `proxy.ts`. Un override
 vacio o desconocido abre el contenido y persiste como sin detectar; borrar
@@ -80,8 +83,8 @@ inicial/fallback muestra el contenido hasta resolver la ciudad en el cliente.
 Pruebas sin dependencias: `bun scripts/test-city-gate.ts`; TypeScript y Biome
 focalizado pasan. `bun run build` completo pasó con PostgreSQL local y confirma
 `/sitios` como ruta estática/ISR a 300 s. Recorrido de navegador local verificado:
-Pereira muestra el gate y CTA; Manizales muestra el explorador; el CTA conserva
-`vista=mapa` y cambia a Manizales. Falta validar en preview la geolocalización
+una ciudad en camino muestra el gate y CTA; una ciudad activa muestra el explorador;
+el CTA conserva `vista=mapa` y cambia a la ciudad activa. Falta validar en preview la geolocalización
 por IP y la cookie `tumbenla-geo` que `proxy.ts` escribe con las cabeceras de
 Vercel.
 
@@ -344,7 +347,8 @@ Estan aca para no volver a discutirlas cada dos semanas.
     en la base, mientras el formulario de verdad no aparecia ni en la portada ni
     en la barra de navegacion. O sea que el camino principal para registrar un
     bar era redactar un correo a mano y esperar. Ahora la puerta es
-    `/registrar-sitio` y esta en la barra.
+    `/registrar-sitio` y esta en la barra. La portada le reserva un bloque
+    separado al final, despues del recorrido del rumbero.
 37. **ePayco Hosted Smart Checkout v2 es el proveedor de cobro elegido para el
     MVP colombiano; la salida de fondos será una transferencia bancaria manual
     revisada.** El plan de implementación está autorizado. El checkout alojado
@@ -371,12 +375,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     siempre gana y el sistema no la reemplaza. La deuda vencida sigue bloqueando
     pedidos nuevos y no deshabilita el pago por ePayco.
 39. **La transparencia pública resume el ciclo en tres cifras que sí se pueden comparar.**
-    `Total donado` suma exclusivamente la asignación final para reconstruir de unidades reales
+    `Para reconstruir` suma exclusivamente la asignación final para reconstruir de unidades reales
     entregadas y con cobro aprobado; nunca suma el ingreso completo, pruebas, legado sin verificar
-    ni cobros en disputa. `Ya entregado` es la parte de ese total atribuida, sin excederla, a compras
-    de material verificadas con recibo público. `Pendiente por entregar` es exactamente la
+    ni cobros en disputa. `Ya en material` es la parte de ese total atribuida, sin excederla, a compras
+    de material verificadas con recibo público. `Pendiente de convertir en material` es exactamente la
     diferencia entre las dos. En `/mi-historia`, `Total gastado` muestra las unidades reales pagadas
-    y no devueltas de esa persona, mientras `Total donado` usa la misma asignación final. Los pedidos
+    y no devueltas de esa persona, mientras `Para reconstruir` usa la misma asignación final. Los pedidos
     `sandbox` y `legacy_unverified` siguen visibles para soporte y pruebas, pero rotulados y separados
     de cualquier total real.
     **Por qué:** las cuatro etapas contables siguen siendo necesarias internamente, pero juntas en la
@@ -398,6 +402,12 @@ Estan aca para no volver a discutirlas cada dos semanas.
     pedido. **Por qué:** obligar a pagar dos veces por dos bebidas del mismo bar aumenta pasos,
     comisiones y errores sin reducir ningún riesgo; mezclar bares sí rompería entrega, crédito y
     liquidación.
+42. **La relación con un visitante puede continuar, pero solo con permiso.** La plataforma podrá
+    ofrecer campañas para personas que ya visitaron un sitio, invitaciones a eventos y datos
+    agregados de productos, campañas y retornos. No entrega listas de contactos ni promete una
+    campaña activa hoy. Cada canal necesita consentimiento granular, retiro sencillo, límites de
+    frecuencia, configuración, acuerdo con el sitio y revisión legal; el pedido actual recoge
+    correo, no teléfono del cliente.
 
 ---
 
@@ -415,7 +425,7 @@ poder seguir.
 | Nombre del sitio | Es lo que buscamos en Instagram para confirmar que existe |
 | **Instagram del sitio** | **Es el instrumento de verificacion.** Sin cuenta oficial no hay DM que comprobar |
 | **Correo de contacto** | Por donde le respondemos, y lo que el DM tiene que citar |
-| WhatsApp | Como se persigue una solicitud que se quedo quieta. Es el canal por el que de verdad contesta un bar en Manizales |
+| WhatsApp | Como se persigue una solicitud que se quedo quieta. Es el canal por el que de verdad contesta un bar en la ciudad activa |
 
 **Quien queda de dueno sale del CORREO VERIFICADO, no de la sesion.** Ya no hay
 que entrar antes de aplicar (decision 35): operacion puede aprobar la solicitud
@@ -445,7 +455,7 @@ logo.
 | Aplica y nunca crea la cuenta | Operacion puede aprobar tras validar DM+correo. El sitio queda aprobado sin dueno y no se publica salvo que el operador elija `published`; cuando alguien verifique ese correo, recibe `owner` automaticamente |
 | El DM nunca llega | Se queda en `verifying`. Sin caducidad: la cola es corta y una solicitud vieja es alguien esperando |
 | Se equivoco en los datos | Vuelve a mandar el formulario y se actualiza mientras siga viva |
-| La ciudad no es Manizales | Se acepta y se guarda; es la lista de espera para abrir ciudad |
+| La ciudad aún no está activa | Se acepta y se guarda; es la lista de espera para abrir ciudad |
 | Lo aprobamos y nunca vuelve | El sitio queda con dueno ausente. La plataforma **si** puede quitar al ultimo dueno para reasignarlo; un dueno no |
 
 ### Lo que se sacrifica por simplicidad
@@ -503,8 +513,18 @@ bancarias manuales revisadas, no mediante split automatico.
 
 ### Ahora
 
-- [ ] **"Arrancamos en Manizales"** cerca del CTA del inicio, para que el panel
-      de "aun no estamos aqui" no sea una sorpresa despues del clic.
+- [x] **Copy sin ciudad fija.** La disponibilidad se explica con el gate de
+      ciudades activas; la propuesta no presenta una ciudad como lanzamiento.
+
+- [x] **Comunicación propósito primero.** La portada habla primero al rumbero,
+      conserva las frases canónicas y deja el recorrido del dueño en
+      `/registrar-sitio`. El mecanismo detallado vive en `/como-funciona` y las
+      cifras públicas usan nombres contables comprensibles.
+
+- [ ] **Relación consentida con visitantes.** Definir y construir preferencias
+      de comunicación, segmentación segura, campañas para visitantes anteriores,
+      promoción de eventos e insights agregados antes de anunciarlos como
+      funciones activas.
 
 ### Siguiente
 
@@ -524,8 +544,8 @@ bancarias manuales revisadas, no mediante split automatico.
 ### Despues
 
 - [ ] Perfil publico opcional (las fotos con `showPublicly = true`).
-- [ ] Segunda ciudad. Ver "el filtro de ciudad es de cliente" mas abajo: ese es
-      el trabajo que se destapa al abrirla.
+- [ ] Siguiente ciudad. Ver "el filtro de ciudad es de cliente" mas abajo: ese
+      es el trabajo que se destapa al abrirla.
 
 ### Algun dia
 
@@ -557,13 +577,10 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   Contradice el rol que necesita la experiencia simple: el personal solo entrega
   en `/escanear`; precio y reparto son decisión del dueño. Muerde durante una
   barra llena, cuando quien debe escanear ve y puede cambiar la oferta.
-- **La portada todavía cuenta el modelo retirado.** `src/components/layout/le-entro.tsx:59`
-  y `src/app/(publico)/como-funciona/page.tsx:182` ofrecen porcentaje de la noche
-  o plata fija por trago; `src/app/(publico)/page.tsx:34` sigue diciendo "parte de
-  lo que te tomas". Contradicen las decisiones 1, 34, 35 y 36: el único camino
-  es un producto con reparto declarado y la puerta de alta es
-  `/registrar-sitio`. Muerde en la primera visita de un dueño o rumbero: promete
-  un producto que ya no existe antes de que puedan llegar al flujo correcto.
+- **Comunicación propósito primero — resuelto 2026-09-17.** La portada habla al
+  rumbero, conserva las frases canónicas y dirige el recorrido del dueño a
+  `/registrar-sitio`. El reparto en pesos, el QR y la factura viven después, en
+  `/como-funciona`; el mapa ya no expone contribuciones del modelo legado.
 - **La integración ePayco no tiene evidencia de cuenta.** El adaptador Hosted Smart Checkout v2,
   la firma, la consulta autoritativa y los estados pendientes están implementados con fixtures,
   pero tarjeta crédito, débito, PSE, factura duplicada, reportes de deducciones y reembolsos aún
