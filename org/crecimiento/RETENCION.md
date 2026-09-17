@@ -15,20 +15,18 @@ sirve de ahi es la parte de senales tempranas y de flujos de reenganche.
 | Senal | Que la delata en la base | Que tan grave |
 |---|---|---|
 | No publica noches | ultima `partyNight` hace mas de 3 semanas | temprana |
-| Publica noches pero no reporta aporte | `partyNight` sin `venueContribution` en el periodo | media |
-| Reporto y se quedo en `submitted` | `venueContribution.status = 'submitted'` viejo | **nuestra, no de el** |
+| Tiene noches pero no entrega productos | `partyNight` sin `order_redemption` en el periodo | media |
+| Tiene productos publicados sin entregas | `venueProduct` publicado sin `order_redemption` | temprana |
 | No entra al panel | sin sesion de ningun `venueMember` | debil, no accionar sola |
 
-**La tercera fila es la importante y es culpa nuestra.** Un aporte reportado que
-se queda sin verificar es un sitio que hizo su parte y no vio nada. Esa es la
-forma mas rapida de perder un bar y no aparece en ningun tablero de marketing.
-El tiempo de `submitted` a `verified` es una metrica de retencion, no de
-operacion.
+La entrega registrada es la señal operativa vigente. Las filas de
+`venueContribution` que aparecen en datos son legado de liquidaciones y no
+definen la activación ni una promesa de comunicación.
 
 **Que sostiene a un sitio:**
 1. Que lo verifiquemos rapido. Todo lo demas es secundario.
 2. Que vea gente reclamando fotos de sus noches — la prueba de que sirvio.
-3. Que su aporte verificado salga en `/transparencia` con su nombre.
+3. Que sus compras verificadas salgan en `/transparencia` con su nombre.
 
 **El hueco que ya esta identificado en el roadmap:** hoy nada le avisa a un dueno
 que tiene fotos por revisar o un reporte abierto. Hay que entrar al panel a
@@ -41,20 +39,21 @@ se acuerde solo, y esa es una apuesta que se pierde.
 
 | Senal | Que la delata | Que tan grave |
 |---|---|---|
-| Reclamo una foto y nunca otra | un solo `photoClaim`, cuenta vieja | la principal |
-| Entro a `/mi-historia` y no volvio | sin sesion posterior | media |
-| Reclamo fotos de una noche sola | `photoClaim` de un solo `partyNight` | temprana |
+| Pidió un producto y nunca vuelve | una sola entrega registrada | la principal |
+| Entro a `/mi-historia` y no volvió | sin pedido o reclamo posterior | media |
+| Guardó una noche sin pedir | `photoClaim` de un solo `partyNight` | temprana |
 
-**La segunda noche es todo.** Alguien que reclamo fotos de dos noches distintas
-ya entendio para que sirve esto; alguien con una sola vino por una foto. La
-metrica de retencion de este lado es **cuantos llegan a la segunda noche**, no
-sesiones ni visitas.
+**La segunda noche es todo.** Alguien que pide y recibe productos en dos noches
+distintas ya entendió para qué sirve esto; una foto guardada puede acompañar la
+historia, pero no reemplaza la entrega como señal principal. La métrica de
+retención de este lado es cuántos llegan a la segunda noche, no sesiones ni
+visitas.
 
 **Que hace que alguien vuelva:**
-1. Que haya fotos nuevas suyas. Depende del sitio, no de nosotros — otra razon
-   por la que la retencion del sitio manda sobre la del rumbero.
-2. Que `/mi-historia` haya crecido desde la ultima vez.
-3. Que alguien del combo le avise que salio en una foto.
+1. Que haya otra noche y productos publicados. Depende del sitio, no de nosotros
+   — otra razón por la que la retención del sitio manda sobre la del rumbero.
+2. Que `/mi-historia` haya crecido desde la última vez.
+3. Que alguien del combo le avise que hay una noche nueva o una foto aprobada.
 
 **Lo que no se hace para traerlo de vuelta:** correos de reenganche genericos,
 notificaciones sin nada nuevo detras, y absolutamente nada que exponga fotos
@@ -76,9 +75,8 @@ Las tres definiciones y sus consultas estan en `org/datos/METRICAS.md`. **Ningun
 de las tres necesita que se construya nada**: el esquema ya las soporta y nadie
 las ha consultado.
 
-- **Tiempo de `submitted` a `verified`.** `venue_contribution.verified_at` ya
-  existe. Es la metrica de retencion mas importante del proyecto y esta a una
-  consulta de distancia.
+- **Tragos entregados por sitio.** `order_redemption` permite revisar si la carta
+  publicada realmente se está usando.
 - **Segunda noche por rumbero.** `photo_claim` + `party_photo.night_id`.
 - **Sitios en silencio.** `venue` publicados sin `party_night` en tres semanas.
 

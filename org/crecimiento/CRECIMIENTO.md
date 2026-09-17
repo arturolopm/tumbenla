@@ -22,7 +22,7 @@ definicion se separan en un mes.
 | Solicitud → publicado (tasa y dias) | por medir |
 | Noches publicadas por semana | por medir |
 | Rumberos con al menos una foto | por medir |
-| Aportes reportados / verificados | por medir |
+| Tragos entregados por sitio | por medir |
 
 Todas son medibles hoy: el esquema las soporta y nadie las ha consultado. La de
 negrita es la del lazo; si solo se mira una, es esa.
@@ -32,9 +32,9 @@ negrita es la del lazo; si solo se mira una, es esa.
 ## Lado sitio: como llega un bar
 
 ```
-lo oye  ->  /quiero-poner  ->  venueApplication  ->  DM de verificacion
-        ->  venue published ->  primera noche    ->  primer aporte reportado
-        ->  APORTE VERIFICADO  <- aca esta activo, no antes
+lo oye  ->  /registrar-sitio  ->  venueApplication  ->  DM de verificacion
+        ->  venue published ->  producto publicado -> primer trago entregado
+        ->  aca esta activo, no antes
 ```
 
 **El cuello de botella es humano y esta a proposito.** Una solicitud no crea el
@@ -62,21 +62,21 @@ y no lo mueve un formulario mas bonito.
 
 **Lo que NO se hace:** ads pagos (no hay con que medir la conversion de un lado
 que se cierra por DM), cold email a bares (mata la relacion antes de empezar),
-pSEO por ciudad (solo existe Manizales).
+pSEO por ciudad mientras no haya cobertura y evidencia suficiente en cada ciudad.
 
 ---
 
 ## Lado rumbero: como llega alguien que sale de rumba
 
 ```
-lo ve  ->  mapa / sitio  ->  sale esa noche  ->  ve sus fotos
-       ->  RECLAMA UNA FOTO  <- aca esta activo
-       ->  cuenta + /mi-historia  ->  vuelve a reclamar otra noche
+lo ve  ->  mapa / sitio  ->  sale esa noche  ->  pide un producto
+       ->  recibe el trago  <- aca esta activo
+       ->  cuenta + /mi-historia  ->  vuelve cuando haya otra noche
 ```
 
-**El acto de activacion es reclamar una foto** (Decision 9: no hay boton de
-"estuve aqui" porque se infla con clics). Todo lo de este lado se mide contra
-eso.
+**El acto de activacion es pedir y recibir un producto.** Las fotos siguen siendo
+un recorrido válido para guardar una noche, pero no se presentan como la razón
+principal del producto ni como una métrica de impacto financiero.
 
 **Lo que hay que entender:** el rumbero no viene por el mapa. Viene porque salio,
 porque alguien le dijo "estan tus fotos" y porque quiere verse. El mapa es lo que

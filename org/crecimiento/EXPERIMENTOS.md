@@ -47,7 +47,7 @@ tiempo a puro pulso.
 **Ventana.** Permanente una vez exista.
 
 - [ ] Datos — **la metrica NO existe.** Falta una columna de origen en
-      `venueApplication` y un campo (o parametro en la URL) en `/quiero-poner`.
+      `venueApplication` y un campo (o parametro en la URL) en `/registrar-sitio`.
 - [ ] Producto — pendiente. Es una migracion chiquita, pero es migracion.
 - [ ] Crecimiento — nada que preparar hasta que exista.
 
@@ -76,8 +76,8 @@ estadistica y **no se va a fingir que la hay**.
 
 ---
 
-### EXP-003 — verificar los aportes en menos de 72 horas
-**Estado:** Medible | **Lado:** sitio | **Abierto:** 2026-09-01
+### EXP-003 — verificar los aportes en menos de 72 horas (legado)
+**Estado:** Propuesto — bloqueado por retiro del modelo | **Lado:** sitio | **Abierto:** 2026-09-01
 
 **Hipotesis.** Si un aporte reportado pasa de `submitted` a `verified` en menos
 de 72 horas, sube la proporcion de sitios que reportan un segundo mes, porque hoy
@@ -88,20 +88,22 @@ mediano de `submitted` → `verified`.
 cambio es operativo, no de producto.
 **Ventana.** Dos meses.
 
-- [x] Datos — **medible hoy.** `venue_contribution.verified_at` ya existe; la
-      consulta esta en `org/datos/METRICAS.md`. No falta instrumentar nada.
-- [ ] Producto — pendiente de firma. No choca con nada: es un compromiso
-      operativo, no un cambio de producto.
-- [ ] Crecimiento — nada que preparar; esto es operacion, no campana.
+- [ ] Datos — histórico: `venue_contribution.verified_at` existe, pero no mide el
+      camino vigente de pedidos y entregas.
+- [ ] Producto — bloqueado: el modelo general por porcentaje de ventas fue retirado.
+- [ ] Crecimiento — no preparar una pieza; sustituir por seguimiento de entregas.
 
-**Nota.** Es el experimento de retencion mas importante que hay, el mas barato, y
-**el unico de los tres que no esta bloqueado**. Deberia arrancar primero.
-Ver `org/crecimiento/RETENCION.md`.
+**Nota.** Se conserva como registro histórico para no perder contexto; no debe
+arrancar ni presentarse como métrica de retención actual.
 
 ---
 
 ### EXP-004 — Value prop "Datos te devuelven clientes" vs "Causa social"
-**Estado:** Propuesto | **Lado:** sitio | **Abierto:** 2026-09-14
+**Estado:** Propuesto — bloqueado | **Lado:** sitio | **Abierto:** 2026-09-14
+
+**Nota de archivo.** El título y la hipótesis conservan el planteamiento
+original para poder auditarlo. La dirección de valor se considera futura, no una
+promesa ni una pieza aprobada, hasta instrumentar consentimiento y medición.
 
 **Hipotesis.** Si el pitch B2B enfatiza "recuperas clientes con data" vs "apoyas
 reconstruccion", entonces la tasa reunion→alta sube, porque el dueño decide por
@@ -110,14 +112,20 @@ interes propio, no moral.
 **Tamano minimo que importa.** 10 reuniones por variante.
 **Ventana.** 4 semanas.
 
-- [ ] Datos — metrica existe (`venueApplication` → `venue` publicado)
-- [ ] Producto — no choca; es mensaje, no codigo
-- [ ] Crecimiento — dos guiones de pitch listos (pasar por `VOZ.md`)
+- [ ] Datos — **no existe la medición declarada**: no hay eventos de reuniones ni
+      de alta iniciada por variante.
+- [ ] Producto — bloqueado: no se promete que Tumbenla devuelva clientes; la
+      comunicación futura debe hablar de campañas consentidas y datos agregados.
+- [ ] Crecimiento — no preparar variantes hasta instrumentar una métrica válida.
 
 ---
 
 ### EXP-005 — Promo automática "cumpleaños" genera 2da visita
-**Estado:** Propuesto | **Lado:** lazo | **Abierto:** 2026-09-14
+**Estado:** Propuesto — bloqueado | **Lado:** lazo | **Abierto:** 2026-09-14
+
+**Nota de archivo.** La idea se conserva solo como hipótesis bloqueada. Las
+campañas futuras requieren consentimiento, preferencias y límites antes de
+ofrecer cualquier promoción o recompensa.
 
 **Hipotesis.** Si al cumplir años el usuario recibe "Tu trago en [Bar Frecuente]
 nos cuenta la mitad", entonces sube % usuarios con 2da noche en mes de
@@ -128,13 +136,17 @@ con cumpleaños registrado.
 **Ventana.** 3 meses.
 
 - [ ] Datos — falta `user.birthdate` + consentimiento + trigger automático
-- [ ] Producto — requiere decisión: ¿birthdate obligatorio u opcional?
-- [ ] Crecimiento — pieza: email/WhatsApp template (VOZ.md)
+- [ ] Producto — bloqueado: no existe cumpleaños, promociones ni consentimiento
+      de marketing en el producto actual; no se anuncia como disponible.
+- [ ] Crecimiento — no preparar email/WhatsApp ni prometer recompensas.
 
 ---
 
 ### EXP-006 — Benchmark anonimizado en panel mueve decisiones de carta
-**Estado:** Propuesto | **Lado:** sitio | **Abierto:** 2026-09-14
+**Estado:** Propuesto — bloqueado | **Lado:** sitio | **Abierto:** 2026-09-14
+
+**Nota de archivo.** La idea se conserva solo como hipótesis bloqueada. Los
+insights futuros serán agregados y no compartirán datos individuales entre sitios.
 
 **Hipotesis.** Si el panel muestra "Tu ticket medio: $X vs. promedio ciudad: $Y
 vs. promedio tu segmento: $Z", entonces el dueño cambia precio/producto en 30
@@ -145,13 +157,18 @@ benchmark.
 **Ventana.** 60 días tras lanzamiento benchmark.
 
 - [ ] Datos — consulta agregada anonimizada por ciudad/segmento
-- [ ] Producto — UI en `/panel/[slug]/carta` + consentimiento data pooling
-- [ ] Crecimiento — comunicación: "Esto te ayuda a ganar más"
+- [ ] Producto — bloqueado: no hay benchmark ni agrupación consentida; nunca se
+      prometerá que el sitio gane más.
+- [ ] Crecimiento — no preparar la comunicación.
 
 ---
 
 ### EXP-007 — Notificación impacto compartido aumenta 2da visita y orgullo bar
-**Estado:** Propuesto | **Lado:** lazo | **Abierto:** 2026-09-14
+**Estado:** Propuesto — bloqueado | **Lado:** lazo | **Abierto:** 2026-09-14
+
+**Nota de archivo.** La idea se conserva solo como hipótesis bloqueada. Una
+notificación futura usaría evidencia agregada y nunca atribuiría una compra de
+material a un trago o cliente individual.
 
 **Hipotesis.** Si al verificarse una compra de material (`material_purchase.status = 'published'`) tanto el bar como el cliente reciben notificación con evidencia visual (foto material, factura, ubicación, testimonio), entonces sube: (a) % usuarios que ven evidencia y hacen 2da visita en 30 días, y (b) % bars que comparten evidencia en redes propias, porque el lazo emocional "juntos hicimos esto" refuerza ambos lados.
 **Metrica.** (a) Usuarios con `impact_notification.read_at` no nulo → 2do `order_redemption` en 30 días / total usuarios notificados. (b) Bars con `impact_notification.read_at` no nulo → `venue_member` action: compartir en redes / 30 días.
@@ -159,8 +176,9 @@ benchmark.
 **Ventana.** 6 semanas (ciclo completo: pedido → verificación → compra → entrega → notificación).
 
 - [ ] Datos — falta tabla `impact_notification` + worker + consulta atribución
-- [ ] Producto — requiere migración #5 + worker + templates VOZ.md
-- [ ] Crecimiento — templates push/email/WhatsApp (VOZ.md: "Tu trago en X puso $Y en material para Z")
+- [ ] Producto — bloqueado: no existe tabla, worker ni atribución individual de
+      compras a tragos; el producto mantiene cuentas colectivas.
+- [ ] Crecimiento — no preparar notificaciones ni textos de impacto individual.
 
 ---
 
