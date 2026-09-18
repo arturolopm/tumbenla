@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import Image from 'next/image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { AbrirNoche } from '@/components/fiestas/abrir-noche'
 import { VolverASitios } from '@/components/sitios/volver-a-sitios'
 import { CartaPublica } from '@/components/comercio/carta-publica'
 import { listarCartaPublica } from '@/lib/comercio/queries'
@@ -134,8 +136,9 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
 
       {venue.coverImageUrl ? (
         <div className='halftone-overlay relative mt-8 h-[clamp(14rem,52vw,28rem)] overflow-hidden rounded-xl border-2 border-secondary bg-muted'>
-          {/* Plain <img>: remote image hosts are
-              not configured in next.config yet. */}
+          {/* Plain <img> a proposito: esta URL la pega una persona y puede ser de
+              cualquier host. next/image solo sirve los de remotePatterns, que es
+              el de R2, y reventaria con el resto. */}
           <img src={venue.coverImageUrl} alt='' className='size-full object-cover' />
         </div>
       ) : null}
@@ -202,38 +205,69 @@ export default async function VenuePage({ params }: { params: Promise<{ slug: st
         <CartaPublica venueId={venue.id} slug={venue.slug} productos={carta} />
       ) : null}
 
-      {noches.length > 0 ? (
-        <section className='mt-10'>
-          <h2 className='font-display font-extrabold text-headline-md uppercase'>Las noches</h2>
-          <p className='mt-2 max-w-prose text-pretty text-body-md text-muted-foreground'>
-            Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en tu
-            historia.
-          </p>
+      {/* La seccion va siempre, aunque el sitio no haya abierto ninguna noche:
+          si solo apareciera con noches ya creadas, quien salio anoche a un bar
+          que nunca entra al panel no tendria donde poner sus fotos. */}
+      <section className='mt-10'>
+        <h2 className='font-display font-extrabold text-headline-md uppercase'>Las noches</h2>
+        <p className='mt-2 max-w-prose text-pretty text-body-md text-muted-foreground'>
+          Si saliste acá, búscate. Guardar tus fotos es lo que hace que esa noche cuente en tu
+          historia.
+        </p>
 
+        {noches.length > 0 ? (
           <ul className='mt-6 flex flex-col gap-2'>
             {noches.map((noche) => (
-              <li key={noche.id}>
+              <li
+                key={noche.id}
+                className='rounded-xl border border-border bg-card transition-colors hover:border-primary'
+              >
                 <Link
                   href={`/sitios/${venue.slug}/noches/${noche.id}`}
-                  className='flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary'
+                  className='flex items-baseline justify-between gap-3 p-4'
                 >
                   <span className='min-w-0'>
-                    <span className='block font-display font-bold uppercase'>
+                    <span className='font-display font-bold uppercase'>
                       {noche.title || formatDate(noche.happenedAt)}
                     </span>
-                    <span className='block text-muted-foreground text-sm'>
-                      {formatDate(noche.happenedAt)}
-                    </span>
+                    {/* La fecha solo se repite cuando la noche tiene nombre
+                        propio: sin nombre, el nombre YA es la fecha. */}
+                    {noche.title ? (
+                      <span className='ml-2 text-muted-foreground text-xs'>
+                        {formatDate(noche.happenedAt)}
+                      </span>
+                    ) : null}
                   </span>
                   <span className='shrink-0 text-muted-foreground text-sm'>
                     {noche.photoCount} {noche.photoCount === 1 ? 'foto' : 'fotos'}
                   </span>
                 </Link>
+
+                {noche.preview.length > 0 ? (
+                  <Link
+                    href={`/sitios/${venue.slug}/noches/${noche.id}`}
+                    aria-label={`Ver las fotos de ${noche.title || formatDate(noche.happenedAt)}`}
+                    className='flex gap-2 overflow-x-auto px-4 pb-4'
+                  >
+                    {noche.preview.map((url) => (
+                      <Image
+                        key={url}
+                        src={url}
+                        alt=''
+                        width={128}
+                        height={128}
+                        className='size-32 shrink-0 rounded-lg object-cover'
+                      />
+                    ))}
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ul>
-        </section>
-      ) : null}
+        ) : null}
+
+        <AbrirNoche venueSlug={venue.slug} />
+      </section>
 
       <div className='mt-10 rounded-xl border-2 border-primary bg-primary/5 p-8'>
         <h2 className='font-display font-extrabold text-headline-md uppercase'>

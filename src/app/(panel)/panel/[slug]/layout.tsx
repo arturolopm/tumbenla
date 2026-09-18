@@ -41,6 +41,7 @@ export default async function PanelVenueLayout({
       venues={venues.map((one) => ({ slug: one.slug, name: one.nombre, role: one.role }))}
       email={access.email}
       isOwner={access.esPlataforma || access.role === 'owner'}
+      isStaff={access.role === 'staff'}
       isPlatform={access.esPlataforma}
     >
       {children}

@@ -108,7 +108,7 @@ test('venue discovery searches by name or city and exposes the public contact li
   const footer = page.locator('footer')
   await expect(footer).toContainText('TUMBENLA')
   await expect(footer).toContainText(
-    'Nos reímos primero. Ayudamos siempre. Salir de rumba en los sitios de esta lista pone material de construcción donde hace falta.'
+    'Salir sigue siendo salir. En los sitios de Tumbenla, una parte del trago se vuelve material para volver a levantar, con la factura a la vista.'
   )
   await expect(footer.getByRole('link', { name: 'hastaabajo@tumbenla.com' })).toHaveAttribute(
     'href',
@@ -273,6 +273,41 @@ test('second owner cannot read the first venue in an isolated context', async ({
     await expect(page.getByRole('heading', { name: 'Page Not Found' })).toBeVisible()
   } finally {
     await context.close()
+  }
+})
+
+test('staff can reach nights and photo review, but nothing else, and a non-member is still rejected', async ({
+  browser,
+}) => {
+  const staffContext = await authenticatedContext(browser, 'staff')
+  try {
+    const staff = await staffContext.newPage()
+    await staff.goto('/panel/bar-la-nona')
+    await expect(staff).toHaveURL(/\/panel\/bar-la-nona\/escanear$/)
+    await expect(staff.getByRole('link', { name: 'Las noches' })).toBeVisible()
+    await expect(staff.getByRole('link', { name: 'Por revisar' })).toBeVisible()
+    await expect(staff.getByRole('link', { name: 'Carta' })).toHaveCount(0)
+    await expect(staff.getByRole('link', { name: 'Equipo' })).toHaveCount(0)
+
+    await staff.goto('/panel/bar-la-nona/noches')
+    await expect(staff.getByRole('heading', { name: 'Las noches' })).toBeVisible()
+
+    await staff.goto('/panel/bar-la-nona/fotos')
+    await expect(staff.getByRole('heading', { name: 'Por revisar' })).toBeVisible()
+  } finally {
+    await staffContext.close()
+  }
+
+  const outsiderContext = await authenticatedContext(browser, 'ownerB')
+  try {
+    const outsider = await outsiderContext.newPage()
+    await outsider.goto('/panel/bar-la-nona/noches')
+    await expect(outsider.getByRole('heading', { name: 'Page Not Found' })).toBeVisible()
+
+    await outsider.goto('/panel/bar-la-nona/fotos')
+    await expect(outsider.getByRole('heading', { name: 'Page Not Found' })).toBeVisible()
+  } finally {
+    await outsiderContext.close()
   }
 })
 

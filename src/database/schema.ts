@@ -513,10 +513,25 @@ export const partyPhoto = pgTable(
     url: text('url').notNull(),
     /** R2 object key, kept so the file can actually be deleted later. A person
      *  asking for their photo to be removed has to result in the bytes going
-     *  away, not just a flag flipping. */
+     *  away, not just a flag flipping. That is the privacy path ('hidden') and
+     *  it still deletes. A venue taking a guest photo off its own night
+     *  ('removed_by_venue') does NOT delete: the bytes are what the person who
+     *  uploaded it keeps seeing in their own history. */
     storageKey: text('storage_key'),
     caption: text('caption'),
-    // 'pending' | 'available' | 'hidden'
+    /**
+     * 'pending' | 'available' | 'hidden' | 'removed_by_venue'
+     *
+     * The last two are both "not on the night", for opposite reasons, and the
+     * difference is who still gets to see it:
+     *   hidden            someone asked not to appear. Gone for everyone, the
+     *                     uploader included, and the bytes go with it.
+     *   removed_by_venue  the bar did not want it on its night. Off the bar and
+     *                     off anything public, still in the uploader's own
+     *                     history.
+     * 'pending' only survives on rows from before guest photos published on
+     * arrival; nothing writes it now.
+     */
     status: text('status').default('pending').notNull(),
 
     /** Who uploaded it. Nullable because the account can be deleted and the
@@ -525,14 +540,16 @@ export const partyPhoto = pgTable(
       onDelete: 'set null',
     }),
     /**
-     * 'venue' | 'guest' | 'platform'. WHO uploaded it, which is not the same as
-     * who may enable it.
+     * 'venue' | 'guest' | 'platform'. WHO uploaded it, which now decides what
+     * REMOVING it means rather than whether it publishes.
      *
-     * A 'guest' photo is forced to 'pending' no matter what the client sends,
-     * and only the venue moves it to 'available'. That is what stops somebody
-     * uploading photos of a bar they never set foot in and claiming them to pad
-     * their nights: the venue is the gate. Default 'venue' so the rows that
-     * existed before this column keep their meaning.
+     * A guest photo publishes on arrival and the venue reviews after the fact.
+     * Padding your own nights with photos of a bar you never entered is what
+     * the old gate prevented, and it costs only the count on /mi-historia: the
+     * money there comes from paid orders, never from a photo. Removing a guest
+     * photo leaves it in the uploader's history, so it cannot delete the bytes;
+     * removing the venue's own photo deletes them. Default 'venue' so rows
+     * older than this column keep their meaning.
      */
     source: text('source').default('venue').notNull(),
     /** Who enabled or hid it, and when. The moderation trail for a photo of

@@ -67,8 +67,8 @@ export function VenueCard({
 
       <div className="halftone-overlay relative h-32 w-full bg-muted">
         {venue.coverImageUrl ? (
-          // Plain <img>: remote hosts are not configured in next.config yet, so
-          // next/image would fail at runtime.
+          // Plain <img> a proposito: coverImageUrl la pega una persona y puede
+          // ser de cualquier host; next/image solo sirve los de remotePatterns.
           <img
             src={venue.coverImageUrl}
             alt=""

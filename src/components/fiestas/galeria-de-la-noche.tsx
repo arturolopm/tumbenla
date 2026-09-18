@@ -1,6 +1,7 @@
 'use client'
 
 import { CheckIcon, FlagIcon } from 'lucide-react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 
@@ -83,8 +84,7 @@ export function GaleriaDeLaNoche({ nightId, fotos }: { nightId: string; fotos: F
     <div className="mt-10 flex flex-col gap-10">
       {fotos.length === 0 ? (
         <p className="text-body-md text-muted-foreground">
-          Todavía no hay fotos habilitadas de esta noche. Si tienes tuyas, súbelas: el sitio las
-          revisa antes de que salgan.
+          Todavía no hay fotos de esta noche. Si tienes tuyas, súbelas: salen de una.
         </p>
       ) : (
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -96,9 +96,11 @@ export function GaleriaDeLaNoche({ nightId, fotos }: { nightId: string; fotos: F
                 foto.reclamada ? 'border-lime' : 'border-border'
               )}
             >
-              <img
+              <Image
                 src={foto.url}
                 alt={foto.caption ?? ''}
+                width={400}
+                height={400}
                 loading="lazy"
                 className="aspect-square w-full object-cover"
               />
@@ -153,7 +155,7 @@ export function GaleriaDeLaNoche({ nightId, fotos }: { nightId: string; fotos: F
           <SubirFotos
             nightId={nightId}
             etiqueta="Subir mis fotos"
-            ayuda="El sitio las revisa antes de que salgan. Sube solo fotos tuyas o de gente que esté de acuerdo."
+            ayuda="Salen de una y quedan en tu historia. Sube solo fotos tuyas o de gente que esté de acuerdo."
           />
         </div>
       </section>

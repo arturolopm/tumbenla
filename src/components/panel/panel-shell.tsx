@@ -38,17 +38,26 @@ import { AccountMenu } from '@/components/layout/account-menu'
 
 type Venue = { slug: string; name: string; role: string }
 
-/** Staff only scan; owners and platform operators manage the venue. */
-const items = (slug: string, isOwner: boolean) => [
+/**
+ * Owners manage the whole venue. Staff also run nights and photos — they
+ * upload, moderate, and resolve privacy reports in `noches.ts` — but not the
+ * menu, the account, the site profile, or the team. Only platform operators
+ * and owners see those.
+ */
+const items = (slug: string, { isOwner, isStaff }: { isOwner: boolean; isStaff: boolean }) => [
   { href: `/panel/${slug}/escanear`, label: 'Escanear' },
+  ...(isOwner || isStaff
+    ? [
+        { href: `/panel/${slug}/noches`, label: 'Las noches' },
+        { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
+      ]
+    : []),
   ...(isOwner
     ? [
         { href: `/panel/${slug}`, label: 'Resumen', exact: true },
         { href: `/panel/${slug}/sitios`, label: 'Sitios' },
         { href: `/panel/${slug}/carta`, label: 'La carta' },
         { href: `/panel/${slug}/cuenta`, label: 'La cuenta' },
-        { href: `/panel/${slug}/noches`, label: 'Las noches' },
-        { href: `/panel/${slug}/fotos`, label: 'Por revisar' },
         { href: `/panel/${slug}/sitio`, label: 'El sitio' },
         { href: `/panel/${slug}/equipo`, label: 'Equipo' },
       ]
@@ -60,6 +69,7 @@ export function PanelShell({
   venues,
   email,
   isOwner,
+  isStaff,
   isPlatform,
   children,
 }: {
@@ -67,11 +77,12 @@ export function PanelShell({
   venues: Venue[]
   email: string
   isOwner: boolean
+  isStaff: boolean
   isPlatform: boolean
   children: React.ReactNode
 }) {
   const pathname = usePathname()
-  const nav = items(venue.slug, isOwner)
+  const nav = items(venue.slug, { isOwner, isStaff })
 
   return (
     <SidebarProvider>
