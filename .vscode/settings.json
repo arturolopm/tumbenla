@@ -1,0 +1,25 @@
+{
+  // .gitignore does NOT exclude anything from the editor's file watcher: that is
+  // this setting alone. `.next/` is ~1800 files that a production build rewrites
+  // from scratch, so without these entries every build floods the watcher, and
+  // with it tsserver, ESLint, Tailwind and Copilot, all of which re-index.
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/test-results/**": true,
+    "**/playwright-report/**": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/test-results": true,
+    "**/playwright-report": true,
+    "**/bun.lock": true
+  },
+  "files.exclude": {
+    "**/.next": true,
+    "**/test-results": true,
+    "**/playwright-report": true
+  }
+}
