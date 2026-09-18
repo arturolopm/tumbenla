@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 
 import {
@@ -71,7 +72,7 @@ export function ColaDeFotos({
 
         {pendientes.length === 0 ? (
           <p className='mt-2 text-body-md text-muted-foreground'>
-            Nada por revisar. Cuando alguien suba una foto a una de tus noches, aparece acá.
+            Nada pendiente. Las fotos que sube la gente salen de una; acá llegan los reportes de privacidad.
           </p>
         ) : (
           <ul className='mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3'>
@@ -104,7 +105,13 @@ function ReporteCard({
 }) {
   return (
     <li className='flex flex-wrap gap-4 rounded-xl border border-primary bg-primary/5 p-4'>
-      <img src={reporte.url} alt='' className='size-24 shrink-0 rounded-lg object-cover' />
+      <Image
+        src={reporte.url}
+        alt=''
+        width={96}
+        height={96}
+        className='size-24 shrink-0 rounded-lg object-cover'
+      />
       <div className='min-w-0 flex-1'>
         <p className='text-muted-foreground text-xs uppercase'>
           {formatDate(new Date(reporte.createdAt))} ·{' '}
@@ -158,7 +165,13 @@ function FotoPendienteCard({
 }) {
   return (
     <li className='overflow-hidden rounded-xl border border-border bg-card'>
-      <img src={foto.url} alt={foto.caption ?? ''} className='aspect-square w-full object-cover' />
+      <Image
+        src={foto.url}
+        alt={foto.caption ?? ''}
+        width={400}
+        height={400}
+        className='aspect-square w-full object-cover'
+      />
       <div className='flex flex-col gap-2 p-3'>
         <Link
           href={`/panel/${slug}/noches/${foto.nightId}`}

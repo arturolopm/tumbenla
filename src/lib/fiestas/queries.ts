@@ -29,6 +29,13 @@ export const listNightsForVenue = async (venueId: string): Promise<PartyNight[]>
       title: partyNight.title,
       status: partyNight.status,
       photoCount: sql<number>`count(${partyPhoto.id})::int`,
+      // Las primeras fotos de cada noche, para pintarlas en la lista y que
+      // nadie tenga que entrar a una noche para saber si vale la pena.
+      preview: sql<string[]>`coalesce(
+        (array_agg(${partyPhoto.url} order by ${partyPhoto.createdAt} desc)
+          filter (where ${partyPhoto.id} is not null))[1:6],
+        '{}'
+      )`,
     })
     .from(partyNight)
     .innerJoin(venue, eq(partyNight.venueId, venue.id))
@@ -79,28 +86,47 @@ export const listClaimedPhotoIds = async (
   return new Set(rows.map((row) => row.photoId))
 }
 
-/** El historial de una persona: sus fotos reclamadas, mas recientes primero. */
+/**
+ * Lo que una persona tiene en su historia: lo que reclamo y lo que subio.
+ *
+ * Las dos mitades no filtran igual, y ahi esta todo el asunto:
+ *   reclamada  tiene que seguir 'available'. Reclamar es decir "esa soy yo" en
+ *              una foto ajena, y si el sitio la quito, ya no hay donde verla.
+ *   subida     sobrevive a que el sitio la quite ('removed_by_venue'). El bar
+ *              decide que sale en SU noche, no que se borra de la historia de
+ *              quien la tomo.
+ * 'hidden' no aparece por ninguna de las dos: eso es alguien pidiendo no salir,
+ * y ahi no hay excepcion para nadie, ni para quien la subio.
+ */
+const MIA = (userId: string) =>
+  sql`(
+    (${photoClaim.userId} = ${userId} and ${partyPhoto.status} = 'available')
+    or
+    (${partyPhoto.uploadedByUserId} = ${userId} and ${partyPhoto.status} in ('available', 'removed_by_venue'))
+  )`
+
 export const listMyClaimedPhotos = async (userId: string): Promise<ClaimedPhoto[]> => {
   return db
-    .select({
-      claimId: photoClaim.id,
+    .selectDistinctOn([partyNight.happenedAt, partyPhoto.id], {
       photoId: partyPhoto.id,
       url: partyPhoto.url,
       caption: partyPhoto.caption,
-      showPublicly: photoClaim.showPublicly,
+      showPublicly: sql<boolean>`coalesce(${photoClaim.showPublicly}, false)`,
+      soloMia: sql<boolean>`${partyPhoto.status} <> 'available'`,
       nightId: partyNight.id,
       happenedAt: partyNight.happenedAt,
       venueName: venue.name,
       venueSlug: venue.slug,
     })
-    .from(photoClaim)
-    .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
+    .from(partyPhoto)
     .innerJoin(partyNight, eq(partyPhoto.nightId, partyNight.id))
     .innerJoin(venue, eq(partyNight.venueId, venue.id))
-    // Una foto retirada desaparece tambien del historial de quien la reclamo.
-    // Si alguien pidio que no se muestre, "no se muestra" no admite excepciones.
-    .where(and(eq(photoClaim.userId, userId), eq(partyPhoto.status, 'available')))
-    .orderBy(desc(partyNight.happenedAt))
+    .leftJoin(
+      photoClaim,
+      and(eq(photoClaim.photoId, partyPhoto.id), eq(photoClaim.userId, userId))
+    )
+    .where(MIA(userId))
+    .orderBy(desc(partyNight.happenedAt), desc(partyPhoto.id))
 }
 
 /** Las noches y fotos de una persona. Los aportes vienen de sus pedidos pagados. */
@@ -110,17 +136,23 @@ export const getHistorySummary = async (userId: string): Promise<HistorySummary>
       nightId: partyNight.id,
       venueId: venue.id,
     })
-    .from(photoClaim)
-    .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
+    .from(partyPhoto)
     .innerJoin(partyNight, eq(partyPhoto.nightId, partyNight.id))
     .innerJoin(venue, eq(partyNight.venueId, venue.id))
-    .where(and(eq(photoClaim.userId, userId), eq(partyPhoto.status, 'available')))
+    .leftJoin(
+      photoClaim,
+      and(eq(photoClaim.photoId, partyPhoto.id), eq(photoClaim.userId, userId))
+    )
+    .where(MIA(userId))
 
   const [{ count: photos } = { count: 0 }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(photoClaim)
-    .innerJoin(partyPhoto, eq(photoClaim.photoId, partyPhoto.id))
-    .where(and(eq(photoClaim.userId, userId), eq(partyPhoto.status, 'available')))
+    .select({ count: sql<number>`count(distinct ${partyPhoto.id})::int` })
+    .from(partyPhoto)
+    .leftJoin(
+      photoClaim,
+      and(eq(photoClaim.photoId, partyPhoto.id), eq(photoClaim.userId, userId))
+    )
+    .where(MIA(userId))
 
   const venues = new Set<string>()
 

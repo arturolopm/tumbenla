@@ -1,6 +1,7 @@
 'use client'
 
 import { EyeIcon, EyeOffIcon, Trash2Icon } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
@@ -74,13 +75,20 @@ export function MiHistoriaGaleria({ fotos }: { fotos: ClaimedPhoto[] }) {
                   key={foto.photoId}
                   className="overflow-hidden rounded-xl border-2 border-border bg-card"
                 >
-                  {/* Plain <img>: el host de R2 todavia no esta en next.config. */}
-                  <img
+                  <Image
                     src={foto.url}
                     alt={foto.caption ?? `Foto en ${primera.venueName}`}
+                    width={400}
+                    height={176}
                     className="h-44 w-full object-cover"
                     loading="lazy"
                   />
+
+                  {foto.soloMia ? (
+                    <p className="border-border border-b bg-surface-container-lowest px-3 py-2 text-muted-foreground text-xs">
+                      El sitio la quitó de su noche. Sigue acá, solo para ti.
+                    </p>
+                  ) : null}
 
                   <div className="flex items-center justify-between gap-2 p-3">
                     <button
