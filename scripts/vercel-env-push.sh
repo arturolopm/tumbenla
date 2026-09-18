@@ -57,8 +57,18 @@ while IFS= read -r linea || [[ -n "$linea" ]]; do
     continue
   fi
 
-  if printf '%s' "$valor" | vercel env add "$clave" "$entorno" --force --yes >/dev/null 2>&1; then
-    printf '  ok       %-32s\n' "$clave"
+  # Una NEXT_PUBLIC_* termina dentro del bundle del navegador, asi que Vercel se
+  # niega a guardarla como secreto en production o preview y el push falla con
+  # "invalid_visibility". No es un caso raro: NEXT_PUBLIC_SENTRY_DSN esta en los
+  # dos archivos de entorno. Que sea "config" es ademas lo correcto, porque de
+  # secreto no tiene nada.
+  visibilidad=()
+  if [[ "$clave" == NEXT_PUBLIC_* ]]; then
+    visibilidad=(--visibility config --no-sensitive)
+  fi
+
+  if printf '%s' "$valor" | vercel env add "$clave" "$entorno" --force --yes "${visibilidad[@]}" >/dev/null 2>&1; then
+    printf '  ok       %-32s%s\n' "$clave" "${visibilidad:+  (config, no secreta)}"
     subidas=$((subidas + 1))
   else
     printf '  FALLO    %-32s\n' "$clave"
