@@ -100,18 +100,28 @@ function NocheRow({
   disabled: boolean
 }) {
   const publicada = noche.status === 'published'
+  const sinFotos = noche.disponibles === 0 && noche.pendientes === 0
 
   return (
     <li className='flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4'>
       <div className='min-w-0'>
-        <Link
-          href={`/panel/${slug}/noches/${noche.id}`}
-          className='font-display font-bold uppercase hover:text-primary-text'
-        >
-          {noche.title || formatDate(new Date(noche.happenedAt))}
-        </Link>
+        <p>
+          <Link
+            href={`/panel/${slug}/noches/${noche.id}`}
+            className='font-display font-bold uppercase underline-offset-4 hover:text-primary-text hover:underline'
+          >
+            {noche.title || formatDate(new Date(noche.happenedAt))}
+          </Link>
+          {/* La fecha solo se repite cuando la noche tiene nombre propio: sin
+              nombre, el nombre YA es la fecha. */}
+          {noche.title ? (
+            <span className='ml-2 text-muted-foreground text-xs'>
+              {formatDate(new Date(noche.happenedAt))}
+            </span>
+          ) : null}
+        </p>
         <p className='text-muted-foreground text-sm'>
-          {formatDate(new Date(noche.happenedAt))} · {noche.disponibles} visibles
+          {sinFotos ? 'sin fotos todavía' : `${noche.disponibles} visibles`}
           {noche.pendientes > 0 ? (
             <span className='text-primary-text'> · {noche.pendientes} por revisar</span>
           ) : null}
@@ -122,6 +132,17 @@ function NocheRow({
         <span className='text-muted-foreground text-xs uppercase'>
           {publicada ? 'Publicada' : 'Borrador'}
         </span>
+        {/* The night's title also links here, but a title that only changes on
+            hover is not an affordance: the whole point of the row is the photos,
+            so the row says so. */}
+        <Link
+          href={`/panel/${slug}/noches/${noche.id}`}
+          className={`rounded-lg border px-3 py-1 text-sm transition-colors hover:border-primary ${
+            sinFotos ? 'border-primary text-primary-text' : 'border-border'
+          }`}
+        >
+          {sinFotos ? 'Subir fotos' : 'Ver fotos'}
+        </Link>
         <button
           type='button'
           disabled={disabled}

@@ -1,6 +1,6 @@
 'use server'
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
@@ -76,6 +76,7 @@ const contextoDeFoto = async (photoId: string) => {
       venueId: partyNight.venueId,
       slug: venue.slug,
       status: partyPhoto.status,
+      source: partyPhoto.source,
       storageKey: partyPhoto.storageKey,
     })
     .from(partyPhoto)
@@ -118,7 +119,7 @@ export const guardarNocheAction = async (
 
   if (!sitio) return { status: 'error', error: 'Ese sitio ya no existe.' }
 
-  const acceso = await assertVenueAccess(sitio.id, ['owner'])
+  const acceso = await assertVenueAccess(sitio.id, ['owner', 'staff'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   const id = formData.get('id')
@@ -166,7 +167,7 @@ export const publicarNocheAction = async (
   const contexto = await contextoDeNoche(nightId)
   if (!contexto) return { status: 'error', error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {
@@ -202,7 +203,7 @@ export type Firma =
  * QUIEN PUEDE PEDIR UNA FIRMA:
  *   - el sitio, para su propia noche
  *   - cualquiera con sesion verificada, para una noche PUBLICADA (sube como
- *     'guest' y su foto nace 'pending')
+ *     'guest' y su foto nace 'available': el sitio revisa despues)
  * El nightId decide el sitio; no se recibe venueId por ninguna parte.
  */
 export const firmarSubidaAction = async (
@@ -227,7 +228,7 @@ export const firmarSubidaAction = async (
   const contexto = await contextoDeNoche(nightId)
   if (!contexto) return { ok: false, error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   const esDelSitio = acceso.ok
 
   // Quien no es del sitio solo puede subir a una noche publicada. A una en
@@ -279,7 +280,7 @@ export const registrarFotoAction = async (
   const contexto = await contextoDeNoche(parsed.data.nightId)
   if (!contexto) return { status: 'error', error: 'Esa noche ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   const esDelSitio = acceso.ok
 
   if (!esDelSitio && contexto.status !== 'published') {
@@ -300,7 +301,9 @@ export const registrarFotoAction = async (
       caption: parsed.data.caption ?? null,
       uploadedByUserId: session.user.id,
       source: esDelSitio ? 'venue' : 'guest',
-      status: esDelSitio && entrada.publicar ? 'available' : 'pending',
+      // Una foto de rumbero sale publicada de una vez. El sitio revisa despues,
+      // y lo que quita con `borrarFotoAction` se le queda a quien la subio.
+      status: esDelSitio && !entrada.publicar ? 'pending' : 'available',
       ...(esDelSitio && entrada.publicar
         ? { reviewedByUserId: session.user.id, reviewedAt: new Date() }
         : {}),
@@ -313,9 +316,91 @@ export const registrarFotoAction = async (
 
   return {
     status: 'success',
-    mensaje: esDelSitio
-      ? 'Foto subida.'
-      : 'Foto enviada. El sitio la revisa antes de que salga.',
+    mensaje: esDelSitio ? 'Foto subida.' : 'Foto subida. Ya está en la noche y en tu historia.',
+  }
+}
+
+/**
+ * Un rumbero abre la noche que el sitio no abrio.
+ *
+ * Sin esto la foto no tiene donde ir: subir exige una noche, y la noche la creaba
+ * solo el sitio, asi que una foto del sabado se perdia si el bar no habia entrado
+ * al panel el domingo. Aqui la fecha la pone quien subio la foto, que es quien
+ * estuvo.
+ *
+ * Reusa la noche que ya exista en esa fecha en vez de crear otra: dos personas
+ * subiendo fotos de la misma rumba tienen que caer en la misma noche, o el sitio
+ * termina con cuatro "20 de septiembre" y las fotos repartidas entre ellas.
+ *
+ * NO pide assertVenueAccess a proposito: el punto es que no eres del sitio. Lo
+ * que si exige es sesion con correo verificado y un sitio publicado, igual que
+ * subir.
+ */
+export const abrirNocheComoRumberoAction = async (
+  venueSlug: string,
+  fecha: string
+): Promise<NocheState> => {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session) return { status: 'error', error: 'Inicia sesión para subir fotos.' }
+  if (!session.user.emailVerified) {
+    return { status: 'error', error: 'Verifica tu correo antes de subir fotos.' }
+  }
+
+  const parsed = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .safeParse(fecha)
+  if (!parsed.success) return { status: 'error', error: 'Dinos qué día fue esa noche.' }
+
+  const cuando = new Date(`${parsed.data}T00:00:00`)
+  if (Number.isNaN(cuando.getTime())) {
+    return { status: 'error', error: 'Dinos qué día fue esa noche.' }
+  }
+  // Una noche que todavia no paso no es una noche a la que le tomaste fotos.
+  if (cuando.getTime() > Date.now()) {
+    return { status: 'error', error: 'Esa noche todavía no ha pasado.' }
+  }
+
+  const [sitio] = await db
+    .select({ id: venue.id, slug: venue.slug })
+    .from(venue)
+    .where(and(eq(venue.slug, venueSlug), eq(venue.status, 'published')))
+    .limit(1)
+
+  if (!sitio) return { status: 'error', error: 'Ese sitio no existe.' }
+
+  const [yaExiste] = await db
+    .select({ id: partyNight.id })
+    .from(partyNight)
+    .where(
+      and(
+        eq(partyNight.venueId, sitio.id),
+        sql`${partyNight.happenedAt}::date = ${parsed.data}::date`
+      )
+    )
+    .limit(1)
+
+  if (yaExiste) {
+    return { status: 'success', mensaje: 'Esa noche ya estaba abierta.', nightId: yaExiste.id }
+  }
+
+  try {
+    const [fila] = await db
+      .insert(partyNight)
+      .values({
+        venueId: sitio.id,
+        happenedAt: cuando,
+        // Sin titulo: el nombre de la noche ES la fecha, y ponerle uno seria
+        // que un desconocido bautice la rumba del sitio.
+        title: null,
+        status: 'published',
+      })
+      .returning({ id: partyNight.id })
+
+    revalidarNoche(sitio.slug, fila.id)
+    return { status: 'success', mensaje: 'Noche abierta. Sube tus fotos.', nightId: fila.id }
+  } catch {
+    return { status: 'error', error: 'No se pudo abrir esa noche.' }
   }
 }
 
@@ -328,7 +413,7 @@ export const moderarFotoAction = async (
   const contexto = await contextoDeFoto(photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {
@@ -363,12 +448,41 @@ export const moderarFotoAction = async (
  * vaya, no que un flag cambie. Si se borrara la fila primero y fallara el
  * borrado en R2, quedaria un archivo publico que ya nadie sabe que existe.
  */
+/**
+ * El sitio quita una foto de su noche.
+ *
+ * Lo que pasa depende de quien la subio, y la diferencia es el punto entero:
+ * una foto del sitio se borra de verdad, archivo incluido, porque no hay nadie
+ * mas a quien le pertenezca. Una foto de un rumbero solo sale del bar: se queda
+ * en la historia de quien la subio, asi que borrar el objeto de R2 le romperia
+ * la suya. Por eso esto NO es el camino de privacidad: cuando alguien pide no
+ * aparecer, `retirarFotoComoPlataformaAction` la esconde para todos.
+ */
 export const borrarFotoAction = async (photoId: string): Promise<NocheState> => {
   const contexto = await contextoDeFoto(photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
+
+  if (contexto.source === 'guest') {
+    try {
+      await db
+        .update(partyPhoto)
+        .set({
+          status: 'removed_by_venue',
+          reviewedByUserId: acceso.acceso.userId,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(partyPhoto.id, photoId))
+    } catch {
+      return { status: 'error', error: 'No se pudo quitar la foto.' }
+    }
+
+    revalidarNoche(contexto.slug, contexto.nightId)
+    return { status: 'success', mensaje: 'Foto quitada de la noche.' }
+  }
 
   if (contexto.storageKey) {
     try {
@@ -438,7 +552,7 @@ export const resolverReporteAction = async (reportId: string): Promise<NocheStat
   const contexto = await contextoDeFoto(reporte.photoId)
   if (!contexto) return { status: 'error', error: 'Esa foto ya no existe.' }
 
-  const acceso = await assertVenueAccess(contexto.venueId, ['owner'])
+  const acceso = await assertVenueAccess(contexto.venueId, ['owner', 'staff'])
   if (!acceso.ok) return { status: 'error', error: acceso.error }
 
   try {

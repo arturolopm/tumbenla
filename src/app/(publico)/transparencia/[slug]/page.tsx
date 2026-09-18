@@ -116,8 +116,8 @@ export default async function PurchasePage({
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {receipts.map((item) => (
               <figure key={item.id} className="overflow-hidden rounded-xl border-2 border-secondary">
-                {/* Plain <img>: R2 host is not
-                    configured in next.config yet. */}
+                {/* Plain <img> a proposito: la URL de una evidencia puede venir pegada
+                    y no solo de R2; next/image reventaria con otro host. */}
                 <img src={item.url} alt={item.caption ?? 'Recibo'} className="w-full" />
                 {item.caption ? (
                   <figcaption className="border-secondary border-t px-3 py-2 text-body-md text-muted-foreground">

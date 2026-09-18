@@ -309,6 +309,20 @@ change, and `bun run migrate:local` only when a new migration is committed. Data
 - `bun run db:up` / `db:down` / `db:reset` / `db:logs` / `db:psql`: Local services (defined in
   `compose.yaml` at the repo root: Postgres on 5432, Mailpit on 8025)
 
+**Antes de escribir un comando a mano, mira si ya existe aqui.** `package.json` no los lista
+todos: estos viven en `scripts/` y se corren directo, asi que no aparecen en `bun run`. Si
+necesitas hacer algo y no esta en esta lista, `ls scripts/` antes de improvisar uno.
+
+- `scripts/vercel-env-push.sh <archivo.env> <production|preview|development> [--dry-run]`:
+  sube a Vercel las variables de un archivo de entorno. Cada valor viaja por STDIN, asi que
+  no queda en el historial del shell; salta los `<<<sin rellenar>>>` y los vacios, y es
+  idempotente. **Corre siempre `--dry-run` primero.**
+- `bun scripts/seed-tumbenla.ts`: sitios, productos y compras de ejemplo.
+- `bun scripts/test-city-gate.ts`: comprueba el gate de ciudad.
+- `bun --conditions react-server scripts/prueba-confirmacion-concurrente.ts`: dos
+  confirmaciones de pago a la vez. Lleva la condicion porque importa una server action;
+  sin ella el import revienta.
+
 ### Email
 
 Resend is the default provider in every environment, so local testing uses the same delivery path as

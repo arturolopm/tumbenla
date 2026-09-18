@@ -59,7 +59,7 @@ primera ciudad. Tumbenla puede abrir nuevas ciudades cuando Producto lo decida.
 | Liquidación del sitio y transparencia | Construida y probada localmente: deducciones revisadas, asignación exacta, transferencias manuales con evidencia y vistas V2. Falta ejecutar la operación real en preview/live. |
 | Alta en 4 campos, aprobación sin cuenta y reclamo por correo verificado | Construido (decisión 35) |
 | Compromiso general por porcentaje de ventas | **Retirado** (decision 34) |
-| Subida real a R2 (cuenta, buckets, CORS) | **Falta la infra, el codigo esta** |
+| Subida real a R2 (cuenta, buckets, CORS) | **Vivo en local (2026-09-18).** Bucket publico `tumbenla-preview-public` por Public Development URL (r2.dev), privado aparte, CORS probada con una subida de verdad desde el navegador. Falta el par de produccion y sumar el dominio de preview a los origenes. |
 | Gate de ciudad (ciudades activas, resto en camino) | Implementado y browser-validado localmente; build completo confirma ISR de 300 s. La geolocalización por IP en preview/producción sigue por validar. |
 | **Vender el trago: carta, pedido, QR, escaneo, compensacion y caducidad** | Construido y probado en local. El adaptador ePayco Hosted Smart Checkout v2, la verificación autoritativa, la reconciliación y la recuperación están implementados; faltan aprobación comercial/legal, evidencia de cuenta y prueba en preview. |
 | Compras de material y trazabilidad de la fundación | Administración, evidencia privada/pública, atribución limitada por monto y vistas V2 construidas y probadas localmente; falta validar R2 real. |
@@ -93,7 +93,8 @@ Vercel.
 | Actor | Como se decide | Donde vive | Que puede |
 |---|---|---|---|
 | **Plataforma** (nosotros) | `ADMIN_EMAILS`, variable de entorno | `/admin` | verificar sitios, consultar la carta, liquidar saldos, moderar cualquier foto de la red, comprar material |
-| **Sitio** (dueno + personal) | `venue_member`, fila en la base | `/panel/[slug]` | armar la carta y **escanear** cada entrega, noches y fotos, aprobar lo que sube la gente. Solo el dueno maneja el equipo y ve la cuenta |
+| **Sitio — dueno** | `venue_member` con `role = 'owner'` | `/panel/[slug]` | todo lo del personal, mas armar la carta, el equipo, el sitio y la cuenta |
+| **Sitio — personal** | `venue_member` con `role = 'staff'` | `/panel/[slug]` | **escanear** cada entrega, las noches y sus fotos, aprobar lo que sube la gente (decision 43). No toca carta, cuenta, equipo ni sitio |
 | **Rumbero** | cualquier sesion | publico + `/mi-historia` | reclamar sus fotos, subir las suyas, reportar una en la que sale |
 
 Nadie publica su propio sitio. Esa verificacion es de la plataforma y es lo que
@@ -209,9 +210,13 @@ Estan aca para no volver a discutirlas cada dos semanas.
     `/api/geocode`: entra el operador al crear un sitio y el dueno verificado
     solo al editar uno que ya le pertenece. El alta publica sigue teniendo
     cuatro campos y ninguna direccion.
-21. **Una foto que sube un rumbero solo es reclamable cuando el sitio la
-    aprueba.** Es lo que impide subir fotos de un bar donde uno nunca estuvo y
-    reclamarlas para inflarse las noches. El portero es el sitio.
+21. ~~**Una foto que sube un rumbero solo es reclamable cuando el sitio la
+    aprueba.**~~ **Revertida (2026-09-18) por la decision 44.** La foto sale
+    publicada al subirla y el sitio revisa despues. El fraude que esta decision
+    evitaba —inflarse las noches con fotos de un bar donde uno nunca estuvo—
+    cuesta solo el CONTEO de `/mi-historia`: la plata de ahi sale de pedidos
+    pagados, nunca de una foto. Cobrar una espera a todo el mundo por una cifra
+    de vanidad salia mas caro que el fraude.
 22. **El estimado se queda simple: una sola accion, "Esa soy yo".** No hay un
     "me gusta" que tambien sume. Un guardar-porque-me-gusta que contara como
     visita volveria el aporte estimado inflable a punta de clics. Aplazado junto
@@ -408,6 +413,37 @@ Estan aca para no volver a discutirlas cada dos semanas.
     campaña activa hoy. Cada canal necesita consentimiento granular, retiro sencillo, límites de
     frecuencia, configuración, acuerdo con el sitio y revisión legal; el pedido actual recoge
     correo, no teléfono del cliente.
+43. **El personal maneja fotos y noches; la carta y la cuenta son del dueño.** La
+    línea no se traza por pantalla sino por lo que la acción decide: precio,
+    reparto y quién cobra son del dueño, y ahí el personal no entra
+    (`carta.ts`, `/cuenta`, `/equipo`, `/sitio`, todos `['owner']`). Subir,
+    moderar y borrar una foto, y armar la noche a la que cuelgan, no mueven
+    plata, y son justo lo que pasa mientras el dueño no está: `noches.ts` y sus
+    tres páginas aceptan `['owner', 'staff']`. Antes el personal veía solo
+    `/escanear`, lo que dejaba las fotos de una noche esperando a que el dueño
+    se sentara a subirlas.
+44. **La foto del rumbero sale publicada, y quitarla del bar no se la quita a
+    quien la subio.** Revierte la 21. Son tres estados y la diferencia esta en
+    QUIEN deja de verla:
+    - `available` — sale al subirla, sin esperar a nadie.
+    - `removed_by_venue` — el sitio no la quiere en SU noche. Desaparece del bar
+      y de todo lo publico, y **sigue en la historia de quien la subio**. No
+      borra el archivo de R2, porque ese archivo es lo que esa persona sigue
+      viendo. El bar decide que sale en su noche, no que se borra de la memoria
+      de alguien.
+    - `hidden` — alguien pidio no aparecer. Se va para todos, quien la subio
+      incluido, y el archivo tambien. Aqui no hay excepcion para nadie: es el
+      unico camino que destruye bytes.
+    Colapsar los dos ultimos en "borrar" es lo que habia antes, y significaba
+    que un bar incomodo con una foto podia borrarsela de la historia a quien
+    estuvo ahi.
+45. **Un rumbero puede abrir la noche que el sitio no abrio.** Si no, la foto no
+    tiene donde ir: subir exige una noche, y la noche la creaba solo el sitio,
+    asi que la rumba del sabado se perdia si el bar no entraba al panel el
+    domingo. Nace publicada y sin titulo —el nombre ES la fecha, porque un
+    desconocido no bautiza la rumba del sitio— y si ya existe una noche en esa
+    fecha se reusa, para que dos personas subiendo de la misma rumba caigan en
+    la misma noche y no en cuatro "20 de septiembre" distintos.
 
 ---
 
@@ -528,13 +564,18 @@ bancarias manuales revisadas, no mediante split automatico.
 
 ### Siguiente
 
-- [ ] **Conectar R2 de verdad.** El codigo esta y las claves ya salen sin
-      comentar en `.env.example`; falta la cuenta de Cloudflare, los buckets, las
-      llaves, y la **politica de CORS del bucket publico** que permita `PUT`
-      desde produccion, preview y `http://localhost:3000`. Sin CORS la subida
-      falla en el navegador con un error que no menciona CORS por ninguna parte.
-      Hasta entonces, firmar una subida responde "El almacenamiento de fotos no
-      esta configurado" y el resto del sitio sigue funcionando.
+- [x] **Conectar R2 de verdad — hecho en local el 2026-09-18.** Cuenta, los dos
+      buckets, token con alcance solo a ellos, y la CORS del publico probada con
+      una subida real desde el navegador (que es la unica forma de probarla: por
+      curl nunca falla). **No se uso dominio propio**: un dominio propio en R2
+      exige mover TODA la zona DNS a Cloudflare, y `tumbenla.com` vive en Vercel
+      con el correo en Zoho; mover la zona arriesgaba correo y despliegue para
+      ganar una URL bonita. Sirve por `pub-….r2.dev`, y cambiar a
+      `cdn.tumbenla.com` el dia que la zona este en Cloudflare es una variable de
+      entorno, no codigo.
+- [ ] **El par de produccion de R2.** Mismos pasos con `tumbenla-prod-*`, token
+      aparte, y `https://tumbenla.com` en los origenes CORS. Al de preview hay
+      que sumarle la URL de preview de Vercel.
 - [ ] **Avisarle al sitio cuando algo lo espera.** Hoy nada le avisa a un dueno
       que tiene fotos por revisar o un reporte de privacidad abierto: hay que
       entrar al panel a mirar.
@@ -570,13 +611,11 @@ Cosas que note construyendo, con donde estan y cuando muerden.
 
 ### Lo que queda abierto de "vender el trago"
 
-- **El personal puede administrar la carta.** Probado localmente con
-  `mesero@prueba.local`: `/panel/bar-la-nona/carta` muestra agregar, pausar,
-  editar y archivar. `CartaPage` y las acciones de `src/app/actions/carta.ts`
-  llaman `requireVenueAccess` / `assertVenueAccess` sin restringir a `owner`.
-  Contradice el rol que necesita la experiencia simple: el personal solo entrega
-  en `/escanear`; precio y reparto son decisión del dueño. Muerde durante una
-  barra llena, cuando quien debe escanear ve y puede cambiar la oferta.
+- **El personal podía administrar la carta — resuelto.** `CartaPage` y los seis
+  puntos de `src/app/actions/carta.ts` restringen a `['owner']`, así que precio
+  y reparto vuelven a ser decisión del dueño y quien escanea ya no puede cambiar
+  la oferta en plena barra. Lo que el personal sí maneja, y por qué esa línea no
+  es la misma, está en la decisión 43.
 - **Comunicación propósito primero — resuelto 2026-09-17.** La portada habla al
   rumbero, conserva las frases canónicas y dirige el recorrido del dueño a
   `/registrar-sitio`. El reparto en pesos, el QR y la factura viven después, en
@@ -660,10 +699,22 @@ mentalmente en cada linea. Hoy no rompe nada; solo cuesta leerlo.
   build de producción. Cubre aislamiento mínimo y el circuito pago → QR → redención → confirmación,
   pero no reemplaza la matriz manual de cámara, móvil, correo real ni aceptación en preview.
 
-- **El viaje real a R2 nunca se ejecuto.** Firmar, subir, registrar y borrar
-  estan escritos y todo lo que los rodea esta probado, pero sin cuenta ni buckets
-  el ultimo paso responde "El almacenamiento de fotos no esta configurado". La
-  primera subida de verdad es tambien la primera prueba de la politica de CORS.
+- **El viaje real a R2 ya se ejecuto (2026-09-18).** Firmar, subir directo desde
+  el navegador, registrar la fila y servir la foto por `next/image`: probado de
+  punta a punta contra el bucket de preview. La CORS quedo probada donde
+  importa, en un navegador; por `curl` nunca habria fallado. Queda el par de
+  produccion.
+
+- **El build pedia siete procesos para 28 paginas.** Next reparte la generacion
+  estatica en `os.cpus().length - 1` trabajadores, y cada uno arranca un runtime
+  entero para producir cuatro paginas: el arranque cuesta mas que el trabajo. En
+  una maquina de 8 GB los siete a la vez hacian crecer el swap 9 GB y el sistema
+  empezaba a matar procesos, casi siempre el editor, no el build. Con
+  `experimental.cpus: 2` en `next.config.ts` el mismo build compila en 8 s en vez
+  de 25 s. Aparte, `.gitignore` NO excluye nada del vigilante de archivos del
+  editor: eso es `files.watcherExclude`, y sin el, los ~1800 archivos que
+  `.next/` reescribe en cada build despertaban a tsserver, ESLint y Tailwind
+  juntos. Por eso existe `.vscode/settings.json`.
 
 ### La trampa que va a morder (multi-tenencia)
 
@@ -878,9 +929,14 @@ ruta: es otro proveedor o un proxy propio con limite.
   de las trazas (preview y desarrollo, 100%). Faltan las cinco variables de
   `.env.vercel.example`, un redespliegue y comprobar en Preview un error de
   navegador y uno de servidor con stack TypeScript antes de promover.
-- **No hay hosts remotos en `next.config.ts`**, por eso todas las imagenes usan
-  `<img>` plano en vez de `next/image`. Cuando R2 sirva imagenes de verdad, hay
-  que configurarlo y migrar.
+- **Las fotos de fiestas ya van por `next/image`; el resto de imagenes NO, y es
+  a proposito.** `next.config.ts` deriva el host de `R2_BUCKET_URL`, asi que solo
+  sirve el bucket. Una foto de `party_photo` siempre sale de ahi y esas migraron.
+  `venue.coverImageUrl` y la imagen de un producto son campos de texto donde una
+  persona PEGA una URL de cualquier host (`httpsImageUrl` solo exige https), y
+  `next/image` con un host que no esta en `remotePatterns` revienta en runtime.
+  Cada `<img>` que queda lleva el motivo escrito encima: no son un pendiente,
+  son la unica opcion correcta mientras esos campos acepten URLs ajenas.
 
 ### Dos sistemas de diseno en Stitch
 

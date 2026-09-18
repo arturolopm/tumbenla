@@ -1,6 +1,7 @@
 'use client'
 
 import { EyeOffIcon, Trash2Icon } from 'lucide-react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useTransition } from 'react'
 
@@ -22,6 +23,7 @@ const ESTADO: Record<string, string> = {
   pending: 'Sin habilitar',
   available: 'Visible',
   hidden: 'Retirada',
+  removed_by_venue: 'Fuera de la noche',
 }
 
 export function FotosDeLaNoche({ nightId, fotos }: { nightId: string; fotos: Foto[] }) {
@@ -54,12 +56,11 @@ export function FotosDeLaNoche({ nightId, fotos }: { nightId: string; fotos: Fot
         <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {fotos.map((foto) => (
             <li key={foto.id} className="overflow-hidden rounded-xl border border-border bg-card">
-              {/* <img> plano y no next/image: el host de R2 solo entra en
-                  remotePatterns cuando la variable existe en el build, y en un
-                  entorno sin R2 next/image romperia la pagina entera. */}
-              <img
+              <Image
                 src={foto.url}
                 alt={foto.caption ?? ''}
+                width={400}
+                height={400}
                 className="aspect-square w-full object-cover"
               />
               <div className="flex flex-col gap-2 p-3">
@@ -82,23 +83,32 @@ export function FotosDeLaNoche({ nightId, fotos }: { nightId: string; fotos: Fot
                     <button
                       type="button"
                       disabled={pendiente}
-                      onClick={() => correr(() => moderarFotoAction(foto.id, 'hidden'))}
-                      className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs disabled:opacity-50"
+                      onClick={() => correr(() => borrarFotoAction(foto.id))}
+                      title={
+                        foto.source === 'guest'
+                          ? 'Sale de la noche. Quien la subió la conserva en su historia.'
+                          : 'Se borra de verdad: el archivo también se va'
+                      }
+                      className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs transition-colors hover:border-destructive disabled:opacity-50"
                     >
                       <EyeOffIcon className="size-3" />
-                      Retirar
+                      Quitar de la noche
                     </button>
                   )}
-                  <button
-                    type="button"
-                    disabled={pendiente}
-                    onClick={() => correr(() => borrarFotoAction(foto.id))}
-                    aria-label="Borrar la foto"
-                    title="Borrar de verdad: el archivo también se va"
-                    className="rounded-lg border border-border p-1 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive-foreground disabled:opacity-50"
-                  >
-                    <Trash2Icon className="size-3" />
-                  </button>
+                  {/* El bote solo aparece en las fotos del sitio. Una foto de un
+                      rumbero no se destruye desde aca: sigue siendo suya. */}
+                  {foto.source !== 'guest' ? (
+                    <button
+                      type="button"
+                      disabled={pendiente}
+                      onClick={() => correr(() => borrarFotoAction(foto.id))}
+                      aria-label="Borrar la foto"
+                      title="Borrar de verdad: el archivo también se va"
+                      className="rounded-lg border border-border p-1 text-muted-foreground transition-colors hover:border-destructive hover:text-destructive-foreground disabled:opacity-50"
+                    >
+                      <Trash2Icon className="size-3" />
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </li>

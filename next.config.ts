@@ -33,6 +33,14 @@ const nextConfig: NextConfig = {
   // A package-lock outside this repository otherwise makes Next trace from the
   // user's home directory, slowing builds and making their inputs ambiguous.
   outputFileTracingRoot: process.cwd(),
+  experimental: {
+    // Next defaults this to `os.cpus().length - 1`, which on an 8-core machine
+    // spawns 7 export workers for 28 static pages: four pages each, and every
+    // worker boots a whole Next runtime to get them. The boot cost dominates,
+    // and seven of them at once is what pushed an 8 GB machine into swap hard
+    // enough for the OS to start killing processes.
+    cpus: 2,
+  },
   images: {
     remotePatterns: r2Patterns,
   },
