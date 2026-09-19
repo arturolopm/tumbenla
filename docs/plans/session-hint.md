@@ -289,7 +289,7 @@ what passed, the numbers, and anything unexpected."
 - `docs/react-patterns.md`: the trap "a barrel re-exporting a server module drags env.ts + Zod into every page".
 - Commit `[T8]`.
 
-### [ ] T9: Gate (Opus)
+### [x] T9: Gate (Opus)
 - `node .gitnexus/run.cjs detect-changes --scope compare --base-ref preview --repo tumbenla`: only expected
   symbols and flows.
 - `git diff --check`, `typecheck`, `lint`, `test:auth`, `test:commerce`, and the full `test:e2e` (all logged to a file).
@@ -346,6 +346,13 @@ in a sandboxed native fetch and hides its traffic from the test), recording that
 `globalThis.__SENTRY__` did not exist yet at that moment (~2.9 s; `load` at ~4.4 s). Both were
 delivered after the SDK loaded, in both runs, and so was a late error. The only errors lost are the
 ones thrown before any of the app's JavaScript has run, which no version of the app could catch.
+
+**Gate (T9, 2026-09-19):** `typecheck` 0 errors · `lint` clean for this branch (the 2 warnings + 1
+info are pre-existing, in `lemonsqueezy.ts` and `formulario-solicitud.tsx`) · `test:auth` 8/8 ·
+`test:commerce` 112/112 · full `test:e2e` 20/20 · `git diff --check` clean ·
+`detect-changes --base-ref origin/preview`: 25 files, the expected ones; risk "critical" comes from
+`getBaseUrl` (email links, metadata, auth), whose logic is unchanged and whose flows the build, e2e
+and the OTP-to-Mailpit check exercised. Not pushed: waiting for the user's decision.
 
 ## Verification (end to end)
 1. `bun run test:auth`: parser, escaping, and the inline script matching `applySessionHint`.
