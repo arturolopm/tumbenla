@@ -609,6 +609,44 @@ Cosas que note construyendo, con donde estan y cuando muerden.
   capa con clustering y consulta acotada por viewport contra `venue_lat_lng_idx`,
   no seguir apilando nodos.
 
+### La barra tarda ~2.6 s en saber si hay sesion, y no es el servidor (medido 2026-09-19)
+
+Medido con Playwright en `/` (build de produccion local y `tumbenla.com`),
+perfil movil: 4G emulado y CPU x4. Scripts y metodo en la conversacion que lo
+midio; los numeros son medianas de 3 corridas.
+
+- **La causa es la cascada detras de la hidratacion.** `useSession()` de
+  Better-Auth no pide `/api/auth/get-session` hasta que el atomo se MONTA
+  (`onMount` + `setTimeout(0)` en `better-auth/dist/client/query.mjs`), o sea
+  despues de bajar, ejecutar e hidratar TODO el JS de la pagina. La pagina
+  pinta a ~1.1 s, la peticion sale a ~3.6 s y el servidor responde en 7 ms.
+  Contrafactual: el mismo build, pidiendo la sesion desde `<head>`, la tiene a
+  ~0.45 s, **antes** del primer pintado. Lo unico que cambia es cuando sale la
+  peticion. La decision 23 conto con "un parpadeo"; en movil son 2.6 s.
+- **Amplificador 1: `@/lib/utils` mete `env.ts` y Zod entero en el cliente.**
+  El barril reexporta `urls.ts`, que importa `@/config/env` (t3-env + Zod +
+  el esquema de TODAS las variables de servidor, nombres incluidos). 41
+  componentes cliente importan `cn` de ese barril, entre ellos `toast.tsx`,
+  que vive en el layout raiz: todas las paginas lo pagan. Son 62 KB gz / 266
+  KB crudos. Quitandolo, la sesion sale ~390 ms antes.
+- **Amplificador 2: el SDK de Sentry en el navegador.** `instrumentation-client.ts`
+  corre antes de hidratar. Quitandolo (ademas de lo anterior), ~740 ms mas, y
+  eso con Sentry APAGADO (el `.env` local no trae DSN): es solo bajar y
+  evaluar el SDK. En produccion hay DSN, asi que ademas inicializa.
+  Con los dos quitados siguen quedando ~1.4 s: adelgazar ayuda pero no quita
+  la cascada.
+- **Con sesion hay una segunda cascada.** `/api/mi-acceso` sale solo cuando
+  `get-session` termina y pega a la base; la barra muestra el nombre y ~160 ms
+  despues (base local despierta) lo cambia por el del sitio. En produccion,
+  una peticion con base tras 13 min quieta tardo 3.08 s (luego 0.53 y 0.44):
+  eso es lo que espera el nombre del sitio cuando Neon duerme.
+- **El arranque en frio de la funcion de auth suma ~1 s** a la primera
+  peticion: 1.40 s tras 10 min sin trafico, contra 0.35 s en caliente
+  (`tumbenla.com`; a los 5 min seguia caliente). `auth.ts` carga
+  al arrancar todo el correo (svix, postmark, nodemailer, plunk, React Email,
+  prettier); volverlo perezoso baja el arranque local de 122 a 101 ms: real,
+  pero no es lo que pesa.
+
 ### Lo que queda abierto de "vender el trago"
 
 - **El personal podía administrar la carta — resuelto.** `CartaPage` y los seis
