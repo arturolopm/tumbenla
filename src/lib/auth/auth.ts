@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { createAuthMiddleware } from 'better-auth/api'
 import { nextCookies } from 'better-auth/next-js'
 import { emailOTP } from 'better-auth/plugins'
 
@@ -7,67 +8,94 @@ import { db } from '@/database'
 import { APP_COOKIE_NAME, isProd } from '@/lib/constants'
 import { env } from '@/config/env'
 import { getBaseUrl } from '@/lib/utils'
-import {
-  getEmailSubject,
-  renderOTPEmail,
-  renderPasswordResetEmail,
-  renderWelcomeEmail,
-} from '@/components/emails'
-import { getFromEmailAddress, quickValidateEmail, sendEmail } from '@/lib/messaging/email'
-import { getActiveProviderName } from '@/lib/messaging/email/mailer'
 import { isEmailVerificationEnabled } from '@/config/feature-flags'
 import { isIsolatedBrowserTest } from '@/lib/isolated-browser-test'
+import { SESSION_HINT_COOKIE, buildSessionHint, serializeSessionHint } from './session-hint'
+import { sessionHintCookieOptions } from './session-hint-server'
 
 /**
- * Todas las direcciones por las que ESTE despliegue responde.
+ * The email stack, loaded on the first send instead of at boot.
  *
- * `getBaseUrl()` devuelve una sola, la canonica, y con eso basta para escribir
- * un enlace dentro de un correo. Pero Vercel sirve el mismo despliegue por
- * varias a la vez —la del dominio propio, la de la rama y la del despliegue
- * suelto, `proyecto-7590aq1ux-...`— y el chequeo de origen de Better-Auth
- * compara contra la direccion por la que el navegador abrio la pagina, no
- * contra la canonica. Con una sola en la lista, entrar desde cualquier otra
- * devuelve 403 "Invalid origin".
- *
- * Las variables sin prefijo publico las pone Vercel en tiempo de ejecucion y
- * describen este mismo despliegue, asi que confiar en ellas no le abre la
- * puerta a nadie mas. A proposito NO se usa un comodin tipo `*.vercel.app`:
- * eso confiaria en cualquier sitio alojado en Vercel, que es justo lo que el
- * chequeo de origen existe para impedir.
+ * Every auth request boots this module, including the `get-session` that each
+ * page view makes. Importing the mail providers (Resend and its svix, Postmark,
+ * Nodemailer, Plunk) and React Email eagerly put all of them on that path for
+ * requests that never send anything: measured, the auth route's cold boot goes
+ * from 122 to 101 ms locally without them.
  */
-const origenesPropios = (): string[] => {
-  const candidatos = [getBaseUrl(), env.VERCEL_URL?.trim(), env.VERCEL_BRANCH_URL?.trim()].filter(
-    (valor): valor is string => Boolean(valor)
+const loadEmail = async () => {
+  const [templates, messaging, mailer] = await Promise.all([
+    import('@/components/emails'),
+    import('@/lib/messaging/email'),
+    import('@/lib/messaging/email/mailer'),
+  ])
+  return { templates, messaging, mailer }
+}
+
+/**
+ * The body of what an endpoint returned, whichever way it was called.
+ *
+ * Over HTTP, better-call's `ctx.json(value)` wraps the value as
+ * `{ body, _flag: 'json' }`; through `auth.api.*` it returns the value itself
+ * (`node_modules/better-call/dist/context.mjs`, `json`). Comparing the raw
+ * value with `null` would therefore never match a browser request.
+ */
+const returnedBody = (returned: unknown): unknown =>
+  returned && typeof returned === 'object' && '_flag' in returned
+    ? (returned as { body?: unknown }).body
+    : returned
+
+/**
+ * Every address THIS deployment answers on.
+ *
+ * `getBaseUrl()` returns one, the canonical one, which is enough to write a
+ * link inside an email. But Vercel serves the same deployment on several at
+ * once — the custom domain, the branch URL and the standalone deployment URL,
+ * `project-7590aq1ux-...` — and Better-Auth's origin check compares against the
+ * address the browser opened the page on, not the canonical one. With only one
+ * in the list, signing in from any other returns 403 "Invalid origin".
+ *
+ * The variables without a public prefix are set by Vercel at runtime and
+ * describe this same deployment, so trusting them opens the door to nobody
+ * else. A wildcard such as `*.vercel.app` is deliberately NOT used: it would
+ * trust any site hosted on Vercel, which is exactly what the origin check
+ * exists to prevent.
+ */
+const deploymentOrigins = (): string[] => {
+  const candidates = [getBaseUrl(), env.VERCEL_URL?.trim(), env.VERCEL_BRANCH_URL?.trim()].filter(
+    (value): value is string => Boolean(value)
   )
 
-  // EN DESARROLLO, ADEMAS, EL LOOPBACK.
+  // IN DEVELOPMENT, THE LOOPBACK AS WELL.
   //
-  // Probar en el telefono obliga a poner NEXT_PUBLIC_APP_URL con la IP de la
-  // red, y en ese momento `localhost` deja de estar en la lista: el Mac abre la
-  // app por localhost, el chequeo de origen la rechaza, y sale un 403
-  // INVALID_ORIGIN que en pantalla se lee como "correo o contraseña
-  // incorrectos". Es exactamente la trampa que ya esta documentada en
-  // PRODUCT.md, y morderla cuesta media hora de buscar donde no es.
+  // Testing on a phone requires NEXT_PUBLIC_APP_URL to be the machine's network
+  // IP, and at that point `localhost` drops out of the list: the Mac opens the
+  // app on localhost, the origin check rejects it, and the result is a 403
+  // INVALID_ORIGIN that reads on screen as "wrong email or password". It is
+  // exactly the trap already documented in PRODUCT.md, and falling into it
+  // costs half an hour of looking in the wrong place.
   //
-  // Que esto sea SOLO de desarrollo no es un detalle: en produccion confiar en
-  // localhost le abriria la puerta a cualquier pagina servida desde la maquina
-  // de quien visita.
-  const locales = isProd
+  // That this is development ONLY is not a detail: in production, trusting
+  // localhost would open the door to any page served from the visitor's own
+  // machine.
+  const loopback = isProd
     ? []
     : ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://0.0.0.0:3000']
 
   return [
     ...new Set(
-      [...candidatos, ...locales].map((valor) =>
-        valor.startsWith('http') ? valor : `https://${valor}`
+      [...candidates, ...loopback].map((value) =>
+        value.startsWith('http') ? value : `https://${value}`
       )
     ),
   ]
 }
 
+/** How long a session can last overall; the session hint lives exactly as long. */
+export const SESSION_EXPIRES_IN_SECONDS = 30 * 24 * 60 * 60
+
 export const auth = betterAuth({
   baseURL: getBaseUrl(),
-  trustedOrigins: origenesPropios(),
+  trustedOrigins: deploymentOrigins(),
   rateLimit: {
     enabled: !isIsolatedBrowserTest(),
   },
@@ -119,9 +147,66 @@ export const auth = betterAuth({
       enabled: true,
       maxAge: 24 * 60 * 60, // 24 hours in seconds
     },
-    expiresIn: 30 * 24 * 60 * 60, // 30 days (how long a session can last overall)
+    expiresIn: SESSION_EXPIRES_IN_SECONDS,
     updateAge: 24 * 60 * 60, // 24 hours (how often to refresh the expiry)
     freshAge: 60 * 60, // 1 hour (or set to 0 to disable completely)
+  },
+
+  /**
+   * Keeps the session-hint cookie (`session-hint.ts`) in step with the
+   * session, so the navbar paints the right state before hydration.
+   *
+   * - A new session writes it: sign-in by any method, sign-up, an OAuth
+   *   callback, the auto sign-in after verifying an email. That is one venue
+   *   query per sign-in, while the database is awake anyway.
+   * - Signing out expires it, and so does a `get-session` that finds no session
+   *   while a hint is still around. That is all this adds to `get-session`: no
+   *   query, and nothing at all for visitors without a hint.
+   *
+   * The handler must return NOTHING: better-call takes an after-hook's return
+   * value as the endpoint's response (`to-auth-endpoints.mjs`,
+   * `runAfterHooks`), and `ctx.setCookie` returns the cookie string. And a
+   * failure must never fail a sign-in: the hint is decoration, and
+   * `/api/mi-acceso` rewrites it on the next page anyway.
+   */
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      const expireHint = () => {
+        ctx.setCookie(SESSION_HINT_COOKIE, '', sessionHintCookieOptions(0))
+      }
+
+      if (ctx.path === '/sign-out') {
+        expireHint()
+        return
+      }
+
+      if (ctx.path === '/get-session') {
+        if (returnedBody(ctx.context.returned) === null && ctx.getCookie(SESSION_HINT_COOKIE)) {
+          expireHint()
+        }
+        return
+      }
+
+      const created = ctx.context.newSession
+      if (!created) return
+
+      try {
+        // Imported here, not at the top: venue-access imports this file.
+        const { listMyVenues } = await import('./venue-access')
+        const venues = await listMyVenues(created.user.id)
+        const hint = buildSessionHint(
+          created.user,
+          venues.map((venue) => ({ slug: venue.slug, name: venue.nombre }))
+        )
+        ctx.setCookie(
+          SESSION_HINT_COOKIE,
+          serializeSessionHint(hint),
+          sessionHintCookieOptions(ctx.context.sessionConfig.expiresIn)
+        )
+      } catch (error) {
+        console.error('[auth:session-hint] could not write the hint after sign-in', error)
+      }
+    }),
   },
 
   socialProviders: {
@@ -164,13 +249,14 @@ export const auth = betterAuth({
     afterEmailVerification: async (user) => {
       if (user.email) {
         try {
-          const html = await renderWelcomeEmail(user.name || undefined)
+          const { templates, messaging } = await loadEmail()
+          const html = await templates.renderWelcomeEmail(user.name || undefined)
 
-          await sendEmail({
+          await messaging.sendEmail({
             to: user.email,
-            subject: getEmailSubject('welcome'),
+            subject: templates.getEmailSubject('welcome'),
             html,
-            from: getFromEmailAddress(),
+            from: messaging.getFromEmailAddress(),
             emailType: 'transactional',
           })
 
@@ -190,15 +276,16 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: isEmailVerificationEnabled,
     sendResetPassword: async ({ user, url }) => {
+      const { templates, messaging } = await loadEmail()
       const username = user.name || ''
 
-      const html = await renderPasswordResetEmail(username, url)
+      const html = await templates.renderPasswordResetEmail(username, url)
 
-      const result = await sendEmail({
+      const result = await messaging.sendEmail({
         to: user.email,
-        subject: getEmailSubject('reset-password'),
+        subject: templates.getEmailSubject('reset-password'),
         html,
-        from: getFromEmailAddress(),
+        from: messaging.getFromEmailAddress(),
         emailType: 'transactional',
       })
 
@@ -220,7 +307,8 @@ export const auth = betterAuth({
             throw new Error('Email is required')
           }
 
-          const validation = quickValidateEmail(data.email)
+          const { templates, messaging, mailer } = await loadEmail()
+          const validation = messaging.quickValidateEmail(data.email)
           if (!validation.isValid) {
             console.warn('Email validation failed', {
               email: data.email,
@@ -233,25 +321,26 @@ export const auth = betterAuth({
             )
           }
 
-          const html = await renderOTPEmail(data.otp, data.email, data.type)
+          const html = await templates.renderOTPEmail(data.otp, data.email, data.type)
 
-          const result = await sendEmail({
+          const result = await messaging.sendEmail({
             to: data.email,
-            subject: getEmailSubject(data.type),
+            subject: templates.getEmailSubject(data.type),
             html,
-            from: getFromEmailAddress(),
+            from: messaging.getFromEmailAddress(),
             emailType: 'transactional',
           })
 
           const otpWasLoggedOnly =
-            getActiveProviderName() === 'log' || result.message.toLowerCase().includes('logged')
+            mailer.getActiveProviderName() === 'log' ||
+            result.message.toLowerCase().includes('logged')
 
           if (!isProd || otpWasLoggedOnly) {
             console.info('🔑 VERIFICATION CODE FOR LOGIN/SIGNUP', {
               email: data.email,
               otp: data.otp,
               type: data.type,
-              provider: getActiveProviderName(),
+              provider: mailer.getActiveProviderName(),
               validation: validation.checks,
             })
           }
@@ -284,9 +373,9 @@ export const auth = betterAuth({
   pages: {
     signIn: '/login',
     signUp: '/register',
-    // No hay ruta /error en este proyecto; el 404 de la app es mejor destino
-    // que una ruta inexistente, que en Next devuelve el not-found igual pero
-    // sin que nadie lo haya decidido.
+    // There is no /error route in this project. The home page is a better
+    // destination than a route that does not exist, which Next would answer
+    // with the not-found page anyway, only without anyone having decided so.
     error: '/',
     verify: '/verify',
   },

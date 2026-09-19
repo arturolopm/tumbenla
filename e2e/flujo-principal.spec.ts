@@ -1,15 +1,5 @@
-import {
-  expect,
-  request as playwrightRequest,
-  test,
-  type APIRequestContext,
-  type Browser,
-  type BrowserContext,
-  type Page,
-} from '@playwright/test'
-
-const BASE_URL = 'http://127.0.0.1:3107'
-const PASSWORD = 'Prueba-2026-tumbenla'
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test'
+import { type AuthState, authenticate } from './auth'
 
 test.describe.configure({ mode: 'serial' })
 
@@ -20,30 +10,8 @@ type OrderStatus = {
 }
 
 type AuthRole = 'operator' | 'ownerA' | 'ownerB' | 'staff'
-type AuthState = Awaited<ReturnType<APIRequestContext['storageState']>>
 
 let authStates: Record<AuthRole, AuthState>
-
-const authenticate = async (email: string, clientAddress: string): Promise<AuthState> => {
-  const request = await playwrightRequest.newContext({
-    baseURL: BASE_URL,
-    extraHTTPHeaders: { 'x-forwarded-for': clientAddress },
-  })
-
-  try {
-    const response = await request.post('/api/auth/sign-in/email', {
-      data: { email, password: PASSWORD, callbackURL: '/' },
-    })
-    if (!response.ok()) {
-      throw new Error(
-        `Sign-in for ${email} returned ${response.status()}: ${await response.text()}`
-      )
-    }
-    return request.storageState()
-  } finally {
-    await request.dispose()
-  }
-}
 
 const authenticatedContext = (browser: Browser, role: AuthRole): Promise<BrowserContext> =>
   browser.newContext({ storageState: authStates[role] })

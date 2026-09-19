@@ -2,6 +2,8 @@
 
 import { useQuery } from '@tanstack/react-query'
 
+import { type SessionHint, readSessionHint } from '@/lib/auth/session-hint'
+
 /**
  * What this session is allowed to do beyond being a regular person.
  *
@@ -20,8 +22,24 @@ export type MyAccess = {
   venues: { slug: string; name: string }[]
 }
 
+/**
+ * What the session hint implies, shown until /api/mi-acceso answers. It is
+ * why the navbar names the venue straight away instead of flashing the
+ * person's name first: the hint already carries the venue the trigger will
+ * show. `admin` stays false because only the open menu uses it, and the answer
+ * arrives long before anyone opens it.
+ */
+const accessFromHint = (hint: SessionHint | null): MyAccess => ({
+  admin: false,
+  venues:
+    hint?.kind === 'venue' && hint.venueSlug ? [{ slug: hint.venueSlug, name: hint.label }] : [],
+})
+
 export function useMyAccess(hasSession: boolean) {
   return useQuery<MyAccess>({
+    // Only once there is a session: before that, the navbar is still in its
+    // hydration render, which has to match the server's.
+    placeholderData: hasSession ? () => accessFromHint(readSessionHint()) : undefined,
     queryKey: ['my-access'],
     queryFn: async () => {
       const response = await fetch('/api/mi-acceso')

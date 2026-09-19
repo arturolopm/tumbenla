@@ -322,6 +322,10 @@ necesitas hacer algo y no esta en esta lista, `ls scripts/` antes de improvisar 
 - `bun --conditions react-server scripts/prueba-confirmacion-concurrente.ts`: dos
   confirmaciones de pago a la vez. Lleva la condicion porque importa una server action;
   sin ella el import revienta.
+- `bun scripts/measure-auth-paint.ts [--url <url>] [--profile 4g|none] [--runs N] [--login <email>]`:
+  mide cuanto tarda la barra en mostrar el estado de sesion correcto despues del primer pintado
+  (`navCorrectAt − FCP`), contra un build de produccion local (`bun run start`, puerto 3000).
+  `--login` firma con una cuenta sembrada (`bun run seed:cuentas`) y reusa sus cookies.
 
 ### Email
 
@@ -351,7 +355,9 @@ remove the step or defer it until it returns value. Record durable decisions in
 
 1. **Bun Runtime**: This project uses Bun, not Node.js
 2. **Server Components**: Default to Server Components, use `'use client'` only when needed
-3. **Environment Variables**: Always validate via `src/config/env.ts`
+3. **Environment Variables**: Always validate via `src/config/env.ts`. Client code never imports it,
+   directly or through a barrel: it ships t3-env, Zod and every server variable name to every page.
+   Browser-reachable code reads `process.env.NEXT_PUBLIC_*` literally (see `src/lib/utils/urls.ts`)
 4. **Database**: Use Drizzle ORM, not raw SQL
 5. **Authentication**: Use Better-Auth client/server APIs, don't access DB directly
 6. **Payments**: Use payment service, don't call providers directly

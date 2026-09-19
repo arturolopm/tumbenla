@@ -2,7 +2,13 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 import { isAdminEmail } from '@/lib/auth/admin'
-import { auth } from '@/lib/auth/auth'
+import { SESSION_EXPIRES_IN_SECONDS, auth } from '@/lib/auth/auth'
+import {
+  SESSION_HINT_COOKIE,
+  buildSessionHint,
+  serializeSessionHint,
+} from '@/lib/auth/session-hint'
+import { sessionHintCookieOptions } from '@/lib/auth/session-hint-server'
 import { listMyVenues } from '@/lib/auth/venue-access'
 
 /**
@@ -18,6 +24,13 @@ import { listMyVenues } from '@/lib/auth/venue-access'
  * which covers the landing page, /sitios and /transparencia. Reading the
  * session on the server there forces a render per request and takes down the
  * ISR of the whole public site.
+ *
+ * IT ALSO KEEPS THE SESSION HINT CURRENT (`session-hint.ts`). Every page with a
+ * session asks this, and the answer already says what the navbar will show, so
+ * refreshing the hint here costs nothing; it is how the hint catches up when
+ * venue membership or a name changes without a new sign-in. The opposite case
+ * — a hint with no session behind it — is expired by the auth hook that
+ * `getSession` below runs through, so it needs nothing here.
  *
  * It reveals nothing the caller does not already know about themselves, and
  * with no session it answers the empty object instead of 401: for the navbar,
@@ -38,13 +51,19 @@ export const GET = async () => {
     )
   }
 
-  const venues = await listMyVenues(session.user.id)
+  const venues = (await listMyVenues(session.user.id)).map((venue) => ({
+    slug: venue.slug,
+    name: venue.nombre,
+  }))
 
-  return NextResponse.json(
-    {
-      admin: isAdminEmail(session.user.email, session.user.emailVerified),
-      venues: venues.map((venue) => ({ slug: venue.slug, name: venue.nombre })),
-    },
+  const response = NextResponse.json(
+    { admin: isAdminEmail(session.user.email, session.user.emailVerified), venues },
     { headers: { 'Cache-Control': 'no-store' } }
   )
+  response.cookies.set(
+    SESSION_HINT_COOKIE,
+    serializeSessionHint(buildSessionHint(session.user, venues)),
+    sessionHintCookieOptions(SESSION_EXPIRES_IN_SECONDS)
+  )
+  return response
 }

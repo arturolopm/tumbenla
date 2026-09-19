@@ -4,6 +4,7 @@ import { Anybody, Geist_Mono, Montserrat } from 'next/font/google'
 import '@/app/_styles/globals.css'
 import { QueryProvider } from '@/app/_providers/query-provider'
 import { ToastProvider } from '@/components/ui/toast'
+import { SESSION_HINT_SCRIPT } from '@/lib/auth/session-hint'
 import { generateMetadata } from '@/lib/seo'
 
 /** Stitch font pair: Anybody carries heavy display weights and Montserrat carries body text. */
@@ -50,7 +51,15 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang='es' className='dark'>
+    // suppressHydrationWarning: the inline script below adds `data-session` and
+    // a style property to <html> before React hydrates it, on purpose.
+    <html lang='es' className='dark' suppressHydrationWarning>
+      <head>
+        {/* Marks <html> with the session hint before the first paint, so the
+            navbar shows the right state without waiting for hydration. It is
+            a static string with no user input; see session-hint.ts. */}
+        <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
+      </head>
       <body
         className={`${montserrat.variable} ${geistMono.variable} ${anybody.variable} font-sans antialiased`}
       >
