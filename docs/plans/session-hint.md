@@ -127,7 +127,7 @@ what passed, the numbers, and anything unexpected."
 - Commit `[T0a] docs: record the nav auth-latency measurements and the session-hint plan` (PRODUCT.md + the plan).
 - **Done when:** the log shows `[T0a]`, and `node .gitnexus/run.cjs status` is not stale.
 
-### [ ] T0b: Measurement harness + baseline (Sonnet)
+### [x] T0b: Measurement harness + baseline (Sonnet)
 - Create `scripts/measure-auth-paint.ts` (bun + `@playwright/test`'s `chromium`). Port the method used in the
   diagnosis:
   - Args: `--url` (default `http://localhost:3000/`), `--profile 4g|none` (4g = latency 150 ms, 1.6 Mbps down,
@@ -300,10 +300,10 @@ what passed, the numbers, and anything unexpected."
 
 | Metric | baseline | after T3 | after T4 | after T5 |
 |---|---|---|---|---|
-| anon: FCP / navCorrectAt / hydratedAt (ms) | | | | |
-| person: FCP / navCorrectAt / labels | | | | |
-| venue: FCP / navCorrectAt / labels | | | | |
-| auth route cold boot (ms, local, median of 5) | T0b: (diag 122) | — | — | |
+| anon: FCP / navCorrectAt / hydratedAt (ms) | 1124 / 3783 / 3611 (gap 2659) | | | |
+| person: FCP / navCorrectAt / labels | 1128 / 3826 / ["Operación"] (gap 2686) | | | |
+| venue: FCP / navCorrectAt / labels | 1148 / 3818 / ["Dueño A","Bar La Nona"] (gap 2612) | | | |
+| auth route cold boot (ms, local, median of 5) | 135 (diag 122) | — | — | |
 
 Targets: `navCorrectAt − FCP ≤ 50 ms` for all three from T3 on; venue `labels` has exactly one entry.
 `hydratedAt` ≈ −390 ms at T4 and ≈ −740 ms at T5 relative to the previous column (±15 %).

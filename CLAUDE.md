@@ -322,6 +322,10 @@ necesitas hacer algo y no esta en esta lista, `ls scripts/` antes de improvisar 
 - `bun --conditions react-server scripts/prueba-confirmacion-concurrente.ts`: dos
   confirmaciones de pago a la vez. Lleva la condicion porque importa una server action;
   sin ella el import revienta.
+- `bun scripts/measure-auth-paint.ts [--url <url>] [--profile 4g|none] [--runs N] [--login <email>]`:
+  mide cuanto tarda la barra en mostrar el estado de sesion correcto despues del primer pintado
+  (`navCorrectAt − FCP`), contra un build de produccion local (`bun run start`, puerto 3000).
+  `--login` firma con una cuenta sembrada (`bun run seed:cuentas`) y reusa sus cookies.
 
 ### Email
 
