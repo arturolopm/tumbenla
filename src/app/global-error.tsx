@@ -1,12 +1,15 @@
 'use client'
 
-import * as Sentry from '@sentry/nextjs'
 import NextError from 'next/error'
 import { useEffect } from 'react'
 
+import { captureException } from '@/lib/monitoring/sentry-browser'
+
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
+  // Through the lazy loader, not `@sentry/nextjs` directly: a static import here
+  // would put the whole SDK back on every page's critical path.
   useEffect(() => {
-    Sentry.captureException(error)
+    captureException(error)
   }, [error])
 
   return (

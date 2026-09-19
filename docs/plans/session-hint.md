@@ -232,7 +232,7 @@ what passed, the numbers, and anything unexpected."
   (`curl -s localhost:3000/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u | xargs -I{} sh -c 'curl -s localhost:3000{} | grep -l -e ZodError -e DATABASE_URL'`
   prints nothing), and `typecheck`, `lint` and the build are clean. Commit `[T4]`.
 
-### [ ] T5: Defer Sentry in the browser (Opus)
+### [x] T5: Defer Sentry in the browser (Opus)
 - Impact first: `onRouterTransitionStart`, `GlobalError`.
 - New `src/lib/monitoring/sentry-browser.ts`:
   - `loadSentry()`: memoized `import('@sentry/nextjs')` + `init` with the current options from
