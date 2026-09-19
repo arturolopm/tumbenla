@@ -101,6 +101,25 @@ Si se repite, es un hook. `src/hooks/use-countdown.ts` para las esperas de
 "pide otro en Ns". Un listener de ventana que varios componentes necesitan va en
 un hook con recuento de referencias, no copiado en cada uno.
 
+## 6. Lo que llega al navegador antes de hidratar
+
+Todo lo que un componente cliente importa, directo o por un barril, se baja y
+se ejecuta ANTES de que la página responda. Dos cosas ya mordieron:
+
+- **Un barril que reexporta algo de servidor.** `cn` desde `@/lib/utils`
+  arrastraba `urls.ts` → `@/config/env` → t3-env y Zod enteros a todas las
+  páginas (~390 ms en un teléfono). El cliente nunca importa `@/config/env`;
+  si un módulo alcanzable desde el navegador necesita una `NEXT_PUBLIC_*`, la
+  lee como `process.env.NEXT_PUBLIC_X` literal.
+- **Un SDK "de fondo" importado estáticamente.** Sentry en
+  `instrumentation-client.ts` costaba ~700 ms. Lo que no hace falta para pintar
+  se carga con `import()` después de `load` (`src/lib/monitoring/sentry-browser.ts`).
+
+Y lo que la página necesita para el PRIMER pintado no se pide desde un efecto:
+eso llega después de hidratar. La sesión de la barra sale de una cookie que lee
+un script en el `<head>` (`src/lib/auth/session-hint.ts`, decisión 46 de
+`PRODUCT.md`). `e2e/client-bundle.spec.ts` vigila los dos primeros.
+
 ---
 
 ## Deuda conocida

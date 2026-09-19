@@ -277,7 +277,7 @@ what passed, the numbers, and anything unexpected."
   `perf/session-hint`, fill in the Results table in `docs/plans/session-hint.md` and commit it as `[T7] measure per stage`.
   The dummy-DSN build is throwaway: rebuild without it before leaving.
 
-### [ ] T8: Docs (Opus)
+### [x] T8: Docs (Opus)
 - `PRODUCT.md`:
   - New decision **46**: "the nav paints from the hint cookie, the session still arbitrates", with the why and the accepted edges above.
   - Amend decision 23's last sentence: the gap placeholder is replaced by the hint.
@@ -337,6 +337,15 @@ the first async chunk executes has no listener yet, in this build or the one bef
 chunk itself (confirmed by fetching each requested chunk and grepping for the `sentry.javascript.nextjs`
 marker) was requested 34 ms after the `load` event fired, never before — confirming the deferral works
 as designed.
+
+**Queue check (main agent, same dummy-DSN build, 4g + CPU ×4, 2 runs):** the case the queue exists
+for is an error thrown by the app AFTER `instrumentation-client` ran but BEFORE the SDK loaded. The
+check threw one error and one unhandled rejection the moment the app's own `get-session` request
+finished (post-hydration, via a `PerformanceObserver` — wrapping `window.fetch` makes Sentry swap
+in a sandboxed native fetch and hides its traffic from the test), recording that
+`globalThis.__SENTRY__` did not exist yet at that moment (~2.9 s; `load` at ~4.4 s). Both were
+delivered after the SDK loaded, in both runs, and so was a late error. The only errors lost are the
+ones thrown before any of the app's JavaScript has run, which no version of the app could catch.
 
 ## Verification (end to end)
 1. `bun run test:auth`: parser, escaping, and the inline script matching `applySessionHint`.

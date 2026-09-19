@@ -355,7 +355,9 @@ remove the step or defer it until it returns value. Record durable decisions in
 
 1. **Bun Runtime**: This project uses Bun, not Node.js
 2. **Server Components**: Default to Server Components, use `'use client'` only when needed
-3. **Environment Variables**: Always validate via `src/config/env.ts`
+3. **Environment Variables**: Always validate via `src/config/env.ts`. Client code never imports it,
+   directly or through a barrel: it ships t3-env, Zod and every server variable name to every page.
+   Browser-reachable code reads `process.env.NEXT_PUBLIC_*` literally (see `src/lib/utils/urls.ts`)
 4. **Database**: Use Drizzle ORM, not raw SQL
 5. **Authentication**: Use Better-Auth client/server APIs, don't access DB directly
 6. **Payments**: Use payment service, don't call providers directly
