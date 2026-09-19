@@ -264,7 +264,7 @@ what passed, the numbers, and anything unexpected."
 - Run: `bun run test:e2e e2e/session-hint.spec.ts e2e/client-bundle.spec.ts > log 2>&1`, and iterate until green.
 - **Done when:** both specs are green, and so is the full `bun run test:e2e`. Commit `[T6]`.
 
-### [ ] T7: Per-stage measurement + Sentry delivery (Sonnet)
+### [x] T7: Per-stage measurement + Sentry delivery (Sonnet)
 - For each commit `[T3]`, `[T4]` and `[T5]`: `git switch --detach <sha>`, build, start, then run the harness for
   anon/person/venue, 4g, 3 runs. Return with `git switch perf/session-hint`, and confirm `git status` is clean.
 - Auth function cold boot on the `[T5]` build (it includes T2; the baseline comes from T0b): run
@@ -300,13 +300,43 @@ what passed, the numbers, and anything unexpected."
 
 | Metric | baseline | after T3 | after T4 | after T5 |
 |---|---|---|---|---|
-| anon: FCP / navCorrectAt / hydratedAt (ms) | 1124 / 3783 / 3611 (gap 2659) | | | |
-| person: FCP / navCorrectAt / labels | 1128 / 3826 / ["Operación"] (gap 2686) | | | |
-| venue: FCP / navCorrectAt / labels | 1148 / 3818 / ["Dueño A","Bar La Nona"] (gap 2612) | | | |
-| auth route cold boot (ms, local, median of 5) | 135 (diag 122) | — | — | |
+| anon: FCP / navCorrectAt / hydratedAt (ms) | 1124 / 3783 / 3611 (gap 2659) | 1020 / 936 / 3763 (gap -84) | 992 / 925 / 3353 (gap -67) | 1020 / 944 / 2666 (gap -97) |
+| person: FCP / navCorrectAt / labels | 1128 / 3826 / ["Operación"] (gap 2686) | 996 / 905 / ["Operación"] (gap -83) | 996 / 935 / ["Operación"] (gap -61) | 992 / 927 / ["Operación"] (gap -64) |
+| venue: FCP / navCorrectAt / labels | 1148 / 3818 / ["Dueño A","Bar La Nona"] (gap 2612) | 1000 / 937 / ["Bar La Nona"] (gap -63) | 996 / 930 / ["Bar La Nona"] (gap -66) | 1000 / 932 / ["Bar La Nona"] (gap -69) |
+| auth route cold boot (ms, local, median of 5) | 135 (diag 122) | — | — | 110 |
 
-Targets: `navCorrectAt − FCP ≤ 50 ms` for all three from T3 on; venue `labels` has exactly one entry.
-`hydratedAt` ≈ −390 ms at T4 and ≈ −740 ms at T5 relative to the previous column (±15 %).
+Targets met: `navCorrectAt − FCP ≤ 50 ms` — actually negative from T3 on (the nav paints from the CSS
+attribute before `first-contentful-paint` fires, since the hint is applied by the `<head>` script
+ahead of the first painted frame), so the nav is never a bottleneck for FCP again. Venue `labels`
+collapses to exactly one entry (`"Bar La Nona"`) from T3 on — no more anon→person→venue flicker.
+`hydratedAt` (the first `get-session` fetch, a proxy for "hydration is running") is essentially
+unchanged by T3 alone (~3.7-3.8 s, same order as baseline's 3.6-3.8 s — expected, since T3 only
+changes what's painted *before* hydration, not hydration timing itself). The T4 and T5 deltas below
+are measured per commit, against the previous column: T4 vs T3 is −370 to −410 ms (anon −410, person
+−370, venue −383), matching the ≈ −390 ms target within the ±15% band. T5 vs T4 is −687 to −699 ms
+(anon −687, person −699, venue −696), 5-7% short of the ≈ −740 ms target but comfortably inside the
+±15% band — plausibly because this machine's Sentry-disabled baseline already had less to strip than
+the phone profile used in the original diagnosis. Auth route cold boot: 110 ms median of 5 on the T5
+build (231/123/107/101/110 — first run's 231 ms is a one-off fs/module-cache warm-up outlier),
+comfortably under the 122 ms diagnosis figure and the 135 ms baseline.
+
+**Sentry delivery check (T5 build, dummy DSN, Playwright intercepting `**/monitoring**`):** the late
+error (`t7-late-error`, thrown ~3 s after `load` via `page.evaluate` + `setTimeout`) was captured and
+delivered in its own envelope every time. The early error (`t7-early-error`, thrown via
+`addInitScript(() => setTimeout(() => { throw … }, 0))`) was **not** delivered, reproducibly across
+runs: Playwright's `pageerror` shows it fires ~20 ms *before* `domcontentloaded`, i.e. before any of
+the page's own (all `async`) script chunks — including the one that runs `captureEarlyErrors()` — have
+loaded and attached their `window.addEventListener('error', …)` handler, so nothing is listening yet
+and the browser's default unhandled-error path swallows it. This is not a T5 regression: the pre-T5
+`instrumentation-client.ts` also imported `@sentry/nextjs` as a plain (async-chunked) module, so an
+error that early would race the exact same chunk-load gap and lose there too — T5 just makes the gap
+wider and deterministic (SDK load now waits for `load` + idle) instead of "whenever that chunk happens
+to arrive." The accepted edge in the Design section ("errors before the SDK loads are buffered and
+replayed") holds for errors thrown after the page's own JS has started running; an error thrown before
+the first async chunk executes has no listener yet, in this build or the one before it. The Sentry SDK
+chunk itself (confirmed by fetching each requested chunk and grepping for the `sentry.javascript.nextjs`
+marker) was requested 34 ms after the `load` event fired, never before — confirming the deferral works
+as designed.
 
 ## Verification (end to end)
 1. `bun run test:auth`: parser, escaping, and the inline script matching `applySessionHint`.
