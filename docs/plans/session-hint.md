@@ -149,7 +149,7 @@ what passed, the numbers, and anything unexpected."
 - Add the script to CLAUDE.md's scripts list. Commit `[T0b] …`. Fill in the Results "baseline" column.
 - **Done when:** the baseline anon row shows `navCorrectAt − FCP` ≈ 2.5 s (it matches the diagnosis).
 
-### [ ] T1: Hint core + unit tests (Opus)
+### [x] T1: Hint core + unit tests (Opus)
 - `src/lib/auth/session-hint.ts` (isomorphic and **React-free**: it imports only `@/lib/constants`):
   `SESSION_HINT_COOKIE`, `type SessionHint = { kind: 'person'|'venue'; label: string; venueSlug?: string }`,
   `serializeSessionHint`, `parseSessionHint(cookieString)` (split on `; `, exact name match, decode, validate `v===1`,
@@ -173,7 +173,7 @@ what passed, the numbers, and anything unexpected."
 - `package.json`: `"test:auth": "bun test tests/auth"`. `ci.yml`: a step after "Comercio transaccional".
 - **Done when:** `bun run test:auth` passes and `bun run typecheck` is clean. Commit `[T1]`.
 
-### [ ] T2: Server writers + lazy email + auth.ts in English (Opus)
+### [x] T2: Server writers + lazy email + auth.ts in English (Opus)
 - Impact first: `auth` (the exported const), mi-acceso `GET`.
 - Before comparing `ctx.context.returned` with `null`, log its shape once for an anonymous `get-session`.
   better-call may wrap `ctx.json(null)`. Match the real shape and note it in a comment.
