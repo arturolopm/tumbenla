@@ -197,7 +197,7 @@ what passed, the numbers, and anything unexpected."
   - sending an OTP still works (`EMAIL_PROVIDER=log`, the code appears in the server log).
 - Commit `[T2]`.
 
-### [ ] T3: First-paint nav (Opus)
+### [x] T3: First-paint nav (Opus)
 - Impact first: `RootLayout`, `AccountMenu` (HIGH), `SiteNav`, `NavLink`, `useMyAccess` (HIGH).
 - `src/app/layout.tsx`: `<html … suppressHydrationWarning>`, then `<head><script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} /></head>`.
 - `src/components/layout/account-menu.tsx`:

@@ -7,6 +7,7 @@ import { useTransition } from 'react'
 
 import { Menu, MenuItem, MenuPopup, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
 import { useMyAccess } from '@/hooks/use-my-access'
+import { useSessionHintSync } from '@/hooks/use-session-hint-sync'
 import { signOut, useSession } from '@/lib/auth/auth-client'
 import { enlaceDeLogin } from '@/lib/auth/redirect'
 import { cn } from '@/lib/utils/css'
@@ -22,11 +23,24 @@ import { cn } from '@/lib/utils/css'
  * the Neon database asleep and the 100 CU-hour budget within reach. Read on the
  * client, the pages stay static.
  *
- * THE PRICE IS THE FLICKER, and that is why `isPending` does not paint some
- * neutral state: it paints a gap of the same width. If it showed "Entrar" while
- * loading, someone with a session would see "Entrar" and then their name, which
- * is exactly what we do not want them to see.
+ * WHAT IT PAINTS BEFORE THE SESSION ARRIVES: the session hint
+ * (`session-hint.ts`). `useSession()` only asks after hydration — measured at
+ * ~2.6 s after first paint on a phone — so while it is pending this renders
+ * BOTH states and CSS picks one from the `data-session` mark that the inline
+ * <head> script put on <html> before the first paint: "Entrar" when there is
+ * no hint, otherwise a stand-in of the trigger with the hinted label. When the
+ * session arrives, the real menu replaces it with the same look. Nobody sees
+ * "Entrar" and then their name, and nobody waits on a blank gap either.
  */
+
+const SIGN_IN_CLASS =
+  'inline-flex items-center justify-center rounded-xl border border-secondary px-4 py-2 font-display text-label-lg uppercase transition-colors hover:border-lime hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime'
+
+/** Shared by the real trigger and its pre-hydration stand-in, so the two cannot drift apart. */
+const TRIGGER_CLASS =
+  'inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-display text-label-lg uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime'
+const TRIGGER_VENUE_CLASS = 'border-lime text-lime hover:opacity-80'
+const TRIGGER_PERSON_CLASS = 'border-secondary hover:border-lime hover:text-lime'
 
 export function AccountMenu({ variant = 'bar' }: { variant?: 'bar' | 'mobile' }) {
   const pathname = usePathname()
@@ -35,20 +49,47 @@ export function AccountMenu({ variant = 'bar' }: { variant?: 'bar' | 'mobile' })
   const [signingOut, startSignOut] = useTransition()
 
   const { data: access } = useMyAccess(Boolean(session))
+  useSessionHintSync(isPending, session)
 
-  // While it is unknown, a gap the width of the control. See the note above.
+  // While it is unknown, both states; the hint on <html> decides which one
+  // shows. See the note above.
   if (isPending) {
-    return <div aria-hidden className={cn('h-9', variant === 'bar' ? 'w-24' : 'w-full')} />
+    return (
+      <>
+        <Link
+          href={enlaceDeLogin(pathname)}
+          className={cn(
+            SIGN_IN_CLASS,
+            variant === 'mobile' && 'mt-2 w-full',
+            'in-data-[session=person]:hidden in-data-[session=venue]:hidden'
+          )}
+        >
+          Entrar
+        </Link>
+        <span
+          aria-hidden
+          data-account-trigger
+          className={cn(
+            TRIGGER_CLASS,
+            TRIGGER_PERSON_CLASS,
+            'hidden in-data-[session=person]:inline-flex in-data-[session=venue]:inline-flex',
+            'in-data-[session=venue]:border-lime in-data-[session=venue]:text-lime',
+            variant === 'mobile' && 'mt-2 w-full justify-center'
+          )}
+        >
+          <UserIcon className='size-4 in-data-[session=venue]:hidden' />
+          <StoreIcon className='hidden size-4 in-data-[session=venue]:block' />
+          <span className='max-w-32 truncate after:content-(--session-label)' />
+        </span>
+      </>
+    )
   }
 
   if (!session) {
     return (
       <Link
         href={enlaceDeLogin(pathname)}
-        className={cn(
-          'inline-flex items-center justify-center rounded-xl border border-secondary px-4 py-2 font-display text-label-lg uppercase transition-colors hover:border-lime hover:text-lime focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime',
-          variant === 'mobile' && 'mt-2 w-full'
-        )}
+        className={cn(SIGN_IN_CLASS, variant === 'mobile' && 'mt-2 w-full')}
       >
         Entrar
       </Link>
@@ -82,11 +123,10 @@ export function AccountMenu({ variant = 'bar' }: { variant?: 'bar' | 'mobile' })
           here for their bar, and seeing it written there is what tells them they
           are still in work mode. The name goes inside, where it matters less. */}
       <MenuTrigger
+        data-account-trigger
         className={cn(
-          'inline-flex items-center gap-2 rounded-xl border px-3 py-2 font-display text-label-lg uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime',
-          mainVenue
-            ? 'border-lime text-lime hover:opacity-80'
-            : 'border-secondary hover:border-lime hover:text-lime',
+          TRIGGER_CLASS,
+          mainVenue ? TRIGGER_VENUE_CLASS : TRIGGER_PERSON_CLASS,
           variant === 'mobile' && 'mt-2 w-full justify-center'
         )}
       >
