@@ -103,13 +103,21 @@ test('owner never sees their personal name in the trigger label sequence', async
       requestAnimationFrame(tick)
     })
 
-    await page.goto('/', { waitUntil: 'load' })
     // The real sequence: get-session resolves first, then mi-acceso (Design,
-    // "Readers"). Waiting for both instead of a fixed sleep pins the assertion
-    // to the actual data flow instead of a guessed timing window.
-    await page.waitForResponse((response) => response.url().includes('/api/auth/get-session'))
-    await page.waitForResponse((response) => response.url().includes('/api/mi-acceso'))
-    await page.waitForTimeout(300)
+    // "Readers"). Both waits are registered BEFORE navigating: either response
+    // can arrive before `load`, and a wait registered after it would hang.
+    const sessionAnswered = page.waitForResponse((response) =>
+      response.url().includes('/api/auth/get-session')
+    )
+    const accessAnswered = page.waitForResponse((response) =>
+      response.url().includes('/api/mi-acceso')
+    )
+    await page.goto('/', { waitUntil: 'load' })
+    await sessionAnswered
+    await accessAnswered
+    // The hydrated trigger carries the label as text: waiting for it pins the
+    // read to the final render instead of a guessed delay.
+    await expect(page.locator('header button[data-account-trigger]')).toHaveText('Bar La Nona')
 
     const labels = await page.evaluate(
       () => (window as unknown as { __labelSequence: { labels: string[] } }).__labelSequence.labels
@@ -155,15 +163,20 @@ test('a hand-set stale hint in an anonymous context is cleared after load, and E
     await context.addCookies([{ name: HINT_COOKIE, value: staleHint, url: BASE_URL }])
 
     const page = await context.newPage()
+    // Registered before navigating: the response can land before `load`.
+    const sessionAnswered = page.waitForResponse((response) =>
+      response.url().includes('/api/auth/get-session')
+    )
     await page.goto('/', { waitUntil: 'load' })
-    await page.waitForResponse((response) => response.url().includes('/api/auth/get-session'))
-    // The cookie clears as a side effect of that response's Set-Cookie header;
-    // give the browser a beat to apply it before reading the cookie jar back.
-    await page.waitForTimeout(300)
+    await sessionAnswered
 
     await expect(entrarLink(page)).toBeVisible()
-    const cookies = await context.cookies(BASE_URL)
-    expect(cookies.find((cookie) => cookie.name === HINT_COOKIE)).toBeUndefined()
+    // The cookie clears through that response's Set-Cookie header.
+    await expect
+      .poll(async () =>
+        (await context.cookies(BASE_URL)).some((cookie) => cookie.name === HINT_COOKIE)
+      )
+      .toBe(false)
   } finally {
     await context.close()
   }
