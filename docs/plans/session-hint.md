@@ -220,7 +220,7 @@ what passed, the numbers, and anything unexpected."
   console. Quick Playwright check: with `**/_next/static/chunks/**` aborted, `/` shows "Entrar" (anon) or the venue
   label (duenoa). Commit `[T3]`.
 
-### [ ] T4: Env/Zod out of the client bundle + urls.ts in English (Opus)
+### [x] T4: Env/Zod out of the client bundle + urls.ts in English (Opus)
 - Impact: `getBaseUrl` is CRITICAL (123 dependents), but the change keeps behaviour identical:
   - it reads `process.env.NEXT_PUBLIC_APP_URL`, `…_VERCEL_ENV`, `…_VERCEL_PROJECT_PRODUCTION_URL`,
     `…_VERCEL_BRANCH_URL` and `…_VERCEL_URL` as **literal** accesses, so Next inlines them;

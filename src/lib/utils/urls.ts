@@ -1,52 +1,72 @@
-import { env } from '@/config/env'
 import { isProd } from '@/lib/constants'
 
-/** Las variables de sistema de Vercel llegan SIN esquema: `mi-sitio.vercel.app`. */
-const conEsquema = (host: string) =>
+/**
+ * The public variables this file needs, read as LITERAL `process.env.X`
+ * accesses so Next inlines them at build time.
+ *
+ * WHY NOT `@/config/env`: this file is reachable from the browser — through
+ * the `@/lib/utils` barrel, which dozens of client components import for
+ * `cn`, and through the auth client. Importing the env schema here shipped
+ * t3-env, all of Zod and the name of every server variable to every page:
+ * ~62 KB gzipped on the critical path, measured at ~390 ms of extra wait
+ * before hydration on a phone. `env.ts` still validates these same values when
+ * the server boots — they are in its client schema, and its
+ * `emptyStringAsUndefined` treats '' exactly as `clean()` below does — so
+ * nothing goes unvalidated.
+ */
+const publicEnv = {
+  appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  vercelEnv: process.env.NEXT_PUBLIC_VERCEL_ENV,
+  productionUrl: process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL,
+  branchUrl: process.env.NEXT_PUBLIC_VERCEL_BRANCH_URL,
+  deploymentUrl: process.env.NEXT_PUBLIC_VERCEL_URL,
+}
+
+/** Vercel's system variables arrive WITHOUT a scheme: `my-site.vercel.app`. */
+const withScheme = (host: string) =>
   host.startsWith('http://') || host.startsWith('https://')
     ? host
     : `${isProd ? 'https://' : 'http://'}${host}`
 
-const limpia = (valor: string | undefined) => valor?.trim() || undefined
+const clean = (value: string | undefined) => value?.trim() || undefined
 
 /**
- * La URL publica de la aplicacion, para enlaces de correo, callbacks de sesion
- * y canonicals.
+ * The public URL of the app, for email links, session callbacks and
+ * canonicals.
  *
- * Se deduce sola en Vercel, en este orden:
+ * On Vercel it works itself out, in this order:
  *
- *   1. NEXT_PUBLIC_APP_URL, si esta puesta. Es la anulacion explicita y gana
- *      siempre: es donde va el dominio propio cuando exista.
- *   2. En produccion, NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL. Vercel la
- *      define como "el dominio de produccion propio mas corto, o el de
- *      vercel.app si no hay ninguno". Por eso el paso a un dominio propio no
- *      pide tocar nada: la variable empieza a devolver el dominio nuevo sola.
- *   3. En preview, la URL de la RAMA antes que la del despliegue suelto. La de
- *      la rama sobrevive al siguiente push, asi que el enlace de un correo
- *      enviado hace una hora sigue abriendo algo.
- *   4. En local, localhost:3000.
+ *   1. NEXT_PUBLIC_APP_URL, when set. It is the explicit override and always
+ *      wins: it is where the custom domain goes once there is one.
+ *   2. In production, NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL. Vercel defines
+ *      it as "the shortest custom production domain, or the vercel.app one if
+ *      there is none". That is why moving to a custom domain needs no change:
+ *      the variable starts returning the new domain by itself.
+ *   3. In preview, the BRANCH URL before the standalone deployment's. The
+ *      branch URL survives the next push, so the link in an email sent an hour
+ *      ago still opens something.
+ *   4. Locally, localhost:3000.
  *
- * OJO CON EL MOMENTO: NEXT_PUBLIC_* se incrusta en el bundle DURANTE EL BUILD.
- * Cambiar cualquiera de estas en el panel no surte efecto hasta que se vuelve a
- * desplegar. Vale igual para el dominio propio.
+ * MIND THE TIMING: NEXT_PUBLIC_* is baked into the bundle DURING THE BUILD.
+ * Changing any of these in the dashboard has no effect until the next deploy.
+ * The same goes for the custom domain.
  *
- * En produccion, si no hay ninguna, LANZA. La version anterior tenia un
- * .default() de localhost y devolvia 'http://localhost:3000' sin decir nada:
- * el despliegue quedaba verde con todos los enlaces de correo rotos. Un fallo
- * de build es mejor que eso.
+ * In production, if none is set, it THROWS. The previous version had a
+ * localhost .default() and silently returned 'http://localhost:3000': the
+ * deployment went green with every email link broken. A failed build is better
+ * than that.
  */
 export function getBaseUrl(): string {
-  const explicita = limpia(env.NEXT_PUBLIC_APP_URL)
-  if (explicita) return conEsquema(explicita)
+  const explicit = clean(publicEnv.appUrl)
+  if (explicit) return withScheme(explicit)
 
-  if (env.NEXT_PUBLIC_VERCEL_ENV === 'production') {
-    const produccion = limpia(env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL)
-    if (produccion) return conEsquema(produccion)
+  if (publicEnv.vercelEnv === 'production') {
+    const production = clean(publicEnv.productionUrl)
+    if (production) return withScheme(production)
   }
 
-  const despliegue =
-    limpia(env.NEXT_PUBLIC_VERCEL_BRANCH_URL) ?? limpia(env.NEXT_PUBLIC_VERCEL_URL)
-  if (despliegue) return conEsquema(despliegue)
+  const deployment = clean(publicEnv.branchUrl) ?? clean(publicEnv.deploymentUrl)
+  if (deployment) return withScheme(deployment)
 
   if (!isProd) return 'http://localhost:3000'
 
