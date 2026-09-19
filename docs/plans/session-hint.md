@@ -249,7 +249,7 @@ what passed, the numbers, and anything unexpected."
   `__SENTRY__`; and a chunk loaded after `load` does (same curl pipeline as T4, plus the harness network log).
   Commit `[T5]`.
 
-### [ ] T6: E2E specs (Sonnet)
+### [x] T6: E2E specs (Sonnet)
 - Move `authenticate()` from `e2e/flujo-principal.spec.ts` into `e2e/auth.ts` and import it from both specs.
 - `e2e/session-hint.spec.ts` (runs through `e2e/run.ts`: isolated DB, port 3107, `NODE_ENV=test`, so no `__Secure-`):
   1. Anonymous, with `**/_next/static/chunks/**` aborted: "Entrar" visible, `[data-account-trigger]` hidden.
