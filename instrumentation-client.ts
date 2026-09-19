@@ -1,23 +1,24 @@
-// This file configures the initialization of Sentry on the client.
-// The added config here will be used whenever a users loads a page in their browser.
+// Runs in the browser before React hydrates. It deliberately does NOT import
+// the Sentry SDK: see src/lib/monitoring/sentry-browser.ts for why, and for how
+// errors thrown before the SDK loads still reach Sentry.
 // https://docs.sentry.io/platforms/javascript/guides/nextjs/
 
-import * as Sentry from '@sentry/nextjs'
+import { captureEarlyErrors, getLoadedSentry, loadSentry } from '@/lib/monitoring/sentry-browser'
 
-const environment = process.env.NEXT_PUBLIC_VERCEL_ENV ?? process.env.NODE_ENV
+captureEarlyErrors()
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  enabled: Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN),
-  environment,
+const startSentry = () => void loadSentry()
+const whenIdle = () =>
+  'requestIdleCallback' in window
+    ? window.requestIdleCallback(startSentry, { timeout: 5000 })
+    : setTimeout(startSentry, 1)
 
-  // Keep complete traces outside production while protecting the production quota.
-  tracesSampleRate: environment === 'production' ? 0.1 : 1,
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
+if (document.readyState === 'complete') whenIdle()
+else window.addEventListener('load', whenIdle, { once: true })
 
-  // Request headers, cookies, and other default PII stay out of error reports.
-  sendDefaultPii: false,
-})
-
-export const onRouterTransitionStart = Sentry.captureRouterTransitionStart
+export const onRouterTransitionStart = (
+  href: string,
+  navigationType: 'push' | 'replace' | 'traverse'
+) => {
+  getLoadedSentry()?.captureRouterTransitionStart(href, navigationType)
+}

@@ -78,6 +78,9 @@ jobs:
       - name: Comercio transaccional
         run: bun run test:commerce
 
+      - name: Pista de sesion
+        run: bun run test:auth
+
       - name: Lint
         run: bun run lint
 
